@@ -59,7 +59,7 @@ export default function HelpPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Help Center" description="Learn how to get the most out of InventoryOS." breadcrumb={[{ label: "Help" }]} />
+      <PageHeader title="Help Center" description="Learn how to get the most out of Altrox AI." breadcrumb={[{ label: "Help" }]} />
 
       <Card className="bg-primary/5 border-primary/20 py-6">
         <CardContent className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">

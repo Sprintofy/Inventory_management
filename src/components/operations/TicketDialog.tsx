@@ -59,7 +59,8 @@ export function TicketDialog({ open, onOpenChange }: { open: boolean; onOpenChan
       setIssuesError("Add at least one issue");
       return;
     }
-    const ticketIssues: TicketIssue[] = trimmed.map((text) => ({ id: uid("ISS"), text, resolved: false }));
+    const now = new Date().toISOString();
+    const ticketIssues: TicketIssue[] = trimmed.map((text) => ({ id: uid("ISS"), title: text, priority: values.priority as RequestPriority, status: "open", createdAt: now }));
     addTicket({
       title: values.title,
       description: values.description,
@@ -68,6 +69,8 @@ export function TicketDialog({ open, onOpenChange }: { open: boolean; onOpenChan
       subDepartment: values.subDepartment || undefined,
       priority: values.priority as RequestPriority,
       issues: ticketIssues,
+      assets: [],
+      customer: undefined,
     });
     onOpenChange(false);
   };

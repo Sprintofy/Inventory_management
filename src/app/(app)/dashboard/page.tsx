@@ -4,14 +4,12 @@ import * as React from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
+  ArrowUpRight,
   Boxes,
   CalendarDays,
   ClipboardList,
-  IndianRupee,
   Package,
   PackageX,
-  ArrowUpRight,
-  ArrowDownRight,
 } from "lucide-react";
 import { useApp } from "@/store/app-store";
 import { StatCard } from "@/components/ui/StatCard";
@@ -21,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { InventoryChart, DepartmentChart, StockHealthChart } from "@/components/dashboard/charts";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useFakeLoading } from "@/hooks/use-fake-loading";
-import { formatCompact, formatCurrency, formatNumber, timeAgo, cn } from "@/lib/utils";
+import { formatNumber, timeAgo } from "@/lib/utils";
 import { stockHealth as seedStockHealth, departments } from "@/data/mock";
 
 function Greeting() {
@@ -63,9 +61,8 @@ export default function DashboardPage() {
     const totalStock = items.reduce((s, i) => s + i.quantity, 0);
     const lowStock = items.filter((i) => i.status === "low-stock").length;
     const outOfStock = items.filter((i) => i.status === "out-of-stock").length;
-    const value = items.reduce((s, i) => s + i.quantity * i.unitCost, 0);
     const pendingRequests = state.requests.filter((r) => r.status === "pending" && (activeDepartment === "all" || r.department === activeDepartment)).length;
-    return { totalItems, totalStock, lowStock, outOfStock, value, pendingRequests };
+    return { totalItems, totalStock, lowStock, outOfStock, pendingRequests };
   }, [items, state.requests, activeDepartment]);
 
   const deptChart = React.useMemo(() => {
@@ -127,13 +124,12 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
         <StatCard icon={Boxes} label="Total Items" value={formatNumber(stats.totalItems)} change={4.2} trend="up" loading={loading} iconClass="bg-primary/10 text-primary" />
         <StatCard icon={Package} label="Total Stock" value={formatNumber(stats.totalStock)} change={2.8} trend="up" loading={loading} iconClass="bg-sky-500/10 text-sky-500" />
         <StatCard icon={AlertTriangle} label="Low Stock" value={formatNumber(stats.lowStock)} change={-3.1} trend="down" loading={loading} iconClass="bg-warning/15 text-warning" />
         <StatCard icon={PackageX} label="Out of Stock" value={formatNumber(stats.outOfStock)} change={1.4} trend="up" loading={loading} iconClass="bg-danger/10 text-danger" />
         <StatCard icon={ClipboardList} label="Pending Requests" value={formatNumber(stats.pendingRequests)} change={-12.5} trend="down" loading={loading} iconClass="bg-violet-500/10 text-violet-500" />
-        <StatCard icon={IndianRupee} label="Inventory Value" value={formatCompact(stats.value)} change={5.6} trend="up" loading={loading} iconClass="bg-emerald-500/10 text-emerald-500" />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-3">
@@ -237,5 +233,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-export { cn, formatCurrency, ArrowDownRight };

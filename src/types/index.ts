@@ -16,19 +16,61 @@ export type AssetCondition = "new" | "good" | "fair" | "poor";
 
 export type TransactionType = "stock-in" | "stock-out" | "transfer" | "adjustment";
 
-export type TicketStatus = "open" | "in-progress" | "closed";
+export type TicketStatus = "open" | "in-progress" | "partially-resolved" | "resolved" | "closed";
+
+export type IssueStatus = "open" | "in-progress" | "resolved" | "closed";
+
+export type TicketAssetStatus = "in" | "out" | "in-transit";
+
+export type MovementType = "check-in" | "check-out" | "transfer";
 
 export interface TicketIssue {
   id: string;
-  text: string;
-  resolved: boolean;
+  assetId?: string;
+  title: string;
+  description?: string;
+  priority: RequestPriority;
+  status: IssueStatus;
+  assignedTo?: string;
+  createdAt: string;
   resolvedAt?: string;
+  resolution?: string;
+}
+
+export interface TicketAsset {
+  id: string;
+  assetId: string;
+  serialNumber?: string;
+  itemType: string;
+  name: string;
+  currentLocation: string;
+  previousLocation?: string;
+  status: TicketAssetStatus;
+  checkInDate?: string;
+  checkOutDate?: string;
+  notes?: string;
+}
+
+export interface AssetMovement {
+  id: string;
+  ticketId: string;
+  assetId: string;
+  serialNumber?: string;
+  itemType: string;
+  itemName: string;
+  movementType: MovementType;
+  fromLocation: string;
+  toLocation: string;
+  performedBy: string;
+  date: string;
+  remarks?: string;
 }
 
 export interface Ticket {
   id: string;
   title: string;
   description: string;
+  customer?: string;
   category: string;
   priority: RequestPriority;
   department: string;
@@ -36,6 +78,7 @@ export interface Ticket {
   createdBy: string;
   createdAt: string;
   status: TicketStatus;
+  assets: TicketAsset[];
   issues: TicketIssue[];
   closedBy?: string;
   closedAt?: string;

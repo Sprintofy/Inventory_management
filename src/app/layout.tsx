@@ -9,7 +9,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "InventoryOS — Enterprise Inventory Management",
+  title: "Altrox AI — Enterprise Inventory Management",
   description: "Modern inventory management platform for enterprises.",
 };
 

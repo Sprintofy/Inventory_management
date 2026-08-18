@@ -60,7 +60,7 @@ export default function LoginPage() {
             <Boxes className="size-6 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">InventoryOS</h1>
+            <h1 className="text-xl font-semibold tracking-tight">Altrox AI</h1>
             <p className="text-muted-foreground text-sm">Enterprise Inventory Management</p>
           </div>
         </div>

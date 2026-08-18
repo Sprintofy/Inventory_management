@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Boxes, ChevronsLeft, LifeBuoy, LogOut, ShieldCheck } from "lucide-react";
+import { ChevronsLeft, LifeBuoy, LogOut, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/store/app-store";
 import { navForRole, bottomNav } from "@/components/layout/nav";
@@ -79,16 +79,13 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
       >
         <Link
           href="/dashboard"
-          className="flex min-w-0 items-center gap-2.5"
+          className="flex min-w-0 items-center"
           onClick={onNavigate}
         >
-          <div className="bg-primary flex size-8 shrink-0 items-center justify-center rounded-lg">
-            <Boxes className="size-4.5 text-white" />
-          </div>
           {!collapsed && (
             <div className="min-w-0">
               <p className="text-sm leading-tight font-semibold tracking-tight text-white">
-                InventoryOS
+                Altrox AI
               </p>
               <p className="text-sidebar-foreground/50 text-[10px] leading-tight tracking-wide uppercase">
                 Enterprise Inventory

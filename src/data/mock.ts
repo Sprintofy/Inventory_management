@@ -1,6 +1,7 @@
 import type {
   Activity,
   Asset,
+  AssetMovement,
   Category,
   Department,
   InventoryItem,
@@ -12,6 +13,8 @@ import type {
   StockTransaction,
   Supplier,
   Ticket,
+  TicketAsset,
+  TicketIssue,
   Transfer,
   User,
   DemoAccount,
@@ -810,110 +813,194 @@ export const activities: Activity[] = activityLog.map(([user, action, module, it
   date: iso(ago * MINUTE),
 }));
 
+const ticketIssue = (i: number, title: string, opts: Partial<TicketIssue> & { agoMin: number }): TicketIssue => ({
+  id: `ISS-${String(i).padStart(3, "0")}`,
+  title,
+  priority: "medium",
+  status: "open",
+  createdAt: iso(opts.agoMin * MINUTE),
+  ...opts,
+});
+
+const ticketAsset = (i: number, a: Omit<TicketAsset, "id">): TicketAsset => ({
+  id: `TAS-${String(i).padStart(3, "0")}`,
+  ...a,
+});
+
 export const tickets: Ticket[] = [
   {
-    id: "TKT-2026-014", title: "Server Room AC not cooling", description: "The air conditioner in the server room is not cooling below 28°C. Temperature trending up, risk of hardware failure.", category: "Maintenance", priority: "critical", department: "IT", subDepartment: "Network & Security", createdBy: "Admin", createdAt: iso(40 * MINUTE), status: "open",
+    id: "TKT-2026-014", title: "Server Room AC not cooling", description: "The air conditioner in the server room is not cooling below 28°C. Temperature trending up, risk of hardware failure.", customer: "IT Infrastructure", category: "Maintenance", priority: "critical", department: "IT", subDepartment: "Network & Security", createdBy: "Admin", createdAt: iso(40 * MINUTE), status: "open",
+    assets: [
+      ticketAsset(1, { assetId: "ACU-01", serialNumber: "SN-ACU-2101", itemType: "AC Unit", name: "Server Room Air Conditioner 5TR", currentLocation: "Repair Center", previousLocation: "Customer", status: "in", checkInDate: iso(2 * DAY) }),
+      ticketAsset(2, { assetId: "FAN-01", serialNumber: "SN-FAN-8840", itemType: "Fan", name: "Ceiling Fan — Server Room Backup", currentLocation: "Repair Center", previousLocation: "Customer", status: "in", checkInDate: iso(2 * DAY) }),
+    ],
     issues: [
-      { id: "ISS-001", text: "AC not cooling below 28°C", resolved: false },
-      { id: "ISS-002", text: "Ambient temperature rising above threshold", resolved: false },
-      { id: "ISS-003", text: "Condenser drain line blocked", resolved: false },
+      ticketIssue(1, "AC not cooling below 28°C", { agoMin: 38, priority: "critical", assignedTo: "Suresh Nair", description: "Compressor runs but no cooling effect observed." }),
+      ticketIssue(2, "Ambient temperature rising above threshold", { agoMin: 30, priority: "high", assignedTo: "Suresh Nair", description: "Server room temperature trending above 30°C." }),
+      ticketIssue(3, "Condenser drain line blocked", { agoMin: 25, priority: "medium", assignedTo: "Pooja Reddy", description: "Water leaking near the indoor unit." }),
     ],
   },
   {
-    id: "TKT-2026-013", title: "Laptop battery swelling — MacBook Pro", description: "MacBook Pro 14\" assigned to Finance shows a swollen battery. Needs replacement before it damages the chassis.", category: "IT Support", priority: "high", department: "Finance", subDepartment: "Accounting", createdBy: "Arun Mehta", createdAt: iso(3 * HOUR), status: "open",
+    id: "TKT-2026-013", title: "Laptop battery swelling — MacBook Pro", description: "MacBook Pro 14\" assigned to Finance shows a swollen battery. Needs replacement before it damages the chassis.", customer: "Arun Mehta", category: "IT Support", priority: "high", department: "Finance", subDepartment: "Accounting", createdBy: "Arun Mehta", createdAt: iso(3 * HOUR), status: "in-progress",
+    assets: [
+      ticketAsset(3, { assetId: "PC-001", serialNumber: "SN-MBP-3391", itemType: "PC", name: "MacBook Pro 14\" — Finance", currentLocation: "Customer", previousLocation: "Technician Bench", status: "out", checkInDate: iso(3 * DAY), checkOutDate: iso(4 * HOUR) }),
+    ],
     issues: [
-      { id: "ISS-004", text: "Swollen battery — risk of chassis damage", resolved: false },
-      { id: "ISS-005", text: "Battery replacement under warranty", resolved: false },
+      ticketIssue(4, "Swollen battery — risk of chassis damage", { agoMin: 170, priority: "critical", status: "resolved", resolvedAt: iso(5 * HOUR), resolution: "Battery pack replaced under warranty", assignedTo: "Aditya Patel", description: "Battery swelling visible on bottom case." }),
+      ticketIssue(5, "Post-replacement diagnostics", { agoMin: 170, priority: "high", status: "in-progress", assignedTo: "Aditya Patel", description: "Run full diagnostics after battery swap." }),
     ],
   },
   {
-    id: "TKT-2026-012", title: "Hydraulic oil stock replenishment", description: "Machine 3 hydraulic system is out of oil. Need urgent restock of ISO VG 68 drums and a spill kit inspection.", category: "Inventory", priority: "critical", department: "Engineering", subDepartment: "Mechanical Engineering", createdBy: "Rajesh Kumar", createdAt: iso(6 * HOUR), status: "in-progress",
+    id: "TKT-2026-012", title: "Hydraulic oil stock replenishment", description: "Machine 3 hydraulic system is out of oil. Need urgent restock of ISO VG 68 drums and a spill kit inspection.", customer: "Machine Shop", category: "Inventory", priority: "critical", department: "Engineering", subDepartment: "Mechanical Engineering", createdBy: "Rajesh Kumar", createdAt: iso(6 * HOUR), status: "partially-resolved",
+    assets: [
+      ticketAsset(4, { assetId: "MCH-03", serialNumber: "SN-MCH-0312", itemType: "Machine", name: "Hydraulic Press — Machine 3", currentLocation: "Engineering Store", status: "in" }),
+      ticketAsset(5, { assetId: "SPK-01", serialNumber: "SN-SPK-4401", itemType: "Spill Kit", name: "Spill Kit — Machine 3 bay", currentLocation: "Engineering Store", status: "in" }),
+    ],
     issues: [
-      { id: "ISS-006", text: "Machine 3 hydraulic oil out of stock", resolved: false },
-      { id: "ISS-007", text: "Restock ISO VG 68 drums (PO raised)", resolved: true, resolvedAt: iso(2 * HOUR) },
-      { id: "ISS-008", text: "Spill kit inspection", resolved: false },
+      ticketIssue(6, "Machine 3 hydraulic oil out of stock", { agoMin: 350, priority: "critical", status: "in-progress", assignedTo: "Rohan Gupta", description: "ISO VG 68 level below minimum." }),
+      ticketIssue(7, "Restock ISO VG 68 drums (PO raised)", { agoMin: 340, priority: "high", status: "resolved", resolvedAt: iso(2 * HOUR), resolution: "PO-2026-0142 raised with PetroSupply Co.", assignedTo: "Deepak Verma" }),
+      ticketIssue(8, "Spill kit inspection", { agoMin: 330, priority: "medium", status: "open", assignedTo: "Farhan Ali", description: "Check expiry and contents of spill kit." }),
     ],
   },
   {
-    id: "TKT-2026-011", title: "New hire onboarding — 12 workstations", description: "12 new joiners joining next Monday. Need laptops, monitors and docking stations staged and configured.", category: "IT Support", priority: "high", department: "IT", subDepartment: "Hardware Support", createdBy: "Priya Sharma", createdAt: iso(1 * DAY), status: "open",
+    id: "TKT-2026-011", title: "New hire onboarding — 12 workstations", description: "12 new joiners joining next Monday. Need laptops, monitors and docking stations staged and configured.", customer: "HR Onboarding", category: "IT Support", priority: "high", department: "IT", subDepartment: "Hardware Support", createdBy: "Priya Sharma", createdAt: iso(1 * DAY), status: "open",
+    assets: [
+      ticketAsset(6, { assetId: "LAP-001", serialNumber: "SN-LPT-5520", itemType: "Laptop", name: "Dell Latitude 7440 — New Joiner", currentLocation: "Engineering", previousLocation: "Main Warehouse", status: "out", checkOutDate: iso(1 * DAY) }),
+      ticketAsset(7, { assetId: "MON-001", serialNumber: "SN-MON-1180", itemType: "Monitor", name: "Dell UltraSharp 27\" — New Joiner", currentLocation: "Engineering", previousLocation: "IT Store", status: "out", checkOutDate: iso(1 * DAY) }),
+      ticketAsset(8, { assetId: "DOC-001", serialNumber: "SN-DCK-7702", itemType: "Docking Station", name: "USB-C Dock — New Joiner", currentLocation: "IT Store", status: "in" }),
+    ],
     issues: [
-      { id: "ISS-009", text: "Stage 12 laptops", resolved: false },
-      { id: "ISS-010", text: "Stage 12 monitors", resolved: false },
-      { id: "ISS-011", text: "Configure docking stations", resolved: false },
+      ticketIssue(9, "Stage 12 laptops", { agoMin: 1400, priority: "high", assignedTo: "Aditya Patel", description: "Image and configure laptops for new joiners." }),
+      ticketIssue(10, "Stage 12 monitors", { agoMin: 1400, priority: "medium", assignedTo: "Neha Kulkarni", description: "Stage monitors with cables." }),
+      ticketIssue(11, "Configure docking stations", { agoMin: 1400, priority: "medium", assignedTo: "Aditya Patel", description: "Pair docks with laptops." }),
     ],
   },
   {
-    id: "TKT-2026-010", title: "Warehouse racking safety inspection", description: "Aisle 2 pallet racking has a bent upright from forklift impact. Schedule structural inspection and repair.", category: "Maintenance", priority: "high", department: "Logistics", subDepartment: "Warehouse Operations", createdAt: iso(2 * DAY), createdBy: "Vikram Singh", status: "in-progress",
+    id: "TKT-2026-010", title: "Warehouse racking safety inspection", description: "Aisle 2 pallet racking has a bent upright from forklift impact. Schedule structural inspection and repair.", customer: "Warehouse Ops", category: "Maintenance", priority: "high", department: "Logistics", subDepartment: "Warehouse Operations", createdBy: "Vikram Singh", createdAt: iso(2 * DAY), status: "in-progress",
+    assets: [
+      ticketAsset(9, { assetId: "RAK-02", serialNumber: "SN-RAK-2210", itemType: "Rack", name: "Pallet Racking — Aisle 2 Upright", currentLocation: "Main Warehouse", status: "in" }),
+    ],
     issues: [
-      { id: "ISS-012", text: "Bent upright on Aisle 2 racking", resolved: false },
-      { id: "ISS-013", text: "Structural inspection scheduled", resolved: false },
+      ticketIssue(12, "Bent upright on Aisle 2 racking", { agoMin: 2850, priority: "high", status: "in-progress", assignedTo: "Suresh Nair", description: "Visible deformation from forklift impact." }),
+      ticketIssue(13, "Structural inspection scheduled", { agoMin: 2800, priority: "medium", assignedTo: "Karan Johar", description: "Third-party inspection to be scheduled." }),
     ],
   },
   {
-    id: "TKT-2026-009", title: "Printer toner out — Admin wing", description: "HP LaserJet Pro M404dn in the admin wing shows low toner. Requesting replacement cartridge.", category: "Inventory", priority: "medium", department: "Administration", subDepartment: "Office Management", createdBy: "Anita Desai", createdAt: iso(2 * DAY), status: "open",
+    id: "TKT-2026-009", title: "Printer toner out — Admin wing", description: "HP LaserJet Pro M404dn in the admin wing shows low toner. Requesting replacement cartridge.", customer: "Admin Wing", category: "Inventory", priority: "medium", department: "Administration", subDepartment: "Office Management", createdBy: "Anita Desai", createdAt: iso(2 * DAY), status: "open",
+    assets: [
+      ticketAsset(10, { assetId: "PRN-01", serialNumber: "SN-PRN-3355", itemType: "Printer", name: "HP LaserJet Pro M404dn", currentLocation: "Repair Center", previousLocation: "Administration Room", status: "in", checkInDate: iso(1 * DAY) }),
+    ],
     issues: [
-      { id: "ISS-014", text: "Toner cartridge low", resolved: false },
-      { id: "ISS-015", text: "Replacement cartridge stock", resolved: false },
+      ticketIssue(14, "Toner cartridge low", { agoMin: 2860, priority: "medium", assignedTo: "Neha Kulkarni", description: "Printer reports low toner." }),
+      ticketIssue(15, "Replacement cartridge stock", { agoMin: 2850, priority: "low", assignedTo: "Anita Desai", description: "Check replacement cartridge availability." }),
     ],
   },
   {
-    id: "TKT-2026-008", title: "Fire extinguisher compliance check", description: "Annual fire safety audit next week. All ABC extinguishers need pressure check and tagging.", category: "Safety", priority: "medium", department: "Operations", subDepartment: "Safety & Compliance", createdBy: "Sanjay Gupta", createdAt: iso(3 * DAY), status: "closed", closedBy: "Admin", closedAt: iso(1 * DAY), resolution: "All 14 extinguishers inspected, tagged and logged in compliance register",
+    id: "TKT-2026-008", title: "Fire extinguisher compliance check", description: "Annual fire safety audit next week. All ABC extinguishers need pressure check and tagging.", customer: "Safety Team", category: "Safety", priority: "medium", department: "Operations", subDepartment: "Safety & Compliance", createdBy: "Sanjay Gupta", createdAt: iso(3 * DAY), status: "closed", closedBy: "Admin", closedAt: iso(1 * DAY), resolution: "All 14 extinguishers inspected, tagged and logged in compliance register",
+    assets: [
+      ticketAsset(11, { assetId: "EXT-01", serialNumber: "SN-EXT-1001", itemType: "Extinguisher", name: "Fire Extinguisher ABC 4kg", currentLocation: "Main Warehouse", status: "in", checkInDate: iso(3 * DAY), checkOutDate: iso(1 * DAY) }),
+      ticketAsset(12, { assetId: "EXT-02", serialNumber: "SN-EXT-1002", itemType: "Extinguisher", name: "Fire Extinguisher ABC 4kg", currentLocation: "Main Warehouse", status: "in", checkInDate: iso(3 * DAY), checkOutDate: iso(1 * DAY) }),
+    ],
     issues: [
-      { id: "ISS-016", text: "Pressure check on all extinguishers", resolved: true, resolvedAt: iso(1 * DAY) },
-      { id: "ISS-017", text: "Tagging and compliance register", resolved: true, resolvedAt: iso(1 * DAY) },
+      ticketIssue(16, "Pressure check on all extinguishers", { agoMin: 4260, priority: "high", status: "resolved", resolvedAt: iso(1 * DAY), resolution: "All extinguishers within pressure range.", assignedTo: "Sanjay Gupta" }),
+      ticketIssue(17, "Tagging and compliance register", { agoMin: 4250, priority: "medium", status: "resolved", resolvedAt: iso(1 * DAY), resolution: "Tagged and logged in compliance register.", assignedTo: "Sanjay Gupta" }),
     ],
   },
   {
-    id: "TKT-2026-007", title: "Training lab projector flickering", description: "Epson EB-X49 projector in training lab flickers after 20 minutes of use. Likely lamp end-of-life.", category: "Maintenance", priority: "low", department: "Training", subDepartment: "Training Lab", createdBy: "Meera Iyer", createdAt: iso(4 * DAY), status: "closed", closedBy: "Admin", closedAt: iso(2 * DAY), resolution: "Lamp replaced under warranty, projector recalibrated",
+    id: "TKT-2026-007", title: "Training lab projector flickering", description: "Epson EB-X49 projector in training lab flickers after 20 minutes of use. Likely lamp end-of-life.", customer: "Training Lab", category: "Maintenance", priority: "low", department: "Training", subDepartment: "Training Lab", createdBy: "Meera Iyer", createdAt: iso(4 * DAY), status: "closed", closedBy: "Admin", closedAt: iso(2 * DAY), resolution: "Lamp replaced under warranty, projector recalibrated",
+    assets: [
+      ticketAsset(13, { assetId: "PRJ-01", serialNumber: "SN-PRJ-0098", itemType: "Projector", name: "Epson EB-X49 Projector", currentLocation: "Training Lab", previousLocation: "Technician Bench", status: "out", checkInDate: iso(5 * DAY), checkOutDate: iso(3 * DAY) }),
+    ],
     issues: [
-      { id: "ISS-018", text: "Projector lamp flickering", resolved: true, resolvedAt: iso(2 * DAY) },
-      { id: "ISS-019", text: "Recalibrate projector after lamp swap", resolved: true, resolvedAt: iso(2 * DAY) },
+      ticketIssue(18, "Projector lamp flickering", { agoMin: 5730, priority: "low", status: "resolved", resolvedAt: iso(2 * DAY), resolution: "Lamp replaced under warranty.", assignedTo: "Aditya Patel" }),
+      ticketIssue(19, "Recalibrate projector after lamp swap", { agoMin: 5700, priority: "low", status: "resolved", resolvedAt: iso(2 * DAY), resolution: "Projector recalibrated and verified.", assignedTo: "Aditya Patel" }),
     ],
   },
   {
-    id: "TKT-2026-006", title: "Stationery requisition for Q3", description: "Quarterly stationery requisition — pens, sticky notes, laminating pouches and A4 paper for all departments.", category: "Procurement", priority: "low", department: "Administration", subDepartment: "Facilities", createdBy: "Anita Desai", createdAt: iso(5 * DAY), status: "closed", closedBy: "Admin", closedAt: iso(3 * DAY), resolution: "PO-2026-0145 raised and ordered from OfficeWorld Supplies",
+    id: "TKT-2026-006", title: "Stationery requisition for Q3", description: "Quarterly stationery requisition — pens, sticky notes, laminating pouches and A4 paper for all departments.", customer: "All Departments", category: "Procurement", priority: "low", department: "Administration", subDepartment: "Facilities", createdBy: "Anita Desai", createdAt: iso(5 * DAY), status: "closed", closedBy: "Admin", closedAt: iso(3 * DAY), resolution: "PO-2026-0145 raised and ordered from OfficeWorld Supplies",
+    assets: [
+      ticketAsset(14, { assetId: "STN-01", itemType: "Stationery", name: "Q3 Stationery Bundle", currentLocation: "Administration Room", status: "in" }),
+    ],
     issues: [
-      { id: "ISS-020", text: "Consolidate department stationery list", resolved: true, resolvedAt: iso(3 * DAY) },
-      { id: "ISS-021", text: "Raise purchase order", resolved: true, resolvedAt: iso(3 * DAY) },
+      ticketIssue(20, "Consolidate department stationery list", { agoMin: 7180, priority: "low", status: "resolved", resolvedAt: iso(3 * DAY), resolution: "List consolidated across departments.", assignedTo: "Anita Desai" }),
+      ticketIssue(21, "Raise purchase order", { agoMin: 7150, priority: "low", status: "resolved", resolvedAt: iso(3 * DAY), resolution: "PO raised with OfficeWorld Supplies.", assignedTo: "Deepak Verma" }),
     ],
   },
   {
-    id: "TKT-2026-005", title: "Conveyor belt drive motor noise", description: "Conveyor drive motor 7.5kW in logistics bay making grinding noise during startup. Needs inspection.", category: "Maintenance", priority: "high", department: "Logistics", subDepartment: "Transport & Dispatch", createdBy: "Vikram Singh", createdAt: iso(6 * DAY), status: "in-progress",
+    id: "TKT-2026-005", title: "Conveyor belt drive motor noise", description: "Conveyor drive motor 7.5kW in logistics bay making grinding noise during startup. Needs inspection.", customer: "Logistics Bay", category: "Maintenance", priority: "high", department: "Logistics", subDepartment: "Transport & Dispatch", createdBy: "Vikram Singh", createdAt: iso(6 * DAY), status: "in-progress",
+    assets: [
+      ticketAsset(15, { assetId: "MOT-01", serialNumber: "SN-MOT-5577", itemType: "Motor", name: "Conveyor Drive Motor 7.5kW", currentLocation: "Technician Bench", previousLocation: "Maintenance Workshop", status: "in-transit", checkInDate: iso(4 * DAY) }),
+    ],
     issues: [
-      { id: "ISS-022", text: "Grinding noise during startup", resolved: false },
-      { id: "ISS-023", text: "Bearing inspection", resolved: false },
+      ticketIssue(22, "Grinding noise during startup", { agoMin: 8580, priority: "high", status: "in-progress", assignedTo: "Pooja Reddy", description: "Grinding noise heard during startup." }),
+      ticketIssue(23, "Bearing inspection", { agoMin: 8550, priority: "medium", assignedTo: "Pooja Reddy", description: "Inspect and replace bearings if needed." }),
     ],
   },
   {
-    id: "TKT-2026-004", title: "Wi-Fi dead zone — Engineering floor", description: "Engineering floor has weak Wi-Fi near the CAD workstations. Access point needed or existing one relocated.", category: "IT Support", priority: "medium", department: "Engineering", subDepartment: "Design & R&D", createdBy: "Rajesh Kumar", createdAt: iso(7 * DAY), status: "closed", closedBy: "Admin", closedAt: iso(5 * DAY), resolution: "Ubiquiti UniFi AP installed at CAD bay, coverage verified",
+    id: "TKT-2026-004", title: "Wi-Fi dead zone — Engineering floor", description: "Engineering floor has weak Wi-Fi near the CAD workstations. Access point needed or existing one relocated.", customer: "Engineering", category: "IT Support", priority: "medium", department: "Engineering", subDepartment: "Design & R&D", createdBy: "Rajesh Kumar", createdAt: iso(7 * DAY), status: "closed", closedBy: "Admin", closedAt: iso(5 * DAY), resolution: "Ubiquiti UniFi AP installed at CAD bay, coverage verified",
+    assets: [
+      ticketAsset(16, { assetId: "AP-01", serialNumber: "SN-UAP-3344", itemType: "Access Point", name: "Ubiquiti UniFi AP AC Pro", currentLocation: "Engineering Store", status: "in" }),
+    ],
     issues: [
-      { id: "ISS-024", text: "Weak Wi-Fi at CAD workstations", resolved: true, resolvedAt: iso(5 * DAY) },
-      { id: "ISS-025", text: "Install/relocate access point", resolved: true, resolvedAt: iso(5 * DAY) },
+      ticketIssue(24, "Weak Wi-Fi at CAD workstations", { agoMin: 10020, priority: "medium", status: "resolved", resolvedAt: iso(5 * DAY), resolution: "Coverage verified after AP install.", assignedTo: "Neha Kulkarni" }),
+      ticketIssue(25, "Install/relocate access point", { agoMin: 10000, priority: "medium", status: "resolved", resolvedAt: iso(5 * DAY), resolution: "AP installed at CAD bay.", assignedTo: "Aditya Patel" }),
     ],
   },
   {
-    id: "TKT-2026-003", title: "CNC machine coolant leak", description: "CNC Milling Machine M3 shows coolant leak under the spindle. Floor mat saturated, needs cleanup and seal replacement.", category: "Maintenance", priority: "high", department: "Engineering", subDepartment: "Mechanical Engineering", createdBy: "Rohan Gupta", createdAt: iso(8 * DAY), status: "closed", closedBy: "Admin", closedAt: iso(6 * DAY), resolution: "Spindle seal replaced, coolant topped up and leak tested",
+    id: "TKT-2026-003", title: "CNC machine coolant leak", description: "CNC Milling Machine M3 shows coolant leak under the spindle. Floor mat saturated, needs cleanup and seal replacement.", customer: "Machine Shop", category: "Maintenance", priority: "high", department: "Engineering", subDepartment: "Mechanical Engineering", createdBy: "Rohan Gupta", createdAt: iso(8 * DAY), status: "closed", closedBy: "Admin", closedAt: iso(6 * DAY), resolution: "Spindle seal replaced, coolant topped up and leak tested",
+    assets: [
+      ticketAsset(17, { assetId: "CNC-03", serialNumber: "SN-CNC-0312", itemType: "Machine", name: "CNC Milling Machine M3", currentLocation: "Engineering Store", previousLocation: "Repair Center", status: "out", checkInDate: iso(7 * DAY), checkOutDate: iso(6 * DAY) }),
+    ],
     issues: [
-      { id: "ISS-026", text: "Coolant leak under spindle", resolved: true, resolvedAt: iso(6 * DAY) },
-      { id: "ISS-027", text: "Replace spindle seal", resolved: true, resolvedAt: iso(6 * DAY) },
-      { id: "ISS-028", text: "Cleanup saturated floor mat", resolved: true, resolvedAt: iso(6 * DAY) },
+      ticketIssue(26, "Coolant leak under spindle", { agoMin: 11480, priority: "high", status: "resolved", resolvedAt: iso(6 * DAY), resolution: "Leak contained after seal replacement.", assignedTo: "Farhan Ali" }),
+      ticketIssue(27, "Replace spindle seal", { agoMin: 11460, priority: "high", status: "resolved", resolvedAt: iso(6 * DAY), resolution: "Spindle seal replaced.", assignedTo: "Farhan Ali" }),
+      ticketIssue(28, "Cleanup saturated floor mat", { agoMin: 11440, priority: "low", status: "resolved", resolvedAt: iso(6 * DAY), resolution: "Floor mat cleaned and replaced.", assignedTo: "Rohan Gupta" }),
     ],
   },
   {
-    id: "TKT-2026-002", title: "Safety boots shortage", description: "Site crew safety boots size 8 below reorder level. Requesting purchase of 20 pairs before next deployment.", category: "Procurement", priority: "medium", department: "Operations", subDepartment: "Production", createdBy: "Sanjay Gupta", createdAt: iso(9 * DAY), status: "closed", closedBy: "Admin", closedAt: iso(7 * DAY), resolution: "Purchase order placed with SafeGuard PPE for 40 pairs",
+    id: "TKT-2026-002", title: "Safety boots shortage", description: "Site crew safety boots size 8 below reorder level. Requesting purchase of 20 pairs before next deployment.", customer: "Site Crew", category: "Procurement", priority: "medium", department: "Operations", subDepartment: "Production", createdBy: "Sanjay Gupta", createdAt: iso(9 * DAY), status: "closed", closedBy: "Admin", closedAt: iso(7 * DAY), resolution: "Purchase order placed with SafeGuard PPE for 40 pairs",
+    assets: [
+      ticketAsset(18, { assetId: "BTS-08", itemType: "Boots", name: "Safety Boots Size 8 — Bulk Pack", currentLocation: "Main Warehouse", status: "in" }),
+    ],
     issues: [
-      { id: "ISS-029", text: "Size 8 boots below reorder level", resolved: true, resolvedAt: iso(7 * DAY) },
-      { id: "ISS-030", text: "Place purchase order for 20+ pairs", resolved: true, resolvedAt: iso(7 * DAY) },
+      ticketIssue(29, "Size 8 boots below reorder level", { agoMin: 12920, priority: "medium", status: "resolved", resolvedAt: iso(7 * DAY), resolution: "Stock below reorder level confirmed.", assignedTo: "Sanjay Gupta" }),
+      ticketIssue(30, "Place purchase order for 20+ pairs", { agoMin: 12900, priority: "medium", status: "resolved", resolvedAt: iso(7 * DAY), resolution: "PO placed for 40 pairs.", assignedTo: "Deepak Verma" }),
     ],
   },
   {
-    id: "TKT-2026-001", title: "UPS battery backup failing", description: "APC UPS 1500VA in server room drops to battery backup immediately on power cut. Batteries need replacement.", category: "IT Support", priority: "critical", department: "IT", subDepartment: "Network & Security", createdBy: "Priya Sharma", createdAt: iso(10 * DAY), status: "closed", closedBy: "Admin", closedAt: iso(8 * DAY), resolution: "Battery pack replaced under service contract, runtime tested",
+    id: "TKT-2026-001", title: "UPS battery backup failing", description: "APC UPS 1500VA in server room drops to battery backup immediately on power cut. Batteries need replacement.", customer: "Server Room", category: "IT Support", priority: "critical", department: "IT", subDepartment: "Network & Security", createdBy: "Priya Sharma", createdAt: iso(10 * DAY), status: "closed", closedBy: "Admin", closedAt: iso(8 * DAY), resolution: "Battery pack replaced under service contract, runtime tested",
+    assets: [
+      ticketAsset(19, { assetId: "UPS-01", serialNumber: "SN-UPS-1500", itemType: "UPS", name: "APC UPS 1500VA", currentLocation: "Server Room", previousLocation: "Technician Bench", status: "out", checkInDate: iso(9 * DAY), checkOutDate: iso(8 * DAY) }),
+    ],
     issues: [
-      { id: "ISS-031", text: "Battery backup failing on power cut", resolved: true, resolvedAt: iso(8 * DAY) },
-      { id: "ISS-032", text: "Replace battery pack", resolved: true, resolvedAt: iso(8 * DAY) },
-      { id: "ISS-033", text: "Runtime test after replacement", resolved: true, resolvedAt: iso(8 * DAY) },
+      ticketIssue(31, "Battery backup failing on power cut", { agoMin: 14350, priority: "critical", status: "resolved", resolvedAt: iso(8 * DAY), resolution: "Runtime test passed after replacement.", assignedTo: "Aditya Patel" }),
+      ticketIssue(32, "Replace battery pack", { agoMin: 14330, priority: "critical", status: "resolved", resolvedAt: iso(8 * DAY), resolution: "Battery pack replaced under contract.", assignedTo: "Aditya Patel" }),
+      ticketIssue(33, "Runtime test after replacement", { agoMin: 14310, priority: "high", status: "resolved", resolvedAt: iso(8 * DAY), resolution: "Runtime verified at 40+ minutes.", assignedTo: "Neha Kulkarni" }),
     ],
   },
+];
+
+export const assetMovements: AssetMovement[] = [
+  { id: "MOV-001", ticketId: "TKT-2026-014", assetId: "ACU-01", serialNumber: "SN-ACU-2101", itemType: "AC Unit", itemName: "Server Room Air Conditioner 5TR", movementType: "check-in", fromLocation: "Customer", toLocation: "Repair Center", performedBy: "Admin", date: iso(2 * DAY), remarks: "Received for cooling fault" },
+  { id: "MOV-002", ticketId: "TKT-2026-014", assetId: "ACU-01", serialNumber: "SN-ACU-2101", itemType: "AC Unit", itemName: "Server Room Air Conditioner 5TR", movementType: "transfer", fromLocation: "Repair Center", toLocation: "Technician Bench", performedBy: "Suresh Nair", date: iso(1 * DAY), remarks: "Assigned to AC technician" },
+  { id: "MOV-003", ticketId: "TKT-2026-014", assetId: "FAN-01", serialNumber: "SN-FAN-8840", itemType: "Fan", itemName: "Ceiling Fan — Server Room Backup", movementType: "check-in", fromLocation: "Customer", toLocation: "Repair Center", performedBy: "Admin", date: iso(2 * DAY), remarks: "Backup fan for server room" },
+  { id: "MOV-004", ticketId: "TKT-2026-013", assetId: "PC-001", serialNumber: "SN-MBP-3391", itemType: "PC", itemName: "MacBook Pro 14\" — Finance", movementType: "check-in", fromLocation: "Customer", toLocation: "Repair Center", performedBy: "Arun Mehta", date: iso(3 * DAY), remarks: "Swollen battery" },
+  { id: "MOV-005", ticketId: "TKT-2026-013", assetId: "PC-001", serialNumber: "SN-MBP-3391", itemType: "PC", itemName: "MacBook Pro 14\" — Finance", movementType: "transfer", fromLocation: "Repair Center", toLocation: "Technician Bench", performedBy: "Admin", date: iso(2 * DAY), remarks: "Handed to technician" },
+  { id: "MOV-006", ticketId: "TKT-2026-013", assetId: "PC-001", serialNumber: "SN-MBP-3391", itemType: "PC", itemName: "MacBook Pro 14\" — Finance", movementType: "check-out", fromLocation: "Technician Bench", toLocation: "Customer", performedBy: "Aditya Patel", date: iso(4 * HOUR), remarks: "Battery replaced, returned to customer" },
+  { id: "MOV-007", ticketId: "TKT-2026-011", assetId: "LAP-001", serialNumber: "SN-LPT-5520", itemType: "Laptop", itemName: "Dell Latitude 7440 — New Joiner", movementType: "check-out", fromLocation: "Main Warehouse", toLocation: "Engineering", performedBy: "Priya Sharma", date: iso(1 * DAY), remarks: "Issued for onboarding" },
+  { id: "MOV-008", ticketId: "TKT-2026-011", assetId: "MON-001", serialNumber: "SN-MON-1180", itemType: "Monitor", itemName: "Dell UltraSharp 27\" — New Joiner", movementType: "check-out", fromLocation: "IT Store", toLocation: "Engineering", performedBy: "Neha Kulkarni", date: iso(1 * DAY), remarks: "Issued for onboarding" },
+  { id: "MOV-009", ticketId: "TKT-2026-009", assetId: "PRN-01", serialNumber: "SN-PRN-3355", itemType: "Printer", itemName: "HP LaserJet Pro M404dn", movementType: "check-in", fromLocation: "Administration Room", toLocation: "Repair Center", performedBy: "Anita Desai", date: iso(1 * DAY), remarks: "Toner issue diagnosis" },
+  { id: "MOV-010", ticketId: "TKT-2026-007", assetId: "PRJ-01", serialNumber: "SN-PRJ-0098", itemType: "Projector", itemName: "Epson EB-X49 Projector", movementType: "check-in", fromLocation: "Training Lab", toLocation: "Repair Center", performedBy: "Meera Iyer", date: iso(5 * DAY), remarks: "Lamp flickering" },
+  { id: "MOV-011", ticketId: "TKT-2026-007", assetId: "PRJ-01", serialNumber: "SN-PRJ-0098", itemType: "Projector", itemName: "Epson EB-X49 Projector", movementType: "transfer", fromLocation: "Repair Center", toLocation: "Technician Bench", performedBy: "Admin", date: iso(4 * DAY), remarks: "Lamp replacement" },
+  { id: "MOV-012", ticketId: "TKT-2026-007", assetId: "PRJ-01", serialNumber: "SN-PRJ-0098", itemType: "Projector", itemName: "Epson EB-X49 Projector", movementType: "check-out", fromLocation: "Technician Bench", toLocation: "Training Lab", performedBy: "Aditya Patel", date: iso(3 * DAY), remarks: "Returned after repair" },
+  { id: "MOV-013", ticketId: "TKT-2026-005", assetId: "MOT-01", serialNumber: "SN-MOT-5577", itemType: "Motor", itemName: "Conveyor Drive Motor 7.5kW", movementType: "check-in", fromLocation: "Logistics Bay", toLocation: "Maintenance Workshop", performedBy: "Vikram Singh", date: iso(4 * DAY), remarks: "Grinding noise" },
+  { id: "MOV-014", ticketId: "TKT-2026-005", assetId: "MOT-01", serialNumber: "SN-MOT-5577", itemType: "Motor", itemName: "Conveyor Drive Motor 7.5kW", movementType: "transfer", fromLocation: "Maintenance Workshop", toLocation: "Technician Bench", performedBy: "Suresh Nair", date: iso(3 * DAY), remarks: "Bearing inspection" },
+  { id: "MOV-015", ticketId: "TKT-2026-003", assetId: "CNC-03", serialNumber: "SN-CNC-0312", itemType: "Machine", itemName: "CNC Milling Machine M3", movementType: "check-in", fromLocation: "Engineering Store", toLocation: "Repair Center", performedBy: "Rohan Gupta", date: iso(7 * DAY), remarks: "Coolant leak" },
+  { id: "MOV-016", ticketId: "TKT-2026-003", assetId: "CNC-03", serialNumber: "SN-CNC-0312", itemType: "Machine", itemName: "CNC Milling Machine M3", movementType: "check-out", fromLocation: "Repair Center", toLocation: "Engineering Store", performedBy: "Farhan Ali", date: iso(6 * DAY), remarks: "Repair completed" },
+  { id: "MOV-017", ticketId: "TKT-2026-001", assetId: "UPS-01", serialNumber: "SN-UPS-1500", itemType: "UPS", itemName: "APC UPS 1500VA", movementType: "check-in", fromLocation: "Server Room", toLocation: "Repair Center", performedBy: "Priya Sharma", date: iso(9 * DAY), remarks: "Battery backup failing" },
+  { id: "MOV-018", ticketId: "TKT-2026-001", assetId: "UPS-01", serialNumber: "SN-UPS-1500", itemType: "UPS", itemName: "APC UPS 1500VA", movementType: "transfer", fromLocation: "Repair Center", toLocation: "Technician Bench", performedBy: "Admin", date: iso(8 * DAY), remarks: "Battery replacement" },
+  { id: "MOV-019", ticketId: "TKT-2026-001", assetId: "UPS-01", serialNumber: "SN-UPS-1500", itemType: "UPS", itemName: "APC UPS 1500VA", movementType: "check-out", fromLocation: "Technician Bench", toLocation: "Server Room", performedBy: "Aditya Patel", date: iso(8 * DAY), remarks: "Runtime verified, reinstalled" },
+  { id: "MOV-020", ticketId: "TKT-2026-014", assetId: "FAN-01", serialNumber: "SN-FAN-8840", itemType: "Fan", itemName: "Ceiling Fan — Server Room Backup", movementType: "transfer", fromLocation: "Repair Center", toLocation: "Technician Bench", performedBy: "Suresh Nair", date: iso(20 * HOUR), remarks: "Motor test pending" },
 ];
 
 export const notifications: NotificationItem[] = [

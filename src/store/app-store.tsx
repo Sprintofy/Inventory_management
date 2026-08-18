@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import type {
   Activity,
   Asset,
+  AssetMovement,
   Category,
   Department,
   InventoryItem,
@@ -19,11 +20,14 @@ import type {
   SubDepartment,
   Supplier,
   Ticket,
+  TicketAsset,
+  TicketIssue,
   Transfer,
   User,
 } from "@/types";
 import {
   activities as seedActivities,
+  assetMovements as seedMovements,
   assets as seedAssets,
   categories as seedCategories,
   departments as seedDepartments,
@@ -43,6 +47,7 @@ import {
   computeStatus,
 } from "@/data/mock";
 import { uid } from "@/lib/utils";
+import { ticketStatusFromIssues } from "@/lib/ticket-utils";
 
 export type Permission =
   | "inventory.manage"
@@ -111,6 +116,7 @@ interface AppState {
   transactions: StockTransaction[];
   requests: RequestRecord[];
   tickets: Ticket[];
+  movements: AssetMovement[];
   purchaseOrders: PurchaseOrder[];
   suppliers: Supplier[];
   assets: Asset[];
@@ -148,8 +154,16 @@ type Action =
   | { type: "ADD_REQUEST"; request: RequestRecord }
   | { type: "UPDATE_REQUEST"; id: string; status: RequestRecord["status"] }
   | { type: "ADD_TICKET"; ticket: Ticket }
-  | { type: "ADD_TICKET_ISSUE"; id: string; issue: Ticket["issues"][number] }
+  | { type: "ADD_TICKET_ISSUE"; id: string; issue: TicketIssue }
+  | { type: "UPDATE_TICKET_ISSUE"; ticketId: string; issueId: string; patch: Partial<TicketIssue> }
+  | { type: "REMOVE_TICKET_ISSUE"; ticketId: string; issueId: string }
+  | { type: "ADD_TICKET_ASSET"; ticketId: string; asset: TicketAsset }
+  | { type: "UPDATE_TICKET_ASSET"; ticketId: string; assetId: string; patch: Partial<TicketAsset> }
+  | { type: "REMOVE_TICKET_ASSET"; ticketId: string; assetId: string }
   | { type: "UPDATE_TICKET"; id: string; patch: Partial<Ticket> }
+  | { type: "ADD_MOVEMENT"; movement: AssetMovement }
+  | { type: "UPDATE_MOVEMENT"; id: string; patch: Partial<AssetMovement> }
+  | { type: "REMOVE_MOVEMENT"; id: string }
   | { type: "ADD_PO"; po: PurchaseOrder }
   | { type: "UPDATE_PO"; id: string; status: PurchaseOrder["status"] }
   | { type: "ADD_SUPPLIER"; supplier: Supplier }
@@ -314,8 +328,39 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, tickets: [action.ticket, ...state.tickets] };
     case "ADD_TICKET_ISSUE":
       return { ...state, tickets: state.tickets.map((t) => (t.id === action.id ? { ...t, issues: [...t.issues, action.issue] } : t)) };
+    case "UPDATE_TICKET_ISSUE":
+      return {
+        ...state,
+        tickets: state.tickets.map((t) => (t.id === action.ticketId ? { ...t, issues: t.issues.map((iss) => (iss.id === action.issueId ? { ...iss, ...action.patch } : iss)) } : t)),
+      };
+    case "REMOVE_TICKET_ISSUE":
+      return {
+        ...state,
+        tickets: state.tickets.map((t) => (t.id === action.ticketId ? { ...t, issues: t.issues.filter((iss) => iss.id !== action.issueId) } : t)),
+      };
+    case "ADD_TICKET_ASSET":
+      return {
+        ...state,
+        tickets: state.tickets.map((t) => (t.id === action.ticketId ? { ...t, assets: [...t.assets, action.asset] } : t)),
+      };
+    case "UPDATE_TICKET_ASSET":
+      return {
+        ...state,
+        tickets: state.tickets.map((t) => (t.id === action.ticketId ? { ...t, assets: t.assets.map((a) => (a.id === action.assetId ? { ...a, ...action.patch } : a)) } : t)),
+      };
+    case "REMOVE_TICKET_ASSET":
+      return {
+        ...state,
+        tickets: state.tickets.map((t) => (t.id === action.ticketId ? { ...t, assets: t.assets.filter((a) => a.id !== action.assetId) } : t)),
+      };
     case "UPDATE_TICKET":
       return { ...state, tickets: state.tickets.map((t) => (t.id === action.id ? { ...t, ...action.patch } : t)) };
+    case "ADD_MOVEMENT":
+      return { ...state, movements: [action.movement, ...state.movements] };
+    case "UPDATE_MOVEMENT":
+      return { ...state, movements: state.movements.map((m) => (m.id === action.id ? { ...m, ...action.patch } : m)) };
+    case "REMOVE_MOVEMENT":
+      return { ...state, movements: state.movements.filter((m) => m.id !== action.id) };
     case "ADD_PO":
       return { ...state, purchaseOrders: [action.po, ...state.purchaseOrders] };
     case "UPDATE_PO":
@@ -387,6 +432,7 @@ const initialState: AppState = {
   transactions: seedTransactions,
   requests: seedRequests,
   tickets: seedTickets,
+  movements: seedMovements,
   purchaseOrders: seedPOs,
   suppliers: seedSuppliers,
   assets: seedAssets,
@@ -436,7 +482,14 @@ interface AppContextValue {
   addRequest: (r: Omit<RequestRecord, "id" | "status" | "requestedBy" | "date">) => void;
   updateRequest: (id: string, status: RequestRecord["status"]) => void;
   addTicket: (t: Omit<Ticket, "id" | "status" | "createdBy" | "createdAt">) => void;
-  addTicketIssue: (id: string, text: string) => string | undefined;
+  addTicketIssue: (id: string, issue: Omit<TicketIssue, "id" | "createdAt">) => string | undefined;
+  updateIssue: (ticketId: string, issueId: string, patch: Partial<TicketIssue>) => void;
+  removeIssue: (ticketId: string, issueId: string) => void;
+  addTicketAsset: (ticketId: string, asset: Omit<TicketAsset, "id">) => void;
+  updateTicketAsset: (ticketId: string, assetId: string, patch: Partial<TicketAsset>) => void;
+  removeTicketAsset: (ticketId: string, assetId: string) => void;
+  addMovement: (ticketId: string, assetId: string, m: Omit<AssetMovement, "id" | "ticketId" | "assetId" | "date" | "performedBy">) => void;
+  removeMovement: (id: string) => void;
   updateTicket: (id: string, patch: Partial<Ticket>) => void;
   closeTicket: (id: string, resolution: string, resolvedIssueIds: string[]) => void;
   addPO: (po: Omit<PurchaseOrder, "id" | "status">) => void;
@@ -638,7 +691,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const addTicket = React.useCallback(
     (t: Omit<Ticket, "id" | "status" | "createdBy" | "createdAt">) => {
-      dispatch({ type: "ADD_TICKET", ticket: { ...t, id: uid("TKT-2026"), status: "open", createdBy: state.user?.name ?? "Admin", createdAt: new Date().toISOString() } });
+      const now = new Date().toISOString();
+      dispatch({ type: "ADD_TICKET", ticket: { ...t, id: uid("TKT-2026"), status: "open", createdBy: state.user?.name ?? "Admin", createdAt: now, issues: t.issues.map((iss) => ({ ...iss, createdAt: iss.createdAt ?? now })) } });
       toast.success("Ticket generated successfully");
       dispatch({ type: "ADD_ACTIVITY", activity: pushActivity(state, state.user?.name ?? "Admin", "generated ticket", "Tickets", t.title, t.department) });
     },
@@ -646,21 +700,122 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 
   const addTicketIssue = React.useCallback(
-    (id: string, text: string) => {
-      const issue: Ticket["issues"][number] = { id: uid("ISS"), text, resolved: false };
-      dispatch({ type: "ADD_TICKET_ISSUE", id, issue });
+    (id: string, issue: Omit<TicketIssue, "id" | "createdAt">) => {
+      const newIssue: TicketIssue = { ...issue, id: uid("ISS"), createdAt: new Date().toISOString() };
+      dispatch({ type: "ADD_TICKET_ISSUE", id, issue: newIssue });
       const t = state.tickets.find((x) => x.id === id);
       toast.success("Issue added to ticket");
       dispatch({ type: "ADD_ACTIVITY", activity: pushActivity(state, state.user?.name ?? "Admin", "added issue to ticket", "Tickets", t?.title ?? "", t?.department ?? "-") });
-      return issue.id;
+      return newIssue.id;
     },
     [state]
   );
 
+  const updateIssue = React.useCallback(
+    (ticketId: string, issueId: string, patch: Partial<TicketIssue>) => {
+      const t = state.tickets.find((x) => x.id === ticketId);
+      if (!t) return;
+      const issue = t.issues.find((iss) => iss.id === issueId);
+      if (!issue) return;
+      const now = new Date().toISOString();
+      const next: Partial<TicketIssue> = { ...patch };
+      if (patch.status && (patch.status === "resolved" || patch.status === "closed") && !patch.resolvedAt) next.resolvedAt = issue.resolvedAt ?? now;
+      if (patch.status && (patch.status === "open" || patch.status === "in-progress")) next.resolvedAt = undefined;
+      const issues = t.issues.map((iss) => (iss.id === issueId ? { ...iss, ...next } : iss));
+      dispatch({ type: "UPDATE_TICKET_ISSUE", ticketId, issueId, patch: next });
+      const status = ticketStatusFromIssues(issues, t.status);
+      if (status !== t.status) dispatch({ type: "UPDATE_TICKET", id: ticketId, patch: { status } });
+      toast.success(patch.status ? `Issue marked ${patch.status.replace("-", " ")}` : "Issue updated");
+      dispatch({ type: "ADD_ACTIVITY", activity: pushActivity(state, state.user?.name ?? "Admin", `${patch.status ?? "updated"} issue`, "Tickets", issue.title, t.department) });
+    },
+    [state]
+  );
+
+  const removeIssue = React.useCallback(
+    (ticketId: string, issueId: string) => {
+      const t = state.tickets.find((x) => x.id === ticketId);
+      if (!t) return;
+      const issues = t.issues.filter((iss) => iss.id !== issueId);
+      dispatch({ type: "REMOVE_TICKET_ISSUE", ticketId, issueId });
+      const status = ticketStatusFromIssues(issues, t.status);
+      if (status !== t.status) dispatch({ type: "UPDATE_TICKET", id: ticketId, patch: { status } });
+      toast.success("Issue removed");
+      dispatch({ type: "ADD_ACTIVITY", activity: pushActivity(state, state.user?.name ?? "Admin", "removed issue", "Tickets", t.title, t.department) });
+    },
+    [state]
+  );
+
+  const addTicketAsset = React.useCallback(
+    (ticketId: string, asset: Omit<TicketAsset, "id">) => {
+      dispatch({ type: "ADD_TICKET_ASSET", ticketId, asset: { ...asset, id: uid("TAS") } });
+      const t = state.tickets.find((x) => x.id === ticketId);
+      toast.success(`Asset ${asset.assetId} added to ticket`);
+      dispatch({ type: "ADD_ACTIVITY", activity: pushActivity(state, state.user?.name ?? "Admin", "added asset to ticket", "Tickets", asset.assetId, t?.department ?? "-") });
+    },
+    [state]
+  );
+
+  const updateTicketAsset = React.useCallback(
+    (ticketId: string, assetId: string, patch: Partial<TicketAsset>) => {
+      dispatch({ type: "UPDATE_TICKET_ASSET", ticketId, assetId, patch });
+      const t = state.tickets.find((x) => x.id === ticketId);
+      toast.success("Asset updated");
+      dispatch({ type: "ADD_ACTIVITY", activity: pushActivity(state, state.user?.name ?? "Admin", "updated asset", "Tickets", assetId, t?.department ?? "-") });
+    },
+    [state]
+  );
+
+  const removeTicketAsset = React.useCallback(
+    (ticketId: string, assetId: string) => {
+      const t = state.tickets.find((x) => x.id === ticketId);
+      if (!t) return;
+      const asset = t.assets.find((a) => a.id === assetId);
+      dispatch({ type: "REMOVE_TICKET_ASSET", ticketId, assetId });
+      dispatch({ type: "UPDATE_TICKET", id: ticketId, patch: { issues: t.issues.filter((iss) => iss.assetId !== assetId) } });
+      toast.success(`Asset ${asset?.assetId ?? assetId} removed`);
+      dispatch({ type: "ADD_ACTIVITY", activity: pushActivity(state, state.user?.name ?? "Admin", "removed asset from ticket", "Tickets", asset?.assetId ?? assetId, t.department) });
+    },
+    [state]
+  );
+
+  const addMovement = React.useCallback(
+    (ticketId: string, assetId: string, m: Omit<AssetMovement, "id" | "ticketId" | "assetId" | "date" | "performedBy">) => {
+      const t = state.tickets.find((x) => x.id === ticketId);
+      const asset = t?.assets.find((a) => a.id === assetId);
+      if (!t || !asset) return;
+      const now = new Date().toISOString();
+      const movement: AssetMovement = { ...m, id: uid("MOV"), ticketId, assetId, date: now, performedBy: state.user?.name ?? "Admin" };
+      dispatch({ type: "ADD_MOVEMENT", movement });
+      dispatch({
+        type: "UPDATE_TICKET_ASSET",
+        ticketId,
+        assetId,
+        patch: {
+          currentLocation: m.toLocation,
+          previousLocation: m.fromLocation,
+          status: m.movementType === "check-in" ? "in" : m.movementType === "check-out" ? "out" : "in-transit",
+          checkInDate: m.movementType === "check-in" ? (asset.checkInDate ?? now) : asset.checkInDate,
+          checkOutDate: m.movementType === "check-out" ? now : asset.checkOutDate,
+        },
+      });
+      toast.success(`${m.movementType} recorded for ${asset.assetId}`);
+      dispatch({ type: "ADD_ACTIVITY", activity: pushActivity(state, state.user?.name ?? "Admin", `recorded ${m.movementType}`, "Inventory", asset.assetId, t.department) });
+    },
+    [state]
+  );
+
+  const removeMovement = React.useCallback(
+    (id: string) => {
+      dispatch({ type: "REMOVE_MOVEMENT", id });
+      toast.success("Movement deleted");
+    },
+    []
+  );
+
   const updateTicket = React.useCallback(
     (id: string, patch: Partial<Ticket>) => {
-      dispatch({ type: "UPDATE_TICKET", id, patch });
       const t = state.tickets.find((x) => x.id === id);
+      dispatch({ type: "UPDATE_TICKET", id, patch });
       toast.success(`Ticket ${patch.status?.replace("-", " ") ?? "updated"}`);
       dispatch({ type: "ADD_ACTIVITY", activity: pushActivity(state, state.user?.name ?? "Admin", `${patch.status ?? "updated"} ticket`, "Tickets", t?.title ?? "", t?.department ?? "-") });
     },
@@ -678,7 +833,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           closedBy: state.user?.name ?? "Admin",
           closedAt: now,
           resolution,
-          issues: state.tickets.find((x) => x.id === id)?.issues.map((iss) => (resolvedIssueIds.includes(iss.id) ? { ...iss, resolved: true, resolvedAt: iss.resolvedAt ?? now } : iss)) ?? [],
+          issues: state.tickets.find((x) => x.id === id)?.issues.map((iss) => (resolvedIssueIds.includes(iss.id) ? { ...iss, status: "resolved" as const, resolvedAt: iss.resolvedAt ?? now, resolution: iss.resolution ?? resolution } : iss)) ?? [],
         },
       });
       const t = state.tickets.find((x) => x.id === id);
@@ -883,6 +1038,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     updateRequest,
     addTicket,
     addTicketIssue,
+    updateIssue,
+    removeIssue,
+    addTicketAsset,
+    updateTicketAsset,
+    removeTicketAsset,
+    addMovement,
+    removeMovement,
     updateTicket,
     closeTicket,
     addPO,
