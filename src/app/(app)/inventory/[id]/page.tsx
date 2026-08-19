@@ -80,8 +80,6 @@ export default function InventoryDetailPage({ params }: { params: Promise<{ id: 
     );
   }
 
-  const totalValue = item.quantity * item.unitCost;
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -140,11 +138,11 @@ export default function InventoryDetailPage({ params }: { params: Promise<{ id: 
         <Card className="py-4">
           <CardContent className="px-5">
             <div className="flex items-center justify-between">
-              <p className="text-muted-foreground text-xs font-medium">Inventory Value</p>
+              <p className="text-muted-foreground text-xs font-medium">Unit Cost</p>
               <TrendingUp className="text-success size-4" />
             </div>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">{formatCurrency(totalValue)}</p>
-            <p className="text-muted-foreground text-xs">@ {formatCurrency(item.unitCost)} / {item.unit}</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">{formatCurrency(item.unitCost)}</p>
+            <p className="text-muted-foreground text-xs">per {item.unit}</p>
           </CardContent>
         </Card>
         <Card className="py-4">

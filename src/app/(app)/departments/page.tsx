@@ -22,7 +22,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useApp } from "@/store/app-store";
 import { useFakeLoadingOn } from "@/hooks/use-fake-loading";
-import { formatCompact, formatNumber, uid } from "@/lib/utils";
+import { formatNumber, uid } from "@/lib/utils";
 import { SubDepartmentDialog } from "@/components/departments/SubDepartmentDialog";
 import type { Department, SubDepartment } from "@/types";
 
@@ -102,8 +102,8 @@ export default function DepartmentsPage() {
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {departments.map((d) => {
             const items = state.inventory.filter((i) => i.department === d.name && !i.archived);
-            const value = items.reduce((s, i) => s + i.quantity * i.unitCost, 0);
             const low = items.filter((i) => i.status === "low-stock" || i.status === "out-of-stock").length;
+            const openTickets = state.tickets.filter((t) => t.department === d.name && t.status !== "closed").length;
             const deptUsers = state.users.filter((u) => u.department === d.name).length;
             return (
               <Card key={d.id} className="group relative cursor-pointer py-5 transition-shadow hover:shadow-md" onClick={() => router.push(`/departments/${d.id}`)}>
@@ -174,7 +174,7 @@ export default function DepartmentsPage() {
                   </div>
                   <div className="mt-4 grid grid-cols-4 gap-2 border-t pt-3 text-center">
                     <div><p className="text-sm font-semibold">{formatNumber(items.length)}</p><p className="text-muted-foreground text-[10px]">Items</p></div>
-                    <div><p className="text-sm font-semibold">{formatCompact(value)}</p><p className="text-muted-foreground text-[10px]">Value</p></div>
+                    <div><p className="text-sm font-semibold">{openTickets}</p><p className="text-muted-foreground text-[10px]">Tickets</p></div>
                     <div><p className="text-sm font-semibold">{Math.max(deptUsers, d.users)}</p><p className="text-muted-foreground text-[10px]"><UsersIcon className="mr-0.5 inline size-2.5" />Users</p></div>
                     <div><p className={low > 0 ? "text-warning text-sm font-semibold" : "text-sm font-semibold"}>{low}</p><p className="text-muted-foreground text-[10px]">Low Stock</p></div>
                   </div>

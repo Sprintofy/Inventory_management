@@ -3,7 +3,7 @@
 import * as React from "react";
 import { use, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Building2, ChevronRight, FileText, Layers, MapPin, Package, Plus } from "lucide-react";
+import { ArrowLeft, Building2, ChevronRight, FileText, Layers, Package, Plus, Ticket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useApp } from "@/store/app-store";
 import { useFakeLoading } from "@/hooks/use-fake-loading";
-import { formatCompact, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 
 export default function DepartmentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -26,7 +26,7 @@ export default function DepartmentDetailPage({ params }: { params: Promise<{ id:
     [state.inventory, dept]
   );
   const lowItems = items.filter((i) => i.status === "low-stock" || i.status === "out-of-stock");
-  const value = items.reduce((s, i) => s + i.quantity * i.unitCost, 0);
+  const openTickets = state.tickets.filter((t) => t.department === dept?.name && t.status !== "closed");
   const deptUsers = state.users.filter((u) => u.department === dept?.name);
   const activities = state.activities.filter((a) => a.department === dept?.name).slice(0, 5);
 
@@ -68,8 +68,8 @@ export default function DepartmentDetailPage({ params }: { params: Promise<{ id:
           <p className="mt-1 text-2xl font-semibold tabular-nums">{items.length}</p>
         </CardContent></Card>
         <Card className="py-4"><CardContent>
-          <p className="text-muted-foreground flex items-center gap-2 text-xs"><MapPin className="size-3.5" /> Inventory Value</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums">{formatCompact(value)}</p>
+          <p className="text-muted-foreground flex items-center gap-2 text-xs"><Ticket className="size-3.5" /> Open Tickets</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums">{openTickets.length}</p>
         </CardContent></Card>
         <Card className="py-4"><CardContent>
           <p className="text-warning flex items-center gap-2 text-xs"><FileText className="size-3.5" /> Low / Out of Stock</p>
