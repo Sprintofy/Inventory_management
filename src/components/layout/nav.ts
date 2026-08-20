@@ -37,6 +37,7 @@ const MANAGER: Role[] = ["super-admin", "admin", "department-manager"];
 const ADMIN: Role[] = ["super-admin", "admin"];
 const OP_STAFF: Role[] = ["super-admin", "admin", "department-manager"];
 const ADMIN_ONLY: Role[] = ["admin"];
+const DEPT_ROLES: Role[] = ["super-admin", "admin", "department-manager", "department-user"];
 
 export const navGroups: NavGroup[] = [
   {
@@ -71,7 +72,7 @@ export const navGroups: NavGroup[] = [
   {
     label: "Organization",
     items: [
-      { title: "Departments", href: "/departments", icon: Building2, roles: ADMIN },
+      { title: "Departments", href: "/departments", icon: Building2, roles: DEPT_ROLES },
       { title: "Users", href: "/users", icon: Users, roles: ADMIN },
     ],
   },

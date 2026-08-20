@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { useMemo } from "react";
-import { ArrowDownToLine, ArrowUpFromLine, Boxes, FileDown, FileText, TrendingUp, Wallet } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { ArrowDownToLine, ArrowUpFromLine, FileDown, TrendingUp, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,26 +13,63 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useApp } from "@/store/app-store";
-import { downloadCSV, formatCompact, formatCurrency, formatDate } from "@/lib/utils";
+import { downloadCSV, formatCompact, formatCurrency } from "@/lib/utils";
+import type { SubDepartment } from "@/types";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell,
 } from "recharts";
 
 const palette = ["#4f46e5", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6", "#6366f1", "#f43f5e", "#84cc16"];
 
+function collectSubs(subs: SubDepartment[], out: SubDepartment[] = []): SubDepartment[] {
+  for (const s of subs) {
+    out.push(s);
+    collectSubs(s.children, out);
+  }
+  return out;
+}
+
+function findSubByName(subs: SubDepartment[], name: string): SubDepartment | null {
+  for (const s of subs) {
+    if (s.name === name) return s;
+    const found = findSubByName(s.children, name);
+    if (found) return found;
+  }
+  return null;
+}
+
+function subtreeNames(s: SubDepartment, out: string[] = []): string[] {
+  out.push(s.name);
+  s.children.forEach((c) => subtreeNames(c, out));
+  return out;
+}
+
 export default function ReportsPage() {
   const { state, visibleDepartments, activeDepartment, role, setDepartment } = useApp();
+  const searchParams = useSearchParams();
   const isGlobal = role === "super-admin" || role === "admin";
   const [range, setRange] = React.useState("30d");
 
-  const dept = activeDepartment;
+  const urlDept = searchParams.get("dept");
+  const [dept, setDept] = React.useState(urlDept && visibleDepartments.includes(urlDept) ? urlDept : activeDepartment);
+  const [sub, setSub] = React.useState(searchParams.get("sub") ?? "all");
 
-  const scopeItems = useMemo(
-    () => state.inventory.filter((i) => i.department === dept),
-    [state.inventory, dept]
-  );
+  const deptObj = dept !== "all" ? state.departments.find((d) => d.name === dept) : null;
+  const subOptions = useMemo(() => (deptObj ? collectSubs(deptObj.subDepartments) : []), [deptObj]);
+  const effectiveSub = sub !== "all" && subOptions.some((s) => s.name === sub) ? sub : "all";
+
+  const scopeItems = useMemo(() => {
+    const items = dept === "all" ? state.inventory.filter((i) => !i.archived) : state.inventory.filter((i) => i.department === dept);
+    if (dept !== "all" && effectiveSub !== "all") {
+      const node = findSubByName(deptObj?.subDepartments ?? [], effectiveSub);
+      const names = node ? subtreeNames(node) : [effectiveSub];
+      return items.filter((i) => names.includes(i.subDepartment ?? ""));
+    }
+    return items;
+  }, [state.inventory, dept, effectiveSub, deptObj]);
+
   const scopeTransactions = useMemo(
-    () => state.transactions.filter((t) => t.department === dept),
+    () => (dept === "all" ? state.transactions : state.transactions.filter((t) => t.department === dept)),
     [state.transactions, dept]
   );
 
@@ -56,12 +94,20 @@ export default function ReportsPage() {
     [scopeItems]
   );
 
+  const scopeLabel = dept === "all" ? "All Departments" : effectiveSub === "all" ? dept : `${dept} / ${effectiveSub}`;
+
   const exportReport = () => {
     downloadCSV("inventory-report.csv", [
-      { Name: "Name", SKU: "SKU", Category: "Category", Department: "Department", Location: "Location", Quantity: "Quantity", "Unit Cost": "Unit Cost", Value: "Value", Status: "Status" },
-      ...scopeItems.map((i) => ({ Name: i.name, SKU: i.sku, Category: i.category, Department: i.department, Location: i.location, Quantity: i.quantity, "Unit Cost": i.unitCost, Value: i.quantity * i.unitCost, Status: i.status })),
+      { Name: "Name", SKU: "SKU", Category: "Category", Department: "Department", "Sub-Department": "Sub-Department", Location: "Location", Quantity: "Quantity", "Unit Cost": "Unit Cost", Value: "Value", Status: "Status" },
+      ...scopeItems.map((i) => ({ Name: i.name, SKU: i.sku, Category: i.category, Department: i.department, "Sub-Department": i.subDepartment ?? "", Location: i.location, Quantity: i.quantity, "Unit Cost": i.unitCost, Value: i.quantity * i.unitCost, Status: i.status })),
     ]);
     toast.success("Report exported as CSV");
+  };
+
+  const handleDeptChange = (d: string) => {
+    setDept(d);
+    setSub("all");
+    setDepartment(d);
   };
 
   return (
@@ -69,16 +115,25 @@ export default function ReportsPage() {
       <PageHeader
         title="Reports"
         description="Analyze inventory value, movement and performance."
-        breadcrumb={[{ label: "Reports" }]}
+        breadcrumb={[{ label: "Reports" }, ...(dept !== "all" && effectiveSub !== "all" ? [{ label: `${dept} / ${effectiveSub}` }] : [])]}
         actions={
           <div className="flex items-center gap-2">
-            <Select value={dept} onValueChange={setDepartment}>
+            <Select value={dept} onValueChange={handleDeptChange}>
               <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {isGlobal && <SelectItem value="all">All Departments</SelectItem>}
                 {visibleDepartments.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
               </SelectContent>
             </Select>
+            {dept !== "all" && subOptions.length > 0 && (
+              <Select value={effectiveSub} onValueChange={setSub}>
+                <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All sub-departments</SelectItem>
+                  {subOptions.map((s) => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
             <Select value={range} onValueChange={setRange}>
               <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -92,6 +147,10 @@ export default function ReportsPage() {
           </div>
         }
       />
+
+      <p className="text-muted-foreground text-sm">
+        Showing inventory for <span className="text-foreground font-medium">{scopeLabel}</span> · {scopeItems.length} item{scopeItems.length === 1 ? "" : "s"}
+      </p>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card className="py-4"><CardContent>

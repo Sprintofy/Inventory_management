@@ -3,7 +3,7 @@
 import * as React from "react";
 import { use, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Building2, ChevronRight, FileText, Layers, Package, Plus, Ticket } from "lucide-react";
+import { ArrowLeft, BarChart3, Building2, ChevronRight, FileText, Layers, Package, Plus, Ticket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -60,6 +60,11 @@ export default function DepartmentDetailPage({ params }: { params: Promise<{ id:
             <p className="text-muted-foreground mt-0.5 text-xs">{dept.code} · Manager: {dept.manager}</p>
           </div>
         </div>
+        {can("reports.view") && (
+          <Button variant="outline" onClick={() => router.push(`/reports?dept=${encodeURIComponent(dept.name)}`)}>
+            <BarChart3 className="size-4" /> Inventory Report
+          </Button>
+        )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">

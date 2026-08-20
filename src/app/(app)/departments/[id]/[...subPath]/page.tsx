@@ -3,7 +3,7 @@
 import * as React from "react";
 import { use } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ChevronRight, FileText, Layers, MoreHorizontal, Pencil, Plus, Ticket as TicketIcon, Trash2, Users as UsersIcon } from "lucide-react";
+import { ArrowLeft, BarChart3, ChevronRight, FileText, Layers, MoreHorizontal, Package, Pencil, Plus, Ticket as TicketIcon, Trash2, Users as UsersIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,6 +54,21 @@ export default function SubDepartmentDetailPage({ params }: { params: Promise<{ 
     [state.tickets, dept, node]
   );
 
+  const scopeNames = React.useMemo(() => {
+    const names: string[] = [];
+    const walk = (s: SubDepartment) => {
+      names.push(s.name);
+      s.children.forEach(walk);
+    };
+    if (node) walk(node);
+    return names;
+  }, [node]);
+
+  const nodeItems = React.useMemo(
+    () => (dept && node ? state.inventory.filter((i) => i.department === dept.name && !i.archived && scopeNames.includes(i.subDepartment ?? "")) : []),
+    [state.inventory, dept, node, scopeNames]
+  );
+
   if (!loading && (!dept || !node)) {
     return (
       <div className="mx-auto max-w-2xl">
@@ -92,11 +107,18 @@ export default function SubDepartmentDetailPage({ params }: { params: Promise<{ 
             <p className="text-muted-foreground mt-0.5 text-xs">{node.code} · Manager: {node.manager}</p>
           </div>
         </div>
-        {can("departments.manage") && (
-          <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
-            <Plus className="size-4" /> Add Sub-department
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {can("reports.view") && (
+            <Button variant="outline" onClick={() => router.push(`/reports?dept=${encodeURIComponent(dept.name)}&sub=${encodeURIComponent(node.name)}`)}>
+              <BarChart3 className="size-4" /> Inventory Report
+            </Button>
+          )}
+          {can("departments.manage") && (
+            <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
+              <Plus className="size-4" /> Add Sub-department
+            </Button>
+          )}
+        </div>
       </div>
 
       <nav className="text-muted-foreground flex flex-wrap items-center gap-1 text-sm">
@@ -182,6 +204,39 @@ export default function SubDepartmentDetailPage({ params }: { params: Promise<{ 
                   <p className="text-muted-foreground text-xs">{s.users} member{s.users === 1 ? "" : "s"} · {s.children.length > 0 ? `${s.children.length} sub-department${s.children.length === 1 ? "" : "s"}` : "leaf"}</p>
                 </div>
               ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex-row items-center justify-between space-y-0">
+          <CardTitle className="flex items-center gap-2 text-base"><Package className="text-primary size-4" /> Inventory Items <Badge variant="secondary">{nodeItems.length}</Badge></CardTitle>
+          <Badge variant="outline" className="text-muted-foreground font-normal">{dept.name} · {node.name}</Badge>
+        </CardHeader>
+        <CardContent>
+          {nodeItems.length === 0 ? (
+            <p className="text-muted-foreground text-sm">No inventory assigned to {node.name} or its sub-departments.</p>
+          ) : (
+            <div className="space-y-2">
+              {nodeItems.slice(0, 6).map((i) => (
+                <div key={i.id} className="flex items-center justify-between rounded-lg border px-3 py-2.5">
+                  <div className="flex items-center gap-3">
+                    <div className="flex size-8 items-center justify-center rounded-md bg-muted">
+                      <Package className="text-muted-foreground size-4" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">{i.name}</p>
+                      <p className="text-muted-foreground font-mono text-xs">{i.sku} · {i.subDepartment ?? dept.name}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="text-muted-foreground text-xs">{i.location}</span>
+                    <span className="text-sm font-semibold tabular-nums">{i.quantity}</span>
+                  </div>
+                </div>
+              ))}
+              {nodeItems.length > 6 && <p className="text-muted-foreground pt-1 text-center text-xs">+{nodeItems.length - 6} more items — see the Inventory Report</p>}
             </div>
           )}
         </CardContent>

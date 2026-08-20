@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { cn, uid } from "@/lib/utils";
 import { useApp } from "@/store/app-store";
-import type { InventoryItem } from "@/types";
+import type { InventoryItem, SubDepartment } from "@/types";
 import { computeStatus } from "@/data/mock";
 
 const formSchema = z.object({
@@ -30,6 +30,7 @@ const formSchema = z.object({
   maxStock: z.coerce.number().min(0),
   location: z.string().min(1, "Select a location"),
   department: z.string().min(1, "Select a department"),
+  subDepartment: z.string().optional(),
   warehouse: z.string().optional(),
   storageLocation: z.string().optional(),
   unitCost: z.coerce.number().min(0, "Enter a valid cost"),
@@ -55,7 +56,7 @@ const steps = [
 
 const stepFields: Record<string, (keyof FormValues)[]> = {
   basic: ["name", "sku", "category", "subcategory", "description"],
-  inventory: ["quantity", "unit", "minStock", "reorderLevel", "maxStock", "location", "department", "warehouse", "storageLocation"],
+  inventory: ["quantity", "unit", "minStock", "reorderLevel", "maxStock", "location", "department", "subDepartment", "warehouse", "storageLocation"],
   financial: ["unitCost", "supplier", "purchaseDate"],
   identification: ["serialNumber", "assetNumber", "batchNumber"],
   additional: ["condition", "warranty", "notes"],
@@ -86,6 +87,7 @@ export function InventoryForm({ open, onOpenChange, item }: InventoryFormProps) 
       maxStock: item?.maxStock ?? 100,
       location: item?.location ?? "",
       department: item?.department ?? "",
+      subDepartment: item?.subDepartment ?? "",
       warehouse: "",
       storageLocation: "",
       unitCost: item?.unitCost ?? 0,
@@ -107,6 +109,17 @@ export function InventoryForm({ open, onOpenChange, item }: InventoryFormProps) 
     }
   }, [open, item, form]);
 
+  const deptName = form.watch("department");
+  const subOptions = React.useMemo(() => {
+    if (!deptName) return [] as SubDepartment[];
+    const dept = state.departments.find((d) => d.name === deptName);
+    if (!dept) return [] as SubDepartment[];
+    const out: SubDepartment[] = [];
+    const walk = (subs: SubDepartment[]) => subs.forEach((s) => { out.push(s); walk(s.children); });
+    walk(dept.subDepartments);
+    return out;
+  }, [deptName, state.departments]);
+
   const validateStep = async (i: number) => {
     const fields = stepFields[steps[i].id];
     const result = await form.trigger(fields as never);
@@ -122,8 +135,9 @@ export function InventoryForm({ open, onOpenChange, item }: InventoryFormProps) 
   const onSubmit = (values: FormValues) => {
     const status = computeStatus(values.quantity, values.reorderLevel, values.maxStock);
     const now = new Date().toISOString();
+    const subDepartment = values.subDepartment || undefined;
     if (item) {
-      updateItem({ ...item, ...values, status, lastUpdated: now });
+      updateItem({ ...item, ...values, subDepartment, status, lastUpdated: now });
       log("updated inventory", "Inventory", values.name, values.department);
       toast.success("Inventory item updated successfully");
     } else {
@@ -135,6 +149,7 @@ export function InventoryForm({ open, onOpenChange, item }: InventoryFormProps) 
         subcategory: values.subcategory,
         description: values.description,
         department: values.department,
+        subDepartment,
         location: values.location,
         quantity: values.quantity,
         unit: values.unit,
@@ -299,10 +314,25 @@ export function InventoryForm({ open, onOpenChange, item }: InventoryFormProps) 
                   <FormItem>
                     <FormLabel>Department</FormLabel>
                     <FormControl>
-                      <Select value={field.value} onValueChange={field.onChange}>
+                      <Select value={field.value} onValueChange={(v) => { field.onChange(v); form.setValue("subDepartment", ""); }}>
                         <SelectTrigger className="w-full"><SelectValue placeholder="Select department" /></SelectTrigger>
                         <SelectContent>
                           {state.departments.map((d) => <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="subDepartment" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Sub-department</FormLabel>
+                    <FormControl>
+                      <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                        <SelectTrigger className="w-full"><SelectValue placeholder="Optional" /></SelectTrigger>
+                        <SelectContent>
+                          {subOptions.length === 0 && <SelectItem value="__none" disabled>No sub-departments</SelectItem>}
+                          {subOptions.map((s) => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </FormControl>

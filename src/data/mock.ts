@@ -282,6 +282,75 @@ export const locations: Location[] = [
 
 const depColor = (name: string) => departments.find((d) => d.name === name)?.color ?? "#6b7280";
 
+const subDepartmentMap: Record<string, Record<string, string>> = {
+  IT: {
+    Laptops: "Hardware Support",
+    Monitors: "Hardware Support",
+    Printers: "Hardware Support",
+    Peripherals: "Hardware Support",
+    Tablets: "Hardware Support",
+    "AV Equipment": "Hardware Support",
+    Storage: "Hardware Support",
+    Networking: "Network & Security",
+    Power: "Network & Security",
+    Cables: "Network & Security",
+  },
+  Engineering: {
+    Laptops: "Design & R&D",
+    Lubricants: "Mechanical Engineering",
+    Fasteners: "Mechanical Engineering",
+    Bearings: "Mechanical Engineering",
+    Belts: "Mechanical Engineering",
+    Consumables: "Mechanical Engineering",
+    Filters: "Mechanical Engineering",
+    Seals: "Mechanical Engineering",
+    Lubrication: "Mechanical Engineering",
+  },
+  Administration: {
+    Paper: "Office Management",
+    Pens: "Office Management",
+    Notes: "Office Management",
+    Printing: "Office Management",
+    Furniture: "Office Management",
+    Machines: "Office Management",
+    Chemicals: "Facilities",
+    Equipment: "Facilities",
+    Consumables: "Facilities",
+  },
+  Maintenance: {
+    "Power Tools": "Machine Maintenance",
+    Measurement: "Machine Maintenance",
+    "Hand Tools": "Machine Maintenance",
+    Lubrication: "Machine Maintenance",
+    Cables: "Electrical & Plumbing",
+    Switches: "Electrical & Plumbing",
+    Lighting: "Electrical & Plumbing",
+    Power: "Electrical & Plumbing",
+  },
+  Operations: {
+    "Fire Safety": "Safety & Compliance",
+    "First Aid": "Safety & Compliance",
+    PPE: "Safety & Compliance",
+  },
+  Logistics: {
+    "Material Handling": "Warehouse Operations",
+    Packaging: "Warehouse Operations",
+    Traffic: "Warehouse Operations",
+  },
+  Training: {
+    Tablets: "Training Lab",
+    "AV Equipment": "Training Lab",
+    Display: "Training Lab",
+  },
+  Finance: {
+    Laptops: "Accounting",
+  },
+};
+
+function subDepartmentFor(department: string, subcategory?: string): string | undefined {
+  return subcategory ? subDepartmentMap[department]?.[subcategory] : undefined;
+}
+
 const heroItems: InventoryItem[] = [
   {
     id: "INV-001",
@@ -573,7 +642,7 @@ let seq = 11;
 const now = Date.now();
 
 export const inventoryItems: InventoryItem[] = [
-  ...heroItems,
+  ...heroItems.map((h) => ({ ...h, subDepartment: h.subDepartment ?? subDepartmentFor(h.department, h.subcategory) })),
   ...itemTemplates.map((t, i) => {
     const seed = (i * 7919 + seq) % 101;
     const qty = seed % 7 === 0 ? 0 : Math.round(Math.pow(seed / 10, 1.6) * 3) + 2;
@@ -591,6 +660,7 @@ export const inventoryItems: InventoryItem[] = [
       status,
       lastUpdated,
       createdAt: iso(((seed % 18) + 3) * 30 * DAY),
+      subDepartment: subDepartmentFor(t.department, t.subcategory),
     } as InventoryItem;
   }),
 ];

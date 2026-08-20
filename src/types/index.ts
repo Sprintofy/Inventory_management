@@ -116,6 +116,7 @@ export interface InventoryItem {
   subcategory?: string;
   description?: string;
   department: string;
+  subDepartment?: string;
   location: string;
   quantity: number;
   unit: string;

@@ -40,7 +40,9 @@ export default function LoginPage() {
   const onSubmit = (values: LoginValues) => {
     setError(null);
     if (login(values.email, values.password)) {
-      router.push("/dashboard");
+      const account = demoAccounts.find((a) => a.email === values.email && a.password === values.password);
+      const isDeptRole = account?.role === "department-manager" || account?.role === "department-user";
+      router.push(isDeptRole ? "/departments" : "/dashboard");
     } else {
       setError("Invalid credentials. Use one of the demo accounts below.");
     }
