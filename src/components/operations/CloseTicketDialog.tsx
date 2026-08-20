@@ -35,7 +35,7 @@ export function CloseTicketDialog({ open, onOpenChange, ticket }: { open: boolea
     if (open && ticket) {
       keyCounter.current = 0;
       setRows(
-        ticket.issues.map((iss) => ({
+        ticket.issues.slice(0, 1).map((iss) => ({
           key: `existing-${iss.id}`,
           issueId: iss.id,
           title: iss.title,
