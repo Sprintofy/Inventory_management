@@ -20,14 +20,13 @@ import { InventoryChart, DepartmentChart, StockHealthChart } from "@/components/
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useFakeLoading } from "@/hooks/use-fake-loading";
 import { formatNumber, timeAgo } from "@/lib/utils";
-import { stockHealth as seedStockHealth, departments } from "@/data/mock";
 
 function Greeting() {
-  const { user, activeDepartment, role } = useApp();
+  const { user, activeDepartment, role, state } = useApp();
   const hour = new Date().getHours();
   const part = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const isDeptView = role === "department-manager" || role === "department-user";
-  const dept = departments.find((d) => d.name === activeDepartment);
+  const dept = state.departments.find((d) => d.name === activeDepartment);
 
   if (isDeptView && dept) {
     return (
@@ -66,28 +65,27 @@ export default function DashboardPage() {
   }, [items, state.requests, activeDepartment]);
 
   const deptChart = React.useMemo(() => {
+    const depts = state.departments;
     if (activeDepartment !== "all") {
-      const d = departments.find((x) => x.name === activeDepartment)!;
-      return [{ name: activeDepartment, value: stats.totalStock, color: d.color }];
+      const d = depts.find((x) => x.name === activeDepartment);
+      return [{ name: activeDepartment, value: stats.totalStock, color: d?.color ?? "#6366f1" }];
     }
-    return departments.map((d) => ({
+    return depts.map((d) => ({
       name: d.name,
       value: allItems.filter((i) => i.department === d.name).reduce((s, i) => s + i.quantity, 0),
       color: d.color,
     }));
-  }, [activeDepartment, allItems, stats.totalStock]);
+  }, [activeDepartment, allItems, stats.totalStock, state.departments]);
 
   const health = React.useMemo(() => {
-    if (activeDepartment !== "all") {
-      return [
-        { label: "Healthy", value: items.filter((i) => i.status === "in-stock").length, color: "#10b981" },
-        { label: "Low Stock", value: items.filter((i) => i.status === "low-stock").length, color: "#f59e0b" },
-        { label: "Critical", value: items.filter((i) => i.status === "low-stock" && i.quantity <= i.minStock).length, color: "#f97316" },
-        { label: "Out of Stock", value: items.filter((i) => i.status === "out-of-stock").length, color: "#ef4444" },
-      ];
-    }
-    return seedStockHealth;
-  }, [activeDepartment, items]);
+    const source = activeDepartment === "all" ? allItems : items;
+    return [
+      { label: "Healthy", value: source.filter((i) => i.status === "in-stock").length, color: "#10b981" },
+      { label: "Low Stock", value: source.filter((i) => i.status === "low-stock").length, color: "#f59e0b" },
+      { label: "Critical", value: source.filter((i) => i.status === "low-stock" && i.quantity <= i.minStock).length, color: "#f97316" },
+      { label: "Out of Stock", value: source.filter((i) => i.status === "out-of-stock").length, color: "#ef4444" },
+    ];
+  }, [activeDepartment, items, allItems]);
 
   const recentActivity = React.useMemo(() => state.activities.slice(0, 6), [state.activities]);
 
@@ -227,7 +225,7 @@ export default function DashboardPage() {
       {role === "department-user" && (
         <div className="bg-muted/50 text-muted-foreground flex items-center gap-2 rounded-lg border px-4 py-3 text-xs">
           <AlertTriangle className="size-4" />
-          You're viewing as <span className="font-medium text-foreground">Department User</span> — actions are limited to your department ({activeDepartment}). Switch roles from your profile menu to explore more.
+          You're viewing as <span className="font-medium text-foreground">Department User</span> — actions are limited to your department ({activeDepartment}).
         </div>
       )}
     </div>

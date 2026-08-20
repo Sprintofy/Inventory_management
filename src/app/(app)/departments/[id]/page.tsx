@@ -77,7 +77,7 @@ export default function DepartmentDetailPage({ params }: { params: Promise<{ id:
           <p className="mt-1 text-2xl font-semibold tabular-nums">{openTickets.length}</p>
         </CardContent></Card>
         <Card className="py-4"><CardContent>
-          <p className="text-warning flex items-center gap-2 text-xs"><FileText className="size-3.5" /> Low / Out of Stock</p>
+          <p className="text-warning flex items-center gap-2 text-xs"><FileText className="size-3.5" /> Inventory Alerts</p>
           <p className="mt-1 text-2xl font-semibold tabular-nums">{lowItems.length}</p>
         </CardContent></Card>
       </div>

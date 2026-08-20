@@ -13,8 +13,13 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { chartSeries } from "@/data/mock";
 import { formatNumber } from "@/lib/utils";
+import { useApp } from "@/store/app-store";
+
+export type InventoryRange = "7 days" | "30 days" | "3 months" | "1 year";
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const DAY = 86400000;
 
 export interface ChartTooltipProps {
   active?: boolean;
@@ -42,22 +47,64 @@ export function ChartTooltip({ active, payload, label, prefix = "" }: ChartToolt
   );
 }
 
-export function InventoryChart({ range }: { range: keyof typeof chartSeries }) {
+export function InventoryChart({ range }: { range: InventoryRange }) {
+  const { state } = useApp();
+
   const data = useMemo(() => {
-    const series = chartSeries[range];
-    const n = series.stockIn.length;
-    const labels =
-      range === "7 days"
-        ? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-        : range === "30 days"
-          ? Array.from({ length: n }, (_, i) => `D${i + 1}`)
-          : ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    return series.stockIn.map((v, i) => ({
-      label: labels[i % labels.length],
-      "Stock In": v,
-      "Stock Out": series.stockOut[i],
-    }));
-  }, [range]);
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+    const endTs = end.getTime();
+    const days = range === "7 days" ? 7 : range === "30 days" ? 30 : range === "3 months" ? 90 : 365;
+
+    interface Bucket {
+      start: number;
+      end: number;
+      in: number;
+      out: number;
+    }
+
+    const buckets: Bucket[] = [];
+    if (range === "1 year") {
+      for (let i = 11; i >= 0; i--) {
+        const start = new Date(endTs);
+        start.setDate(1);
+        start.setMonth(start.getMonth() - i);
+        buckets.push({ start: start.getTime(), end: i === 0 ? endTs + 1 : Date.UTC(start.getFullYear(), start.getMonth() + 1, 1), in: 0, out: 0 });
+      }
+    } else if (range === "3 months") {
+      const step = Math.ceil(days / 12) * DAY;
+      for (let i = 11; i >= 0; i--) {
+        const start = endTs - (i + 1) * step;
+        buckets.push({ start, end: start + step, in: 0, out: 0 });
+      }
+    } else {
+      for (let i = days - 1; i >= 0; i--) {
+        const start = endTs - (i + 1) * DAY;
+        buckets.push({ start, end: start + DAY, in: 0, out: 0 });
+      }
+    }
+
+    for (const t of state.transactions) {
+      const ts = new Date(t.date).getTime();
+      if (ts > endTs + 1 || ts < endTs - days * DAY) continue;
+      const idx = buckets.findIndex((b) => ts >= b.start && ts < b.end);
+      if (idx === -1) continue;
+      if (t.type === "stock-in") buckets[idx].in += t.quantity;
+      else if (t.type === "stock-out") buckets[idx].out += Math.abs(t.quantity);
+    }
+
+    return buckets.map((b, i) => {
+      let label: string;
+      if (range === "7 days") label = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][new Date(b.start).getDay()];
+      else if (range === "30 days") label = `D${i + 1}`;
+      else label = MONTHS[i % 12];
+      return {
+        label,
+        "Stock In": b.in,
+        "Stock Out": b.out,
+      };
+    });
+  }, [state.transactions, range]);
 
   return (
     <ResponsiveContainer width="100%" height={280}>

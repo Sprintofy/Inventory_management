@@ -3,13 +3,13 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronsLeft, LifeBuoy, LogOut, ShieldCheck } from "lucide-react";
+import { ChevronsLeft, LifeBuoy, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/store/app-store";
 import { navForRole, bottomNav } from "@/components/layout/nav";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 
@@ -63,7 +63,7 @@ const roleLabels: Record<string, string> = {
 };
 
 function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
-  const { user, role, state, switchRole, logout, toggleSidebar } = useApp();
+  const { user, role, logout, toggleSidebar } = useApp();
   const pathname = usePathname();
   const groups = navForRole(role);
 
@@ -187,32 +187,6 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
               sideOffset={8}
               className="w-60"
             >
-              <DropdownMenuLabel className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-                <ShieldCheck className="size-3.5 text-primary" />
-                DEMO ROLE SWITCHER
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {(
-                [
-                  "super-admin",
-                  "admin",
-                  "department-manager",
-                  "department-user",
-                ] as const
-              ).map((r) => (
-                <DropdownMenuItem
-                  key={r}
-                  onClick={() => switchRole(r)}
-                  className={cn(role === r && "bg-accent font-medium")}
-                >
-                  {roleLabels[r]}
-                  {role === r && (
-                    <span className="text-muted-foreground ml-auto text-xs">
-                      current
-                    </span>
-                  )}
-                </DropdownMenuItem>
-              ))}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 variant="destructive"

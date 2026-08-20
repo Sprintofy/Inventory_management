@@ -136,7 +136,6 @@ interface AppState {
 type Action =
   | { type: "LOGIN"; user: User }
   | { type: "LOGOUT" }
-  | { type: "SWITCH_ROLE"; role: Role }
   | { type: "SET_DEPARTMENT"; department: string }
   | { type: "TOGGLE_NAV" }
   | { type: "SET_SETTINGS"; settings: Partial<Settings> }
@@ -247,16 +246,6 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, user: action.user, department: action.user.role === "super-admin" ? "all" : action.user.department };
     case "LOGOUT":
       return { ...state, user: null };
-    case "SWITCH_ROLE": {
-      const demo = demoAccounts.find((d) => d.role === action.role);
-      if (!demo) return state;
-      const user = state.users.find((u) => u.email === demo.email) ?? state.users[0];
-      return {
-        ...state,
-        user,
-        department: action.role === "super-admin" ? "all" : user.department,
-      };
-    }
     case "SET_DEPARTMENT":
       return { ...state, department: action.department };
     case "TOGGLE_NAV":
@@ -425,6 +414,23 @@ function reducer(state: AppState, action: Action): AppState {
   }
 }
 
+const STORAGE_KEY = "inventoryos-state-v1";
+
+function loadInitialState(): AppState {
+  if (typeof window === "undefined") return initialState;
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return initialState;
+    const parsed = JSON.parse(raw) as Partial<AppState>;
+    if (!parsed || !Array.isArray(parsed.inventory) || !Array.isArray(parsed.departments) || !Array.isArray(parsed.users)) {
+      return initialState;
+    }
+    return { ...initialState, ...parsed } as AppState;
+  } catch {
+    return initialState;
+  }
+}
+
 const initialState: AppState = {
   user: null,
   department: "all",
@@ -462,7 +468,6 @@ interface AppContextValue {
   allItems: InventoryItem[];
   login: (email: string, password: string) => boolean;
   logout: () => void;
-  switchRole: (role: Role) => void;
   setDepartment: (d: string) => void;
   toggleNav: () => void;
   toggleSidebar: () => void;
@@ -523,7 +528,15 @@ interface AppContextValue {
 const AppContext = React.createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [state, dispatch] = React.useReducer(reducer, initialState);
+  const [state, dispatch] = React.useReducer(reducer, undefined, loadInitialState);
+
+  React.useEffect(() => {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch {
+      // storage may be unavailable or full — state still works in-memory
+    }
+  }, [state]);
 
   const role = state.user?.role ?? "super-admin";
   const permissions = React.useMemo(() => rolePermissions[role], [role]);
@@ -571,16 +584,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return true;
   }, []);
 
-  const logout = React.useCallback(() => dispatch({ type: "LOGOUT" }), []);
-
-  const switchRole = React.useCallback(
-    (r: Role) => {
-      dispatch({ type: "SWITCH_ROLE", role: r });
-      const label = r === "department-manager" ? "Department" : r.split("-").map((w) => w[0].toUpperCase() + w.slice(1)).join(" ");
-      toast.success(`Switched to ${label}`);
-    },
-    []
-  );
+const logout = React.useCallback(() => dispatch({ type: "LOGOUT" }), []);
 
   const setDepartment = React.useCallback((d: string) => dispatch({ type: "SET_DEPARTMENT", department: d }), []);
   const toggleNav = React.useCallback(() => dispatch({ type: "TOGGLE_NAV" }), []);
@@ -1021,7 +1025,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     allItems,
     login,
     logout,
-    switchRole,
     setDepartment,
     toggleNav,
     toggleSidebar,

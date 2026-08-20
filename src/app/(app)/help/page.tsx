@@ -38,7 +38,7 @@ const sections = [
       "Super Admin and Admin see everything and can manage organization settings.",
       "Departments manage their own department's inventory, requests and approvals.",
       "Department Users have read access plus request and transfer capabilities for their department.",
-      "Use the avatar menu in the header to switch demo roles instantly.",
+      "Your role determines what you can view and manage. Contact an administrator for access changes.",
     ],
   },
   {

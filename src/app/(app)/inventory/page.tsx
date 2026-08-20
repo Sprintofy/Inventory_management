@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
-import { FileDown, Plus } from "lucide-react";
+import { FileDown, FileUp, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InventoryFilters, emptyFilters, type InventoryFiltersState } from "@/components/inventory/InventoryFilters";
 import { InventoryTable } from "@/components/inventory/InventoryTable";
 import { InventoryForm } from "@/components/inventory/InventoryForm";
+import { InventoryImportDialog } from "@/components/inventory/InventoryImportDialog";
 import { StockInDialog, StockOutDialog } from "@/components/inventory/StockDialogs";
 import { DailyStockView } from "@/components/inventory/DailyStockView";
 import { MovementHistory } from "@/components/inventory/MovementHistory";
@@ -31,6 +32,7 @@ export default function InventoryPage() {
   const [stockInOpen, setStockInOpen] = React.useState(false);
   const [stockOutOpen, setStockOutOpen] = React.useState(false);
   const [stockTarget, setStockTarget] = React.useState<InventoryItem | null>(null);
+  const [importOpen, setImportOpen] = React.useState(false);
   const loading = useFakeLoadingOn(searchParams.toString());
 
   React.useEffect(() => {
@@ -69,13 +71,8 @@ export default function InventoryPage() {
   };
 
   const exportExcel = () => {
-    const rows = filtered.map((i) => ({
-      Item: i.name, SKU: i.sku, Category: i.category, Department: i.department, Location: i.location,
-      Quantity: i.quantity, "Reorder Level": i.reorderLevel, "Unit Cost": i.unitCost, "Total Value": i.quantity * i.unitCost,
-      Status: i.status, "Last Updated": formatDate(i.lastUpdated),
-    }));
-    exportInventoryExcel(rows);
-    toast.success(`Exported ${rows.length} items to Excel`);
+    exportInventoryExcel(filtered);
+    toast.success(`Exported ${filtered.length} items to Excel`);
   };
 
   const openEdit = (item: InventoryItem) => {
@@ -101,6 +98,9 @@ export default function InventoryPage() {
         breadcrumb={[{ label: "Inventory" }]}
         actions={
           <>
+            {can("inventory.manage") && (
+              <Button variant="outline" onClick={() => setImportOpen(true)}><FileUp className="size-4" /> Import</Button>
+            )}
             <Button variant="outline" onClick={exportExcel}><FileDown className="size-4" /> Export to Excel</Button>
             <Button variant="outline" onClick={exportAll}>Export CSV</Button>
             {can("inventory.manage") && (
@@ -168,6 +168,7 @@ export default function InventoryPage() {
       </Tabs>
 
       <InventoryForm open={formOpen} onOpenChange={setFormOpen} item={editing} />
+      <InventoryImportDialog open={importOpen} onOpenChange={setImportOpen} />
       <StockInDialog open={stockInOpen} onOpenChange={setStockInOpen} presetItem={stockTarget} />
       <StockOutDialog open={stockOutOpen} onOpenChange={setStockOutOpen} presetItem={stockTarget} />
     </div>
