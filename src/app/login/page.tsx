@@ -22,7 +22,7 @@ type LoginValues = z.infer<typeof loginSchema>;
 
 const demoList = [
   { label: "Super Admin", email: demoAccounts[0].email, password: demoAccounts[0].password, icon: ShieldCheck, color: "bg-danger/10 text-danger" },
-  { label: "Department Manager", email: demoAccounts[1].email, password: demoAccounts[1].password, icon: UserRound, color: "bg-warning/15 text-warning" },
+  { label: "Department", email: demoAccounts[1].email, password: demoAccounts[1].password, icon: UserRound, color: "bg-warning/15 text-warning" },
   { label: "Department User", email: demoAccounts[2].email, password: demoAccounts[2].password, icon: UserRound, color: "bg-primary/10 text-primary" },
 ];
 

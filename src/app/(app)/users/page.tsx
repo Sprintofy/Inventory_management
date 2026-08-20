@@ -173,7 +173,7 @@ export default function UsersPage() {
                 <FormField control={form.control} name="role" render={({ field }) => (
                   <FormItem><FormLabel>Role</FormLabel>
                     <FormControl><Select value={field.value} onValueChange={field.onChange}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent>
-                      {(["super-admin", "admin", "department-manager", "department-user", "viewer"] as Role[]).map((r) => <SelectItem key={r} value={r} className="capitalize">{r.replace("-", " ")}</SelectItem>)}
+                      {(["super-admin", "admin", "department-manager", "department-user", "viewer"] as Role[]).map((r) => <SelectItem key={r} value={r} className="capitalize">{r === "department-manager" ? "Department" : r.replace("-", " ")}</SelectItem>)}
                     </SelectContent></Select></FormControl>
                     <FormMessage />
                   </FormItem>

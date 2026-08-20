@@ -57,7 +57,7 @@ function NavLink({
 const roleLabels: Record<string, string> = {
   "super-admin": "Super Admin",
   admin: "Admin",
-  "department-manager": "Department Manager",
+  "department-manager": "Department",
   "department-user": "Department User",
   viewer: "Viewer",
 };

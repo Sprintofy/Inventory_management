@@ -8,16 +8,27 @@ import { useApp } from "@/store/app-store";
 import { cn } from "@/lib/utils";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { user, state } = useApp();
+  const { user, role, state } = useApp();
   const pathname = usePathname();
   const router = useRouter();
   const collapsed = state.settings.sidebarCollapsed;
 
+  const blockedPaths = React.useMemo(() => {
+    const blocked: string[] = [];
+    if (role === "super-admin") blocked.push("/purchase-orders", "/suppliers", "/assets");
+    if (role === "department-manager" || role === "department-user") blocked.push("/stock-in", "/stock-out", "/purchase-orders", "/suppliers", "/assets");
+    return blocked;
+  }, [role]);
+
+  const isBlocked = blockedPaths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+
   React.useEffect(() => {
     if (!user) {
       router.replace("/login");
+    } else if (isBlocked) {
+      router.replace("/dashboard");
     }
-  }, [user, router]);
+  }, [user, router, isBlocked]);
 
   if (!user) {
     return (

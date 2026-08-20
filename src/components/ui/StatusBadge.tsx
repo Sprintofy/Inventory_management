@@ -47,7 +47,7 @@ const statusMap: Record<string, { label: string; variant: StatusVariant }> = {
   critical: { label: "Critical", variant: "danger" },
   "super-admin": { label: "Super Admin", variant: "danger" },
   admin: { label: "Admin", variant: "info" },
-  "department-manager": { label: "Department Manager", variant: "warning" },
+  "department-manager": { label: "Department", variant: "warning" },
   "department-user": { label: "Department User", variant: "neutral" },
   viewer: { label: "Viewer", variant: "neutral" },
   new: { label: "New", variant: "success" },

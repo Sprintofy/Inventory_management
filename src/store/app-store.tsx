@@ -74,7 +74,7 @@ export type Permission =
 const rolePermissions: Record<Role, Permission[]> = {
   "super-admin": [
     "inventory.manage", "stock-in.create", "stock-out.create", "requests.create", "requests.approve",
-    "transfers.create", "transfers.approve", "po.create", "po.manage", "tickets.manage", "suppliers.manage", "assets.manage",
+    "transfers.create", "transfers.approve", "tickets.manage",
     "categories.manage", "locations.manage", "departments.manage", "users.manage", "reports.view",
     "activity.view", "settings.manage", "global.view",
   ],
@@ -85,11 +85,11 @@ const rolePermissions: Record<Role, Permission[]> = {
     "activity.view", "settings.manage",
   ],
   "department-manager": [
-    "inventory.manage", "stock-in.create", "stock-out.create", "requests.create", "requests.approve",
-    "transfers.create", "transfers.approve", "po.create", "suppliers.manage", "assets.manage",
+    "inventory.manage", "requests.create", "requests.approve",
+    "transfers.create", "transfers.approve",
     "categories.manage", "locations.manage", "reports.view",
   ],
-  "department-user": ["inventory.manage", "stock-out.create", "requests.create", "transfers.create", "assets.manage", "reports.view"],
+  "department-user": ["inventory.manage", "requests.create", "transfers.create", "reports.view"],
   viewer: ["reports.view"],
 };
 
@@ -531,7 +531,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const can = React.useCallback((p: Permission) => permissions.includes(p), [permissions]);
 
   const visibleDepartments = React.useMemo(() => {
-    if (role === "super-admin" || role === "admin") return state.departments.map((d) => d.name);
+    if (role === "super-admin" || role === "admin" || role === "department-manager" || role === "department-user") {
+      return state.departments.map((d) => d.name);
+    }
     if (state.user) return [state.user.department];
     return state.departments.map((d) => d.name);
   }, [role, state.user, state.departments]);
@@ -541,8 +543,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const activeDepartment = React.useMemo(() => {
     if (state.department !== "all" && visibleDepartments.includes(state.department)) return state.department;
     if (visibleDepartments.length === 1) return visibleDepartments[0];
+    if (role === "department-manager" || role === "department-user") return visibleDepartments[0] ?? "all";
     return "all";
-  }, [state.department, visibleDepartments]);
+  }, [state.department, visibleDepartments, role]);
 
   const allItems = React.useMemo(() => state.inventory.filter((i) => !i.archived), [state.inventory]);
 
@@ -573,7 +576,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const switchRole = React.useCallback(
     (r: Role) => {
       dispatch({ type: "SWITCH_ROLE", role: r });
-      toast.success(`Switched to ${r.split("-").map((w) => w[0].toUpperCase() + w.slice(1)).join(" ")}`);
+      const label = r === "department-manager" ? "Department" : r.split("-").map((w) => w[0].toUpperCase() + w.slice(1)).join(" ");
+      toast.success(`Switched to ${label}`);
     },
     []
   );

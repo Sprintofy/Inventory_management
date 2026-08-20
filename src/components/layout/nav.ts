@@ -33,10 +33,10 @@ export interface NavGroup {
 }
 
 const ALL: Role[] = ["super-admin", "admin", "department-manager", "department-user", "viewer"];
-const STAFF: Role[] = ["super-admin", "admin", "department-manager", "department-user"];
 const MANAGER: Role[] = ["super-admin", "admin", "department-manager"];
 const ADMIN: Role[] = ["super-admin", "admin"];
 const OP_STAFF: Role[] = ["super-admin", "admin", "department-manager"];
+const ADMIN_ONLY: Role[] = ["admin"];
 
 export const navGroups: NavGroup[] = [
   {
@@ -47,8 +47,8 @@ export const navGroups: NavGroup[] = [
     label: "Inventory",
     items: [
       { title: "Inventory", href: "/inventory", icon: Package, roles: ALL },
-      { title: "Stock In", href: "/stock-in", icon: PackagePlus, roles: STAFF },
-      { title: "Stock Out", href: "/stock-out", icon: PackageMinus, roles: STAFF },
+      { title: "Stock In", href: "/stock-in", icon: PackagePlus, roles: ADMIN },
+      { title: "Stock Out", href: "/stock-out", icon: PackageMinus, roles: ADMIN },
       { title: "Adjustments", href: "/adjustments", icon: SlidersHorizontal, roles: MANAGER },
     ],
   },
@@ -56,14 +56,14 @@ export const navGroups: NavGroup[] = [
     label: "Operations",
     items: [
       { title: "Tickets", href: "/tickets", icon: Ticket, roles: ADMIN },
-      { title: "Purchase Orders", href: "/purchase-orders", icon: ShoppingCart, roles: OP_STAFF },
-      { title: "Suppliers", href: "/suppliers", icon: Truck, roles: OP_STAFF },
+      { title: "Purchase Orders", href: "/purchase-orders", icon: ShoppingCart, roles: ADMIN_ONLY },
+      { title: "Suppliers", href: "/suppliers", icon: Truck, roles: ADMIN_ONLY },
     ],
   },
   {
     label: "Assets",
     items: [
-      { title: "Assets", href: "/assets", icon: Boxes, roles: ALL },
+      { title: "Assets", href: "/assets", icon: Boxes, roles: ["admin", "viewer"] },
       { title: "Categories", href: "/categories", icon: FolderTree, roles: OP_STAFF },
       { title: "Locations", href: "/locations", icon: MapPin, roles: OP_STAFF },
     ],

@@ -50,7 +50,7 @@ function Greeting() {
 }
 
 export default function DashboardPage() {
-  const { departmentItems, allItems, activeDepartment, user, state, role, setDepartment } = useApp();
+  const { departmentItems, allItems, activeDepartment, visibleDepartments, user, state, role, setDepartment } = useApp();
   const loading = useFakeLoading();
   const [range, setRange] = React.useState<"7 days" | "30 days" | "3 months" | "1 year">("30 days");
 
@@ -102,7 +102,7 @@ export default function DashboardPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {(role === "super-admin" || role === "admin" ? ["all", ...state.departments.map((d) => d.name)] : [activeDepartment]).map((d) => (
+              {(role === "super-admin" || role === "admin" ? ["all", ...visibleDepartments] : visibleDepartments).map((d) => (
                 <SelectItem key={d} value={d}>
                   {d === "all" ? "All Departments" : d}
                 </SelectItem>

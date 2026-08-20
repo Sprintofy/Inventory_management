@@ -20,16 +20,18 @@ import {
 const palette = ["#4f46e5", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6", "#6366f1", "#f43f5e", "#84cc16"];
 
 export default function ReportsPage() {
-  const { state, visibleDepartments } = useApp();
-  const [dept, setDept] = React.useState("all");
+  const { state, visibleDepartments, activeDepartment, role, setDepartment } = useApp();
+  const isGlobal = role === "super-admin" || role === "admin";
   const [range, setRange] = React.useState("30d");
 
+  const dept = activeDepartment;
+
   const scopeItems = useMemo(
-    () => state.inventory.filter((i) => dept === "all" || i.department === dept),
+    () => state.inventory.filter((i) => i.department === dept),
     [state.inventory, dept]
   );
   const scopeTransactions = useMemo(
-    () => state.transactions.filter((t) => dept === "all" || t.department === dept),
+    () => state.transactions.filter((t) => t.department === dept),
     [state.transactions, dept]
   );
 
@@ -70,10 +72,10 @@ export default function ReportsPage() {
         breadcrumb={[{ label: "Reports" }]}
         actions={
           <div className="flex items-center gap-2">
-            <Select value={dept} onValueChange={setDept}>
+            <Select value={dept} onValueChange={setDepartment}>
               <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Departments</SelectItem>
+                {isGlobal && <SelectItem value="all">All Departments</SelectItem>}
                 {visibleDepartments.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
               </SelectContent>
             </Select>
