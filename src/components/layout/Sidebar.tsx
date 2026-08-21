@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronsLeft, LifeBuoy, LogOut } from "lucide-react";
+import { ChevronsLeft, LifeBuoy, LogOut, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/store/app-store";
 import { navForRole, bottomNav } from "@/components/layout/nav";
@@ -65,9 +65,35 @@ const roleLabels: Record<string, string> = {
 function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
   const { user, role, logout, toggleSidebar } = useApp();
   const pathname = usePathname();
+  const [menuQuery, setMenuQuery] = React.useState("");
   const groups = navForRole(role);
 
   const isActive = (href: string) => (href === "/dashboard" ? pathname === "/dashboard" || pathname === "/" : pathname.startsWith(href));
+
+  const term = menuQuery.trim().toLowerCase();
+  const filtering = term.length > 0;
+
+  const visibleGroups = React.useMemo(() => {
+    if (!filtering) return groups;
+    return groups
+      .map((g) => ({
+        ...g,
+        items: g.items.filter(
+          (i) =>
+            i.title.toLowerCase().includes(term) ||
+            g.label.toLowerCase().includes(term) ||
+            (i.keywords ?? []).some((k) => k.includes(term)),
+        ),
+      }))
+      .filter((g) => g.items.length > 0);
+  }, [groups, term, filtering]);
+
+  const flatMatches = filtering ? visibleGroups.flatMap((g) => g.items) : [];
+
+  const handleNavigate = () => {
+    onNavigate?.();
+    setMenuQuery("");
+  };
 
   return (
     <div className="bg-sidebar text-sidebar-foreground flex h-full flex-col">
@@ -107,30 +133,76 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
         </button>
       </div>
 
+      {/* Menu search — filters sidebar navigation items */}
+      {!collapsed && (
+        <div className="shrink-0 px-3 pt-3">
+          <div className="relative">
+            <Search className="text-sidebar-foreground/40 pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2" />
+            <input
+              value={menuQuery}
+              onChange={(e) => setMenuQuery(e.target.value)}
+              placeholder="Search menu…"
+              aria-label="Search menu"
+              className="border-white/10 bg-white/5 text-sidebar-foreground placeholder:text-sidebar-foreground/40 focus:bg-white/10 focus:border-white/20 h-9 w-full rounded-lg border pr-8 pl-9 text-sm outline-none transition-colors"
+            />
+            {menuQuery && (
+              <button
+                onClick={() => setMenuQuery("")}
+                className="text-sidebar-foreground/50 hover:text-white absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer rounded-md p-1 transition-colors"
+                aria-label="Clear menu search"
+              >
+                <X className="size-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* <nav className="scrollbar-thin flex-1 space-y-5 overflow-y-auto px-3 py-4"> */}
       <nav className="sidebar-scroll flex-1 space-y-5 overflow-y-auto px-3 py-4">
-        {groups.map((group) => (
-          <div key={group.label}>
-            {!collapsed && (
-              <p className="text-sidebar-foreground/40 mb-1.5 px-3 text-[10px] font-semibold tracking-widest uppercase">
-                {group.label}
-              </p>
-            )}
-            <div className="space-y-0.5">
-              {group.items.map((item) => (
-                <NavLink
-                  key={item.href}
-                  href={item.href}
-                  icon={item.icon}
-                  title={item.title}
-                  collapsed={collapsed}
-                  active={isActive(item.href)}
-                  onNavigate={onNavigate}
-                />
-              ))}
-            </div>
+        {filtering && flatMatches.length === 0 && (
+          <p className="text-sidebar-foreground/50 px-3 py-6 text-center text-xs">
+            No menus found for “{menuQuery.trim()}”
+          </p>
+        )}
+        {filtering ? (
+          <div className="space-y-0.5">
+            {flatMatches.map((item) => (
+              <NavLink
+                key={item.href}
+                href={item.href}
+                icon={item.icon}
+                title={item.title}
+                collapsed={collapsed}
+                active={isActive(item.href)}
+                onNavigate={handleNavigate}
+              />
+            ))}
           </div>
-        ))}
+        ) : (
+          groups.map((group) => (
+            <div key={group.label}>
+              {!collapsed && (
+                <p className="text-sidebar-foreground/40 mb-1.5 px-3 text-[10px] font-semibold tracking-widest uppercase">
+                  {group.label}
+                </p>
+              )}
+              <div className="space-y-0.5">
+                {group.items.map((item) => (
+                  <NavLink
+                    key={item.href}
+                    href={item.href}
+                    icon={item.icon}
+                    title={item.title}
+                    collapsed={collapsed}
+                    active={isActive(item.href)}
+                    onNavigate={handleNavigate}
+                  />
+                ))}
+              </div>
+            </div>
+          ))
+        )}
       </nav>
 
       <div className="shrink-0 border-t border-white/10 p-3">
@@ -143,7 +215,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
               title={item.title}
               collapsed={collapsed}
               active={isActive(item.href)}
-              onNavigate={onNavigate}
+              onNavigate={handleNavigate}
             />
           ))}
         </div>

@@ -7,7 +7,6 @@ import { z } from "zod";
 import { MapPin, MoreHorizontal, Pencil, Plus, Trash2, Warehouse, Store, DoorOpen, LayoutGrid } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { SearchInput } from "@/components/ui/SearchInput";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useApp } from "@/store/app-store";
-import { useFakeLoadingOn } from "@/hooks/use-fake-loading";
+import { useFakeLoading } from "@/hooks/use-fake-loading";
 import { formatNumber, uid } from "@/lib/utils";
 import type { Location } from "@/types";
 
@@ -39,11 +38,10 @@ const typeMeta: Record<string, { icon: React.ElementType; label: string; class: 
 
 export default function LocationsPage() {
   const { state, addLocation, updateLocation, deleteLocation, can } = useApp();
-  const [search, setSearch] = React.useState("");
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Location | null>(null);
   const [deleting, setDeleting] = React.useState<Location | null>(null);
-  const loading = useFakeLoadingOn(search);
+  const loading = useFakeLoading();
 
   const form = useForm<SV>({
     resolver: zodResolver(schema) as unknown as Resolver<SV>,
@@ -54,10 +52,7 @@ export default function LocationsPage() {
     if (dialogOpen) form.reset(editing ? { name: editing.name, type: editing.type } : { name: "", type: "store" });
   }, [dialogOpen, editing, form]);
 
-  const locations = React.useMemo(() => {
-    const term = search.trim().toLowerCase();
-    return state.locations.filter((l) => !term || l.name.toLowerCase().includes(term) || l.type.toLowerCase().includes(term));
-  }, [state.locations, search]);
+  const locations = state.locations;
 
   const onSubmit = (values: SV) => {
     if (editing) updateLocation({ ...editing, name: values.name, type: values.type as Location["type"] });
@@ -75,13 +70,11 @@ export default function LocationsPage() {
         actions={can("locations.manage") ? <Button onClick={() => { setEditing(null); setDialogOpen(true); }}><Plus className="size-4" /> Add Location</Button> : undefined}
       />
 
-      <SearchInput value={search} onChange={(e) => setSearch(e.target.value)} onClear={() => setSearch("")} placeholder="Search locations…" className="md:max-w-sm" />
-
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-32" />)}</div>
       ) : locations.length === 0 ? (
         <Card className="py-0"><CardContent className="p-0">
-          <EmptyState icon={MapPin} title="No locations found" description="Try a different search or add a location." action={{ label: "Add Location", onClick: () => setDialogOpen(true) }} />
+          <EmptyState icon={MapPin} title="No locations yet" description="Add a location to start tracking inventory." action={{ label: "Add Location", onClick: () => setDialogOpen(true) }} />
         </CardContent></Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

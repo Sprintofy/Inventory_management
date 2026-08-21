@@ -7,7 +7,6 @@ import { z } from "zod";
 import { AlertTriangle, Plus, SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { SearchInput } from "@/components/ui/SearchInput";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -35,7 +34,6 @@ type SV = z.output<typeof schema>;
 export default function AdjustmentsPage() {
   const { state, activeDepartment, adjustStock, log } = useApp();
   const loading = useFakeLoading();
-  const [search, setSearch] = React.useState("");
   const [page, setPage] = React.useState(1);
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const pageSize = 10;
@@ -55,14 +53,12 @@ export default function AdjustmentsPage() {
   const over = selectedItem && direction === "negative" && qty > selectedItem.quantity;
 
   const records = React.useMemo(() => {
-    const term = search.trim().toLowerCase();
     return state.transactions.filter((t) => {
       if (t.type !== "adjustment") return false;
       if (activeDepartment !== "all" && t.department !== activeDepartment) return false;
-      if (term && !(t.reference.toLowerCase().includes(term) || t.itemName.toLowerCase().includes(term))) return false;
       return true;
     });
-  }, [state.transactions, search, activeDepartment]);
+  }, [state.transactions, activeDepartment]);
 
   const paged = records.slice((page - 1) * pageSize, page * pageSize);
 
@@ -83,8 +79,6 @@ export default function AdjustmentsPage() {
         breadcrumb={[{ label: "Adjustments" }]}
         actions={<Button onClick={() => setDialogOpen(true)}><Plus className="size-4" /> New Adjustment</Button>}
       />
-
-      <SearchInput value={search} onChange={(e) => setSearch(e.target.value)} onClear={() => setSearch("")} placeholder="Search adjustments…" className="md:max-w-sm" />
 
       <div className="rounded-xl border bg-card shadow-sm">
         <Table>

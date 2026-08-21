@@ -4,7 +4,6 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { ArrowDownToLine, MoreHorizontal, Plus, X } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { SearchInput } from "@/components/ui/SearchInput";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -24,20 +23,17 @@ export default function StockInPage() {
   const { state, activeDepartment, can, updateStockInStatus } = useApp();
   const router = useRouter();
   const loading = useFakeLoading();
-  const [search, setSearch] = React.useState("");
   const [page, setPage] = React.useState(1);
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [cancelTarget, setCancelTarget] = React.useState<StockInRecord | null>(null);
   const pageSize = 10;
 
   const records = React.useMemo(() => {
-    const term = search.trim().toLowerCase();
     return state.stockIn.filter((r) => {
       if (activeDepartment !== "all" && r.department !== activeDepartment) return false;
-      if (term && !(r.reference.toLowerCase().includes(term) || r.supplier.toLowerCase().includes(term) || r.itemName.toLowerCase().includes(term))) return false;
       return true;
     });
-  }, [state.stockIn, search, activeDepartment]);
+  }, [state.stockIn, activeDepartment]);
 
   const paged = records.slice((page - 1) * pageSize, page * pageSize);
 
@@ -52,12 +48,9 @@ export default function StockInPage() {
 
       <Card className="py-4">
         <CardContent className="px-6">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <SearchInput value={search} onChange={(e) => setSearch(e.target.value)} onClear={() => setSearch("")} placeholder="Search by reference, supplier or item…" className="md:max-w-sm" />
-            <p className="text-muted-foreground text-sm">
-              {records.length} inbound record{records.length !== 1 ? "s" : ""} {activeDepartment !== "all" && `· ${activeDepartment}`}
-            </p>
-          </div>
+          <p className="text-muted-foreground text-sm md:text-right">
+            {records.length} inbound record{records.length !== 1 ? "s" : ""} {activeDepartment !== "all" && `· ${activeDepartment}`}
+          </p>
         </CardContent>
       </Card>
 

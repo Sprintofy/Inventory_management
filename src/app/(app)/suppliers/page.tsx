@@ -7,7 +7,6 @@ import { z } from "zod";
 import { Plus, Star, Truck } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { SearchInput } from "@/components/ui/SearchInput";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,7 +38,6 @@ export default function SuppliersPage() {
   const { state, addSupplier, updateSupplier, can } = useApp();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [search, setSearch] = React.useState(searchParams.get("q") ?? "");
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Supplier | null>(null);
   const loading = useFakeLoadingOn(searchParams.toString());
@@ -59,10 +57,7 @@ export default function SuppliersPage() {
     }
   }, [dialogOpen, editing, form]);
 
-  const suppliers = React.useMemo(() => {
-    const term = search.trim().toLowerCase();
-    return state.suppliers.filter((s) => !term || s.name.toLowerCase().includes(term) || s.contactPerson.toLowerCase().includes(term) || s.categories.join(" ").toLowerCase().includes(term));
-  }, [state.suppliers, search]);
+  const suppliers = state.suppliers;
 
   const onSubmit = (values: SV) => {
     const data: Supplier = {
@@ -94,15 +89,13 @@ export default function SuppliersPage() {
         actions={can("suppliers.manage") ? <Button onClick={() => { setEditing(null); setDialogOpen(true); }}><Plus className="size-4" /> Add Supplier</Button> : undefined}
       />
 
-      <SearchInput value={search} onChange={(e) => setSearch(e.target.value)} onClear={() => setSearch("")} placeholder="Search suppliers…" className="md:max-w-sm" />
-
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-44" />)}
         </div>
       ) : suppliers.length === 0 ? (
         <Card className="py-0"><CardContent className="p-0">
-          <EmptyState icon={Truck} title="No suppliers found" description="Try a different search or add a new supplier." action={{ label: "Add Supplier", onClick: () => setDialogOpen(true) }} />
+          <EmptyState icon={Truck} title="No suppliers yet" description="Add a supplier to start tracking purchasing." action={{ label: "Add Supplier", onClick: () => setDialogOpen(true) }} />
         </CardContent></Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

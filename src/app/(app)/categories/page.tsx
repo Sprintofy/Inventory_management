@@ -7,7 +7,6 @@ import { z } from "zod";
 import { FolderTree, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { SearchInput } from "@/components/ui/SearchInput";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useApp } from "@/store/app-store";
-import { useFakeLoadingOn } from "@/hooks/use-fake-loading";
+import { useFakeLoading } from "@/hooks/use-fake-loading";
 import { formatNumber, uid } from "@/lib/utils";
 import type { Category } from "@/types";
 
@@ -33,11 +32,10 @@ const palette = ["#4f46e5", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6
 
 export default function CategoriesPage() {
   const { state, addCategory, updateCategory, deleteCategory, can } = useApp();
-  const [search, setSearch] = React.useState("");
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Category | null>(null);
   const [deleting, setDeleting] = React.useState<Category | null>(null);
-  const loading = useFakeLoadingOn(search);
+  const loading = useFakeLoading();
 
   const form = useForm<SV>({
     resolver: zodResolver(schema) as unknown as Resolver<SV>,
@@ -48,10 +46,7 @@ export default function CategoriesPage() {
     if (dialogOpen) form.reset(editing ? { name: editing.name, description: editing.description } : { name: "", description: "" });
   }, [dialogOpen, editing, form]);
 
-  const categories = React.useMemo(() => {
-    const term = search.trim().toLowerCase();
-    return state.categories.filter((c) => !term || c.name.toLowerCase().includes(term) || c.description.toLowerCase().includes(term));
-  }, [state.categories, search]);
+  const categories = state.categories;
 
   const onSubmit = (values: SV) => {
     if (editing) {
@@ -72,13 +67,11 @@ export default function CategoriesPage() {
         actions={can("categories.manage") ? <Button onClick={() => { setEditing(null); setDialogOpen(true); }}><Plus className="size-4" /> Add Category</Button> : undefined}
       />
 
-      <SearchInput value={search} onChange={(e) => setSearch(e.target.value)} onClear={() => setSearch("")} placeholder="Search categories…" className="md:max-w-sm" />
-
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-36" />)}</div>
       ) : categories.length === 0 ? (
         <Card className="py-0"><CardContent className="p-0">
-          <EmptyState icon={FolderTree} title="No categories found" description="Try a different search or add a category." action={{ label: "Add Category", onClick: () => setDialogOpen(true) }} />
+          <EmptyState icon={FolderTree} title="No categories yet" description="Add a category to organize your inventory." action={{ label: "Add Category", onClick: () => setDialogOpen(true) }} />
         </CardContent></Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

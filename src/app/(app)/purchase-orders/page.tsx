@@ -4,7 +4,6 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { MoreHorizontal, Plus, ShoppingCart } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { SearchInput } from "@/components/ui/SearchInput";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -22,19 +21,16 @@ export default function PurchaseOrdersPage() {
   const { state, activeDepartment, can, updatePO } = useApp();
   const router = useRouter();
   const loading = useFakeLoading();
-  const [search, setSearch] = React.useState("");
   const [page, setPage] = React.useState(1);
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const pageSize = 10;
 
   const orders = React.useMemo(() => {
-    const term = search.trim().toLowerCase();
     return state.purchaseOrders.filter((po) => {
       if (activeDepartment !== "all" && po.department !== activeDepartment) return false;
-      if (term && !(po.poNumber.toLowerCase().includes(term) || po.supplier.toLowerCase().includes(term))) return false;
       return true;
     });
-  }, [state.purchaseOrders, search, activeDepartment]);
+  }, [state.purchaseOrders, activeDepartment]);
 
   const paged = orders.slice((page - 1) * pageSize, page * pageSize);
 
@@ -52,8 +48,6 @@ export default function PurchaseOrdersPage() {
         breadcrumb={[{ label: "Purchase Orders" }]}
         actions={can("po.create") ? <Button onClick={() => setDialogOpen(true)}><Plus className="size-4" /> New Purchase Order</Button> : undefined}
       />
-
-      <SearchInput value={search} onChange={(e) => setSearch(e.target.value)} onClear={() => setSearch("")} placeholder="Search by PO number or supplier…" className="md:max-w-sm" />
 
       <div className="rounded-xl border bg-card shadow-sm">
         <Table>

@@ -4,7 +4,6 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Check, FileDown, MoreHorizontal, Plus, Ticket } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { SearchInput } from "@/components/ui/SearchInput";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -38,7 +37,6 @@ export default function TicketsPage() {
   const { state, activeDepartment, can, updateTicket } = useApp();
   const router = useRouter();
   const loading = useFakeLoading();
-  const [search, setSearch] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<StatusFilter>("all");
   const [page, setPage] = React.useState(1);
   const [dialogOpen, setDialogOpen] = React.useState(false);
@@ -48,14 +46,12 @@ export default function TicketsPage() {
   const admin = can("tickets.manage");
 
   const tickets = React.useMemo(() => {
-    const term = search.trim().toLowerCase();
     return state.tickets.filter((t) => {
       if (statusFilter !== "all" && t.status !== statusFilter) return false;
       if (activeDepartment !== "all" && t.department !== activeDepartment) return false;
-      if (term && !(t.id.toLowerCase().includes(term) || t.title.toLowerCase().includes(term) || t.category.toLowerCase().includes(term) || t.createdBy.toLowerCase().includes(term) || (t.customer ?? "").toLowerCase().includes(term))) return false;
       return true;
     });
-  }, [state.tickets, search, statusFilter, activeDepartment]);
+  }, [state.tickets, statusFilter, activeDepartment]);
 
   const paged = tickets.slice((page - 1) * pageSize, page * pageSize);
 
@@ -78,8 +74,7 @@ export default function TicketsPage() {
         }
       />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <SearchInput value={search} onChange={(e) => setSearch(e.target.value)} onClear={() => setSearch("")} placeholder="Search by ID, title, customer, category or creator…" className="md:max-w-sm" />
+      <div className="flex justify-end">
         <Tabs value={statusFilter} onValueChange={(v) => { setStatusFilter(v as StatusFilter); setPage(1); }}>
           <TabsList>
             {statusTabs.map((s) => (

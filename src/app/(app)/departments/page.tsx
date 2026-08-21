@@ -8,7 +8,6 @@ import { z } from "zod";
 import { Building2, Layers, MoreHorizontal, Pencil, Plus, Trash2, Users as UsersIcon } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { SearchInput } from "@/components/ui/SearchInput";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useApp } from "@/store/app-store";
-import { useFakeLoadingOn } from "@/hooks/use-fake-loading";
+import { useFakeLoading } from "@/hooks/use-fake-loading";
 import { formatNumber, uid } from "@/lib/utils";
 import { SubDepartmentDialog } from "@/components/departments/SubDepartmentDialog";
 import type { Department, SubDepartment } from "@/types";
@@ -40,13 +39,12 @@ export default function DepartmentsPage() {
   const { state, addDepartment, updateDepartment, deleteDepartment, deleteSubDepartment, can } = useApp();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [search, setSearch] = React.useState("");
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Department | null>(null);
   const [deleting, setDeleting] = React.useState<Department | null>(null);
   const [subDialog, setSubDialog] = React.useState<{ open: boolean; parent: Department | null; sub: SubDepartment | null }>({ open: false, parent: null, sub: null });
   const [deletingSub, setDeletingSub] = React.useState<{ parent: Department; sub: SubDepartment } | null>(null);
-  const loading = useFakeLoadingOn(search);
+  const loading = useFakeLoading();
 
   const form = useForm<SV>({
     resolver: zodResolver(schema) as unknown as Resolver<SV>,
@@ -66,10 +64,7 @@ export default function DepartmentsPage() {
     }
   }, [searchParams, state.departments, router]);
 
-  const departments = React.useMemo(() => {
-    const term = search.trim().toLowerCase();
-    return state.departments.filter((d) => !term || d.name.toLowerCase().includes(term) || d.code.toLowerCase().includes(term) || d.manager.toLowerCase().includes(term));
-  }, [state.departments, search]);
+  const departments = state.departments;
 
   const onSubmit = (values: SV) => {
     if (editing) {
@@ -90,13 +85,11 @@ export default function DepartmentsPage() {
         actions={can("departments.manage") ? <Button onClick={() => { setEditing(null); setDialogOpen(true); }}><Plus className="size-4" /> Add Department</Button> : undefined}
       />
 
-      <SearchInput value={search} onChange={(e) => setSearch(e.target.value)} onClear={() => setSearch("")} placeholder="Search departments…" className="md:max-w-sm" />
-
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-44" />)}</div>
       ) : departments.length === 0 ? (
         <Card className="py-0"><CardContent className="p-0">
-          <EmptyState icon={Building2} title="No departments found" description="Try a different search or add a department." action={{ label: "Add Department", onClick: () => setDialogOpen(true) }} />
+          <EmptyState icon={Building2} title="No departments yet" description="Create a department to organize inventory ownership." action={{ label: "Add Department", onClick: () => setDialogOpen(true) }} />
         </CardContent></Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
