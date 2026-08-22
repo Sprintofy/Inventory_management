@@ -17,6 +17,7 @@ import type {
   TicketIssue,
   Transfer,
   User,
+  Technician,
   DemoAccount,
   NotificationItem,
 } from "@/types";
@@ -770,40 +771,475 @@ export const suppliers: Supplier[] = [
   { id: "SUP-15", name: "QuickFix Hardware", contactPerson: "Sandeep Verma", email: "orders@quickfix.in", phone: "+91 99555 34567", address: "Ludhiana, Punjab", categories: ["Tools", "Spare Parts"], itemsSupplied: 13, purchaseOrders: 9, totalSpend: 385000, status: "inactive", rating: 3.6 },
 ];
 
-const assetSeeds = [
-  { assetId: "AST-1001", name: 'MacBook Pro 14" — Dev Laptop', category: "IT Equipment", department: "IT", assignedTo: "Priya Sharma", location: "IT Store", cost: 145000, condition: "good" as const, status: "assigned" as const },
-  { assetId: "AST-1002", name: "Server Rack R1", category: "IT Equipment", department: "IT", location: "Server Room", cost: 850000, condition: "good" as const, status: "available" as const },
-  { assetId: "AST-1003", name: "Cisco Core Switch", category: "IT Equipment", department: "IT", location: "Server Room", cost: 320000, condition: "good" as const, status: "assigned" as const },
-  { assetId: "AST-1004", name: "HP ProLiant Server DL380", category: "IT Equipment", department: "IT", location: "Server Room", cost: 540000, condition: "fair" as const, status: "under-repair" as const },
-  { assetId: "AST-1005", name: "CNC Milling Machine M3", category: "Tools", department: "Engineering", location: "Engineering Store", cost: 2400000, condition: "good" as const, status: "assigned" as const },
-  { assetId: "AST-1006", name: "Forklift 3T — Unit 2", category: "Tools", department: "Logistics", location: "Logistics Bay", cost: 1850000, condition: "fair" as const, status: "under-repair" as const },
-  { assetId: "AST-1007", name: "Air Compressor 100L", category: "Tools", department: "Maintenance", location: "Maintenance Workshop", cost: 340000, condition: "good" as const, status: "available" as const },
-  { assetId: "AST-1008", name: "Diesel Generator 62.5kVA", category: "Electrical", department: "Operations", location: "Main Warehouse", cost: 980000, condition: "good" as const, status: "assigned" as const },
-  { assetId: "AST-1009", name: "Projector Epson EB-X49", category: "IT Equipment", department: "Training", assignedTo: "Meera Iyer", location: "Training Lab", cost: 62000, condition: "good" as const, status: "assigned" as const },
-  { assetId: "AST-1010", name: "Conference Room Display 65\"", category: "IT Equipment", department: "Administration", location: "Administration Room", cost: 185000, condition: "good" as const, status: "assigned" as const },
-  { assetId: "AST-1011", name: "Lathe Machine (Heavy)", category: "Tools", department: "Engineering", location: "Engineering Store", cost: 3100000, condition: "poor" as const, status: "damaged" as const },
-  { assetId: "AST-1012", name: "Welding Machine MIG 400A", category: "Tools", department: "Maintenance", location: "Maintenance Workshop", cost: 145000, condition: "good" as const, status: "available" as const },
-  { assetId: "AST-1013", name: "Pallet Racking System — Aisle 2", category: "Office Equipment", department: "Logistics", location: "Main Warehouse", cost: 750000, condition: "good" as const, status: "available" as const },
-  { assetId: "AST-1014", name: "Industrial UPS 20kVA", category: "Electrical", department: "IT", location: "Server Room", cost: 420000, condition: "fair" as const, status: "under-repair" as const },
-  { assetId: "AST-1015", name: "Water Pump 5HP", category: "Electrical", department: "Maintenance", location: "Maintenance Workshop", cost: 48000, condition: "poor" as const, status: "retired" as const },
-  { assetId: "AST-1016", name: 'iPad Air 11" — Training Kit', category: "IT Equipment", department: "Training", assignedTo: "Meera Iyer", location: "Training Lab", cost: 55000, condition: "good" as const, status: "assigned" as const },
-  { assetId: "AST-1017", name: "Security Camera NVR System", category: "IT Equipment", department: "Operations", location: "Main Warehouse", cost: 260000, condition: "good" as const, status: "available" as const },
-  { assetId: "AST-1018", name: "Label Printer Dymo 450", category: "Office Equipment", department: "Logistics", location: "Logistics Bay", cost: 24000, condition: "fair" as const, status: "available" as const },
-  { assetId: "AST-1019", name: "Barcode Scanner (Industrial)", category: "IT Equipment", department: "Logistics", assignedTo: "Karan Johar", location: "Logistics Bay", cost: 38000, condition: "good" as const, status: "assigned" as const },
-  { assetId: "AST-1020", name: "Laser Cutting Table", category: "Tools", department: "Engineering", location: "Engineering Store", cost: 1200000, condition: "good" as const, status: "available" as const },
-  { assetId: "AST-1021", name: "Test Bench — Electronics", category: "Tools", department: "Engineering", location: "Engineering Store", cost: 260000, condition: "good" as const, status: "available" as const },
-  { assetId: "AST-1022", name: 'MacBook Pro 16" — Design', category: "IT Equipment", department: "Engineering", assignedTo: "Divya Menon", location: "Engineering Store", cost: 210000, condition: "good" as const, status: "assigned" as const },
-  { assetId: "AST-1023", name: "Xerox WorkCentre 6515", category: "Office Equipment", department: "Administration", location: "Administration Room", cost: 98000, condition: "good" as const, status: "available" as const },
-  { assetId: "AST-1024", name: "Heavy Duty Shredder", category: "Office Equipment", department: "Finance", location: "Main Warehouse", cost: 45000, condition: "fair" as const, status: "available" as const },
-  { assetId: "AST-1025", name: "Compactor Machine 15T", category: "Spare Parts", department: "Operations", location: "Main Warehouse", cost: 340000, condition: "poor" as const, status: "damaged" as const },
-  { assetId: "AST-1026", name: "Conveyor Drive Motor 7.5kW", category: "Spare Parts", department: "Logistics", location: "Logistics Bay", cost: 89000, condition: "good" as const, status: "available" as const },
-  { assetId: "AST-1027", name: "Digital Weighing Scale 300kg", category: "Tools", department: "Logistics", location: "Logistics Bay", cost: 32000, condition: "good" as const, status: "assigned" as const },
-  { assetId: "AST-1028", name: "Automatic Door System", category: "Electrical", department: "Administration", location: "Administration Room", cost: 150000, condition: "good" as const, status: "available" as const },
-  { assetId: "AST-1029", name: "Solar Inverter 5kW", category: "Electrical", department: "Operations", location: "Main Warehouse", cost: 130000, condition: "poor" as const, status: "retired" as const },
-  { assetId: "AST-1030", name: "3D Printer Ultimaker S5", category: "IT Equipment", department: "Engineering", location: "Engineering Store", cost: 420000, condition: "good" as const, status: "available" as const },
+const assetSeeds: Array<Omit<Asset, "id" | "serialNumber" | "purchaseDate" | "warranty">> = [
+  { 
+    assetId: "AST-1001", 
+    name: 'MacBook Pro 14" — Dev Laptop', 
+    category: "IT Equipment", 
+    department: "IT", 
+    assignedTo: "Priya Sharma", 
+    location: "IT Store", 
+    cost: 145000, 
+    condition: "good" as const, 
+    status: "assigned" as const,
+    hardware: {
+      cpu: "Apple M3 Pro 12-core",
+      ram: "18GB Unified Memory",
+      storage: "512GB SSD",
+      gpu: "Apple 19-core GPU",
+      display: "14.2-inch Liquid Retina XDR",
+      battery: "70Wh",
+      network: "Wi-Fi 6E, Bluetooth 5.3"
+    },
+    software: [
+      { name: "macOS Sonoma", version: "14.5", licenseStatus: "Licensed" },
+      { name: "Microsoft Office 365", version: "2024", licenseStatus: "Licensed" },
+      { name: "Adobe Creative Cloud", version: "2024", licenseStatus: "Licensed" }
+    ],
+    warrantyDetails: {
+      provider: "Apple",
+      status: "Active",
+      startDate: "2023-09-15",
+      expiryDate: "2026-09-15"
+    }
+  },
+  { 
+    assetId: "AST-1002", 
+    name: "Server Rack R1", 
+    category: "IT Equipment", 
+    department: "IT", 
+    location: "Server Room", 
+    cost: 850000, 
+    condition: "good" as const, 
+    status: "available" as const
+  },
+  { 
+    assetId: "AST-1003", 
+    name: "Cisco Core Switch", 
+    category: "IT Equipment", 
+    department: "IT", 
+    location: "Server Room", 
+    cost: 320000, 
+    condition: "good" as const, 
+    status: "assigned" as const,
+    hardware: {
+      cpu: "Cisco Nexus 9000 Series Processor",
+      ram: "32GB DDR4",
+      storage: "N/A",
+      gpu: "N/A",
+      display: "N/A",
+      battery: "N/A",
+      network: "40x 100GbE QSFP28, 4x 400GbE QSFP-DD"
+    },
+    software: [
+      { name: "Cisco NX-OS", version: "10.2(3)", licenseStatus: "Licensed" }
+    ],
+    warrantyDetails: {
+      provider: "Cisco Systems",
+      status: "Active",
+      startDate: "2022-01-10",
+      expiryDate: "2025-01-10"
+    }
+  },
+  { 
+    assetId: "AST-1003", 
+    name: "Cisco Core Switch", 
+    category: "IT Equipment", 
+    department: "IT", 
+    location: "Server Room", 
+    cost: 320000, 
+    condition: "good" as const, 
+    status: "assigned" as const
+  },
+  { 
+    assetId: "AST-1004", 
+    name: "HP ProLiant Server DL380", 
+    category: "IT Equipment", 
+    department: "IT", 
+    location: "Server Room", 
+    cost: 540000, 
+    condition: "fair" as const, 
+    status: "under-repair" as const
+  },
+  { 
+    assetId: "AST-1005", 
+    name: "CNC Milling Machine M3", 
+    category: "Tools", 
+    department: "Engineering", 
+    location: "Engineering Store", 
+    cost: 2400000, 
+    condition: "good" as const, 
+    status: "assigned" as const
+  },
+  { 
+    assetId: "AST-1006", 
+    name: "Forklift 3T — Unit 2", 
+    category: "Tools", 
+    department: "Logistics", 
+    location: "Logistics Bay", 
+    cost: 1850000, 
+    condition: "fair" as const, 
+    status: "under-repair" as const
+  },
+  { 
+    assetId: "AST-1007", 
+    name: "Air Compressor 100L", 
+    category: "Tools", 
+    department: "Maintenance", 
+    location: "Maintenance Workshop", 
+    cost: 340000, 
+    condition: "good" as const, 
+    status: "available" as const
+  },
+  { 
+    assetId: "AST-1008", 
+    name: "Diesel Generator 62.5kVA", 
+    category: "Electrical", 
+    department: "Operations", 
+    location: "Main Warehouse", 
+    cost: 980000, 
+    condition: "good" as const, 
+    status: "assigned" as const
+  },
+  { 
+    assetId: "AST-1009", 
+    name: "Projector Epson EB-X49", 
+    category: "IT Equipment", 
+    department: "Training", 
+    assignedTo: "Meera Iyer", 
+    location: "Training Lab", 
+    cost: 62000, 
+    condition: "good" as const, 
+    status: "assigned" as const,
+    hardware: {
+      cpu: "Epson Image Processing Engine",
+      ram: "256MB DDR3",
+      storage: "N/A",
+      gpu: "N/A",
+      display: "WXGA (1280x800)",
+      battery: "N/A",
+      network: "Wi-Fi 5, Ethernet"
+    },
+    software: [
+      { name: "Epson Projector Software", version: "3.2.1", licenseStatus: "Licensed" }
+    ],
+    warrantyDetails: {
+      provider: "Epson",
+      status: "Active",
+      startDate: "2023-06-20",
+      expiryDate: "2026-06-20"
+    }
+  },
+  { 
+    assetId: "AST-1010", 
+    name: "Conference Room Display 65\"", 
+    category: "IT Equipment", 
+    department: "Administration", 
+    location: "Administration Room", 
+    cost: 185000, 
+    condition: "good" as const, 
+    status: "assigned" as const,
+    hardware: {
+      cpu: "N/A",
+      ram: "N/A",
+      storage: "N/A",
+      gpu: "N/A",
+      display: "65-inch 4K UHD LED",
+      battery: "N/A",
+      network: "Wi-Fi 6, Bluetooth 5.2, Ethernet"
+    },
+    software: [
+      { name: "Smart TV Platform", version: "Tizen 6.5", licenseStatus: "Licensed" }
+    ],
+    warrantyDetails: {
+      provider: "Samsung",
+      status: "Active",
+      startDate: "2023-03-10",
+      expiryDate: "2028-03-10"
+    }
+  },
+  { 
+    assetId: "AST-1011", 
+    name: "Lathe Machine (Heavy)", 
+    category: "Tools", 
+    department: "Engineering", 
+    location: "Engineering Store", 
+    cost: 3100000, 
+    condition: "poor" as const, 
+    status: "damaged" as const
+  },
+  { 
+    assetId: "AST-1012", 
+    name: "Welding Machine MIG 400A", 
+    category: "Tools", 
+    department: "Maintenance", 
+    location: "Maintenance Workshop", 
+    cost: 145000, 
+    condition: "good" as const, 
+    status: "available" as const
+  },
+  { 
+    assetId: "AST-1013", 
+    name: "Pallet Racking System — Aisle 2", 
+    category: "Office Equipment", 
+    department: "Logistics", 
+    location: "Main Warehouse", 
+    cost: 750000, 
+    condition: "good" as const, 
+    status: "available" as const
+  },
+  { 
+    assetId: "AST-1014", 
+    name: "Industrial UPS 20kVA", 
+    category: "Electrical", 
+    department: "IT", 
+    location: "Server Room", 
+    cost: 420000, 
+    condition: "fair" as const, 
+    status: "under-repair" as const
+  },
+  { 
+    assetId: "AST-1015", 
+    name: "Water Pump 5HP", 
+    category: "Electrical", 
+    department: "Maintenance", 
+    location: "Maintenance Workshop", 
+    cost: 48000, 
+    condition: "poor" as const, 
+    status: "retired" as const
+  },
+  { 
+    assetId: "AST-1016", 
+    name: 'iPad Air 11" — Training Kit', 
+    category: "IT Equipment", 
+    department: "Training", 
+    assignedTo: "Meera Iyer", 
+    location: "Training Lab", 
+    cost: 55000, 
+    condition: "good" as const, 
+    status: "assigned" as const,
+    hardware: {
+      cpu: "Apple M1",
+      ram: "8GB Unified Memory",
+      storage: "64GB SSD",
+      gpu: "Apple 7-core GPU",
+      display: "10.9-inch Liquid Retina",
+      battery: "28.9Wh",
+      network: "Wi-Fi 6, Bluetooth 5.2"
+    },
+    software: [
+      { name: "iPadOS", version: "17.5", licenseStatus: "Licensed" },
+      { name: "Microsoft Teams", version: "1449/1.0.0", licenseStatus: "Licensed" }
+    ],
+    warrantyDetails: {
+      provider: "Apple",
+      status: "Active",
+      startDate: "2023-10-05",
+      expiryDate: "2025-10-05"
+    }
+  },
+  { 
+    assetId: "AST-1017", 
+    name: "Security Camera NVR System", 
+    category: "IT Equipment", 
+    department: "Operations", 
+    location: "Main Warehouse", 
+    cost: 260000, 
+    condition: "good" as const, 
+    status: "available" as const
+  },
+  { 
+    assetId: "AST-1018", 
+    name: "Label Printer Dymo 450", 
+    category: "Office Equipment", 
+    department: "Logistics", 
+    location: "Logistics Bay", 
+    cost: 24000, 
+    condition: "fair" as const, 
+    status: "available" as const
+  },
+  { 
+    assetId: "AST-1019", 
+    name: "Barcode Scanner (Industrial)", 
+    category: "IT Equipment", 
+    department: "Logistics", 
+    assignedTo: "Karan Johar", 
+    location: "Logistics Bay", 
+    cost: 38000, 
+    condition: "good" as const, 
+    status: "assigned" as const,
+    hardware: {
+      cpu: "Honeywell Image Processing Engine",
+      ram: "512MB DDR3",
+      storage: "N/A",
+      gpu: "N/A",
+      display: "N/A",
+      battery: "N/A",
+      network: "USB 3.0, RS-232"
+    },
+    software: [
+      { name: "Honeywell Scanner SDK", version: "2.1.0", licenseStatus: "Licensed" }
+    ],
+    warrantyDetails: {
+      provider: "Honeywell",
+      status: "Active",
+      startDate: "2022-11-30",
+      expiryDate: "2025-11-30"
+    }
+  },
+  { 
+    assetId: "AST-1020", 
+    name: "Laser Cutting Table", 
+    category: "Tools", 
+    department: "Engineering", 
+    location: "Engineering Store", 
+    cost: 1200000, 
+    condition: "good" as const, 
+    status: "available" as const
+  },
+  { 
+    assetId: "AST-1021", 
+    name: "Test Bench — Electronics", 
+    category: "Tools", 
+    department: "Engineering", 
+    location: "Engineering Store", 
+    cost: 260000, 
+    condition: "good" as const, 
+    status: "available" as const
+  },
+  { 
+    assetId: "AST-1022", 
+    name: 'MacBook Pro 16" — Design', 
+    category: "IT Equipment", 
+    department: "Engineering", 
+    assignedTo: "Divya Menon", 
+    location: "Engineering Store", 
+    cost: 210000, 
+    condition: "good" as const, 
+    status: "assigned" as const,
+    hardware: {
+      cpu: "Apple M3 Max 16-core",
+      ram: "36GB Unified Memory",
+      storage: "1TB SSD",
+      gpu: "Apple 40-core GPU",
+      display: "16.2-inch Liquid Retina XDR",
+      battery: "100Wh",
+      network: "Wi-Fi 6E, Bluetooth 5.3"
+    },
+    software: [
+      { name: "macOS Sonoma", version: "14.5", licenseStatus: "Licensed" },
+      { name: "Adobe Creative Cloud", version: "2024", licenseStatus: "Licensed" },
+      { name: "Final Cut Pro", version: "10.6.2", licenseStatus: "Licensed" }
+    ],
+    warrantyDetails: {
+      provider: "Apple",
+      status: "Active",
+      startDate: "2023-12-15",
+      expiryDate: "2026-12-15"
+    }
+  },
+  { 
+    assetId: "AST-1023", 
+    name: "Xerox WorkCentre 6515", 
+    category: "Office Equipment", 
+    department: "Administration", 
+    location: "Administration Room", 
+    cost: 98000, 
+    condition: "good" as const, 
+    status: "available" as const
+  },
+  { 
+    assetId: "AST-1024", 
+    name: "Heavy Duty Shredder", 
+    category: "Office Equipment", 
+    department: "Finance", 
+    location: "Main Warehouse", 
+    cost: 45000, 
+    condition: "fair" as const, 
+    status: "available" as const
+  },
+  { 
+    assetId: "AST-1025", 
+    name: "Compactor Machine 15T", 
+    category: "Spare Parts", 
+    department: "Operations", 
+    location: "Main Warehouse", 
+    cost: 340000, 
+    condition: "poor" as const, 
+    status: "damaged" as const
+  },
+  { 
+    assetId: "AST-1026", 
+    name: "Conveyor Drive Motor 7.5kW", 
+    category: "Spare Parts", 
+    department: "Logistics", 
+    location: "Logistics Bay", 
+    cost: 89000, 
+    condition: "good" as const, 
+    status: "available" as const
+  },
+  { 
+    assetId: "AST-1027", 
+    name: "Digital Weighing Scale 300kg", 
+    category: "Tools", 
+    department: "Logistics", 
+    location: "Logistics Bay", 
+    cost: 32000, 
+    condition: "good" as const, 
+    status: "assigned" as const
+  },
+  { 
+    assetId: "AST-1028", 
+    name: "Automatic Door System", 
+    category: "Electrical", 
+    department: "Administration", 
+    location: "Administration Room", 
+    cost: 150000, 
+    condition: "good" as const, 
+    status: "available" as const
+  },
+  { 
+    assetId: "AST-1029", 
+    name: "Solar Inverter 5kW", 
+    category: "Electrical", 
+    department: "Operations", 
+    location: "Main Warehouse", 
+    cost: 130000, 
+    condition: "poor" as const, 
+    status: "retired" as const
+  },
+  { 
+    assetId: "AST-1030", 
+    name: "3D Printer Ultimaker S5", 
+    category: "IT Equipment", 
+    department: "Engineering", 
+    location: "Engineering Store", 
+    cost: 420000, 
+    condition: "good" as const, 
+    status: "available" as const,
+    hardware: {
+      cpu: "Dual-core ARM Cortex-A9",
+      ram: "1GB DDR3",
+      storage: "8GB eMMC",
+      gpu: "Vivante GC2000",
+      display: "2.4-inch Color LCD",
+      battery: "N/A",
+      network: "Wi-Fi 4, Ethernet, USB 2.0"
+    },
+    software: [
+      { name: "Ultimaker Firmware", version: "7.8.0", licenseStatus: "Licensed" },
+      { name: "Ultimaker Cura", version: "5.6.0", licenseStatus: "Open Source" }
+    ],
+    warrantyDetails: {
+      provider: "Ultimaker",
+      status: "Active",
+      startDate: "2023-07-22",
+      expiryDate: "2026-07-22"
+    }
+  },
 ];
 
-export const assets: Asset[] = assetSeeds.map((a, i) => ({
+export const assets: Asset[] = assetSeeds.map((a, i): Asset => ({
   ...a,
   id: `AST-${String(i + 1).padStart(3, "0")}`,
   serialNumber: `SN-${a.category === "IT Equipment" ? "IT" : "EQ"}-${String(10000 + i * 137)}`,
@@ -909,6 +1345,7 @@ export const tickets: Ticket[] = [
       ticketIssue(2, "Ambient temperature rising above threshold", { agoMin: 30, priority: "high", assignedTo: "Suresh Nair", description: "Server room temperature trending above 30°C." }),
       ticketIssue(3, "Condenser drain line blocked", { agoMin: 25, priority: "medium", assignedTo: "Pooja Reddy", description: "Water leaking near the indoor unit." }),
     ],
+    technicianId: "TECH-001",
   },
   {
     id: "TKT-2026-013", title: "Laptop battery swelling — MacBook Pro", description: "MacBook Pro 14\" assigned to Finance shows a swollen battery. Needs replacement before it damages the chassis.", customer: "Arun Mehta", category: "IT Support", priority: "high", department: "Finance", subDepartment: "Accounting", createdBy: "Arun Mehta", createdAt: iso(3 * HOUR), status: "in-progress",
@@ -919,6 +1356,7 @@ export const tickets: Ticket[] = [
       ticketIssue(4, "Swollen battery — risk of chassis damage", { agoMin: 170, priority: "critical", status: "resolved", resolvedAt: iso(5 * HOUR), resolution: "Battery pack replaced under warranty", assignedTo: "Aditya Patel", description: "Battery swelling visible on bottom case." }),
       ticketIssue(5, "Post-replacement diagnostics", { agoMin: 170, priority: "high", status: "in-progress", assignedTo: "Aditya Patel", description: "Run full diagnostics after battery swap." }),
     ],
+    technicianId: "TECH-002",
   },
   {
     id: "TKT-2026-012", title: "Hydraulic oil stock replenishment", description: "Machine 3 hydraulic system is out of oil. Need urgent restock of ISO VG 68 drums and a spill kit inspection.", customer: "Machine Shop", category: "Inventory", priority: "critical", department: "Engineering", subDepartment: "Mechanical Engineering", createdBy: "Rajesh Kumar", createdAt: iso(6 * HOUR), status: "partially-resolved",
@@ -931,6 +1369,7 @@ export const tickets: Ticket[] = [
       ticketIssue(7, "Restock ISO VG 68 drums (PO raised)", { agoMin: 340, priority: "high", status: "resolved", resolvedAt: iso(2 * HOUR), resolution: "PO-2026-0142 raised with PetroSupply Co.", assignedTo: "Deepak Verma" }),
       ticketIssue(8, "Spill kit inspection", { agoMin: 330, priority: "medium", status: "open", assignedTo: "Farhan Ali", description: "Check expiry and contents of spill kit." }),
     ],
+    technicianId: "TECH-003",
   },
   {
     id: "TKT-2026-011", title: "New hire onboarding — 12 workstations", description: "12 new joiners joining next Monday. Need laptops, monitors and docking stations staged and configured.", customer: "HR Onboarding", category: "IT Support", priority: "high", department: "IT", subDepartment: "Hardware Support", createdBy: "Priya Sharma", createdAt: iso(1 * DAY), status: "open",
@@ -944,6 +1383,7 @@ export const tickets: Ticket[] = [
       ticketIssue(10, "Stage 12 monitors", { agoMin: 1400, priority: "medium", assignedTo: "Neha Kulkarni", description: "Stage monitors with cables." }),
       ticketIssue(11, "Configure docking stations", { agoMin: 1400, priority: "medium", assignedTo: "Aditya Patel", description: "Pair docks with laptops." }),
     ],
+    technicianId: "TECH-002",
   },
   {
     id: "TKT-2026-010", title: "Warehouse racking safety inspection", description: "Aisle 2 pallet racking has a bent upright from forklift impact. Schedule structural inspection and repair.", customer: "Warehouse Ops", category: "Maintenance", priority: "high", department: "Logistics", subDepartment: "Warehouse Operations", createdBy: "Vikram Singh", createdAt: iso(2 * DAY), status: "in-progress",
@@ -954,6 +1394,7 @@ export const tickets: Ticket[] = [
       ticketIssue(12, "Bent upright on Aisle 2 racking", { agoMin: 2850, priority: "high", status: "in-progress", assignedTo: "Suresh Nair", description: "Visible deformation from forklift impact." }),
       ticketIssue(13, "Structural inspection scheduled", { agoMin: 2800, priority: "medium", assignedTo: "Karan Johar", description: "Third-party inspection to be scheduled." }),
     ],
+    technicianId: "TECH-001",
   },
   {
     id: "TKT-2026-009", title: "Printer toner out — Admin wing", description: "HP LaserJet Pro M404dn in the admin wing shows low toner. Requesting replacement cartridge.", customer: "Admin Wing", category: "Inventory", priority: "medium", department: "Administration", subDepartment: "Office Management", createdBy: "Anita Desai", createdAt: iso(2 * DAY), status: "open",
@@ -964,6 +1405,7 @@ export const tickets: Ticket[] = [
       ticketIssue(14, "Toner cartridge low", { agoMin: 2860, priority: "medium", assignedTo: "Neha Kulkarni", description: "Printer reports low toner." }),
       ticketIssue(15, "Replacement cartridge stock", { agoMin: 2850, priority: "low", assignedTo: "Anita Desai", description: "Check replacement cartridge availability." }),
     ],
+    technicianId: "TECH-004",
   },
   {
     id: "TKT-2026-008", title: "Fire extinguisher compliance check", description: "Annual fire safety audit next week. All ABC extinguishers need pressure check and tagging.", customer: "Safety Team", category: "Safety", priority: "medium", department: "Operations", subDepartment: "Safety & Compliance", createdBy: "Sanjay Gupta", createdAt: iso(3 * DAY), status: "closed", closedBy: "Admin", closedAt: iso(1 * DAY), resolution: "All 14 extinguishers inspected, tagged and logged in compliance register",
@@ -985,6 +1427,7 @@ export const tickets: Ticket[] = [
       ticketIssue(18, "Projector lamp flickering", { agoMin: 5730, priority: "low", status: "resolved", resolvedAt: iso(2 * DAY), resolution: "Lamp replaced under warranty.", assignedTo: "Aditya Patel" }),
       ticketIssue(19, "Recalibrate projector after lamp swap", { agoMin: 5700, priority: "low", status: "resolved", resolvedAt: iso(2 * DAY), resolution: "Projector recalibrated and verified.", assignedTo: "Aditya Patel" }),
     ],
+    technicianId: "TECH-005",
   },
   {
     id: "TKT-2026-006", title: "Stationery requisition for Q3", description: "Quarterly stationery requisition — pens, sticky notes, laminating pouches and A4 paper for all departments.", customer: "All Departments", category: "Procurement", priority: "low", department: "Administration", subDepartment: "Facilities", createdBy: "Anita Desai", createdAt: iso(5 * DAY), status: "closed", closedBy: "Admin", closedAt: iso(3 * DAY), resolution: "PO-2026-0145 raised and ordered from OfficeWorld Supplies",
@@ -1005,6 +1448,7 @@ export const tickets: Ticket[] = [
       ticketIssue(22, "Grinding noise during startup", { agoMin: 8580, priority: "high", status: "in-progress", assignedTo: "Pooja Reddy", description: "Grinding noise heard during startup." }),
       ticketIssue(23, "Bearing inspection", { agoMin: 8550, priority: "medium", assignedTo: "Pooja Reddy", description: "Inspect and replace bearings if needed." }),
     ],
+    technicianId: "TECH-008",
   },
   {
     id: "TKT-2026-004", title: "Wi-Fi dead zone — Engineering floor", description: "Engineering floor has weak Wi-Fi near the CAD workstations. Access point needed or existing one relocated.", customer: "Engineering", category: "IT Support", priority: "medium", department: "Engineering", subDepartment: "Design & R&D", createdBy: "Rajesh Kumar", createdAt: iso(7 * DAY), status: "closed", closedBy: "Admin", closedAt: iso(5 * DAY), resolution: "Ubiquiti UniFi AP installed at CAD bay, coverage verified",
@@ -1015,6 +1459,7 @@ export const tickets: Ticket[] = [
       ticketIssue(24, "Weak Wi-Fi at CAD workstations", { agoMin: 10020, priority: "medium", status: "resolved", resolvedAt: iso(5 * DAY), resolution: "Coverage verified after AP install.", assignedTo: "Neha Kulkarni" }),
       ticketIssue(25, "Install/relocate access point", { agoMin: 10000, priority: "medium", status: "resolved", resolvedAt: iso(5 * DAY), resolution: "AP installed at CAD bay.", assignedTo: "Aditya Patel" }),
     ],
+    technicianId: "TECH-007",
   },
   {
     id: "TKT-2026-003", title: "CNC machine coolant leak", description: "CNC Milling Machine M3 shows coolant leak under the spindle. Floor mat saturated, needs cleanup and seal replacement.", customer: "Machine Shop", category: "Maintenance", priority: "high", department: "Engineering", subDepartment: "Mechanical Engineering", createdBy: "Rohan Gupta", createdAt: iso(8 * DAY), status: "closed", closedBy: "Admin", closedAt: iso(6 * DAY), resolution: "Spindle seal replaced, coolant topped up and leak tested",
@@ -1026,6 +1471,7 @@ export const tickets: Ticket[] = [
       ticketIssue(27, "Replace spindle seal", { agoMin: 11460, priority: "high", status: "resolved", resolvedAt: iso(6 * DAY), resolution: "Spindle seal replaced.", assignedTo: "Farhan Ali" }),
       ticketIssue(28, "Cleanup saturated floor mat", { agoMin: 11440, priority: "low", status: "resolved", resolvedAt: iso(6 * DAY), resolution: "Floor mat cleaned and replaced.", assignedTo: "Rohan Gupta" }),
     ],
+    technicianId: "TECH-008",
   },
   {
     id: "TKT-2026-002", title: "Safety boots shortage", description: "Site crew safety boots size 8 below reorder level. Requesting purchase of 20 pairs before next deployment.", customer: "Site Crew", category: "Procurement", priority: "medium", department: "Operations", subDepartment: "Production", createdBy: "Sanjay Gupta", createdAt: iso(9 * DAY), status: "closed", closedBy: "Admin", closedAt: iso(7 * DAY), resolution: "Purchase order placed with SafeGuard PPE for 40 pairs",
@@ -1047,6 +1493,7 @@ export const tickets: Ticket[] = [
       ticketIssue(32, "Replace battery pack", { agoMin: 14330, priority: "critical", status: "resolved", resolvedAt: iso(8 * DAY), resolution: "Battery pack replaced under contract.", assignedTo: "Aditya Patel" }),
       ticketIssue(33, "Runtime test after replacement", { agoMin: 14310, priority: "high", status: "resolved", resolvedAt: iso(8 * DAY), resolution: "Runtime verified at 40+ minutes.", assignedTo: "Neha Kulkarni" }),
     ],
+    technicianId: "TECH-002",
   },
 ];
 
@@ -1134,3 +1581,129 @@ export function computeStatus(qty: number, reorderLevel: number, maxStock: numbe
 export function itemsForDepartment(department: string) {
   return inventoryItems.filter((i) => i.department === department && !i.archived);
 }
+
+// Configurable workload thresholds for technicians (frontend-only config).
+// 0–(mediumFrom-1) → low/green, mediumFrom–(highFrom-1) → medium/orange, >= highFrom → high/red
+export const workloadThresholds = { mediumFrom: 4, highFrom: 7 };
+
+export function workloadLevel(activeTickets: number): "low" | "medium" | "high" {
+  if (activeTickets >= workloadThresholds.highFrom) return "high";
+  if (activeTickets >= workloadThresholds.mediumFrom) return "medium";
+  return "low";
+}
+
+// Technician data for the Technician Management feature
+export const technicians: Technician[] = [
+  {
+    id: "TECH-001",
+    name: "Rahul Sharma",
+    email: "rahul@example.com",
+    employeeId: "EMP-0101",
+    specialization: "Hardware",
+    availability: "Available",
+    status: "Active",
+    activeTickets: 2,
+    resolvedTickets: 28,
+    phone: "+91 98765 43210",
+    lastActive: iso(15 * MINUTE),
+    color: "#4f46e5",
+  },
+  {
+    id: "TECH-002",
+    name: "Amit Patel",
+    email: "amit@example.com",
+    employeeId: "EMP-0102",
+    specialization: "Software",
+    availability: "Busy",
+    status: "Active",
+    activeTickets: 2,
+    resolvedTickets: 35,
+    phone: "+91 98765 43211",
+    lastActive: iso(8 * MINUTE),
+    color: "#0ea5e9",
+  },
+  {
+    id: "TECH-003",
+    name: "Priya Shah",
+    email: "priya@example.com",
+    employeeId: "EMP-0103",
+    specialization: "Network",
+    availability: "Available",
+    status: "Active",
+    activeTickets: 1,
+    resolvedTickets: 19,
+    phone: "+91 98765 43212",
+    lastActive: iso(22 * MINUTE),
+    color: "#10b981",
+  },
+  {
+    id: "TECH-004",
+    name: "Sneha Gupta",
+    email: "sneha@example.com",
+    employeeId: "EMP-0104",
+    specialization: "Hardware",
+    availability: "Busy",
+    status: "Active",
+    activeTickets: 1,
+    resolvedTickets: 22,
+    phone: "+91 98765 43213",
+    lastActive: iso(5 * MINUTE),
+    color: "#f59e0b",
+  },
+  {
+    id: "TECH-005",
+    name: "Vikram Singh",
+    email: "vikram@example.com",
+    employeeId: "EMP-0105",
+    specialization: "Software",
+    availability: "Available",
+    status: "Active",
+    activeTickets: 0,
+    resolvedTickets: 31,
+    phone: "+91 98765 43214",
+    lastActive: iso(18 * MINUTE),
+    color: "#8b5cf6",
+  },
+  {
+    id: "TECH-006",
+    name: "Ananya Desai",
+    email: "ananya@example.com",
+    employeeId: "EMP-0106",
+    specialization: "Network",
+    availability: "Offline",
+    status: "Inactive",
+    activeTickets: 0,
+    resolvedTickets: 15,
+    phone: "+91 98765 43215",
+    lastActive: iso(2 * DAY),
+    color: "#6b7280",
+  },
+  {
+    id: "TECH-007",
+    name: "Karan Mehta",
+    email: "karan@example.com",
+    employeeId: "EMP-0107",
+    specialization: "Hardware",
+    availability: "Available",
+    status: "Active",
+    activeTickets: 0,
+    resolvedTickets: 18,
+    phone: "+91 98765 43216",
+    lastActive: iso(12 * MINUTE),
+    color: "#ef4444",
+  },
+  {
+    id: "TECH-008",
+    name: "Deepika Reddy",
+    email: "deepika@example.com",
+    employeeId: "EMP-0108",
+    specialization: "Software",
+    availability: "Available",
+    status: "Active",
+    activeTickets: 1,
+    resolvedTickets: 27,
+    phone: "+91 98765 43217",
+    lastActive: iso(7 * MINUTE),
+    color: "#14b8a6",
+  },
+];

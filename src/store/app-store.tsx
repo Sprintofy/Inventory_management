@@ -24,6 +24,8 @@ import type {
   TicketIssue,
   Transfer,
   User,
+  Technician,
+  DemoAccount,
 } from "@/types";
 import {
   activities as seedActivities,
@@ -36,6 +38,7 @@ import {
   notifications as seedNotifications,
   purchaseOrders as seedPOs,
   requests as seedRequests,
+  technicians as seedTechnicians,
   stockInRecords as seedStockIn,
   stockOutRecords as seedStockOut,
   suppliers as seedSuppliers,
@@ -69,20 +72,21 @@ export type Permission =
   | "reports.view"
   | "activity.view"
   | "settings.manage"
-  | "global.view";
+  | "global.view"
+  | "technicians.manage";
 
 const rolePermissions: Record<Role, Permission[]> = {
   "super-admin": [
     "inventory.manage", "stock-in.create", "stock-out.create", "requests.create", "requests.approve",
     "transfers.create", "transfers.approve", "tickets.manage",
     "categories.manage", "locations.manage", "departments.manage", "users.manage", "reports.view",
-    "activity.view", "settings.manage", "global.view",
+    "activity.view", "settings.manage", "global.view", "technicians.manage",
   ],
   admin: [
     "inventory.manage", "stock-in.create", "stock-out.create", "requests.create", "requests.approve",
     "transfers.create", "transfers.approve", "po.create", "po.manage", "tickets.manage", "suppliers.manage", "assets.manage",
     "categories.manage", "locations.manage", "departments.manage", "users.manage", "reports.view",
-    "activity.view", "settings.manage",
+    "activity.view", "settings.manage", "technicians.manage",
   ],
   "department-manager": [
     "inventory.manage", "requests.create", "requests.approve",
@@ -129,6 +133,7 @@ interface AppState {
   departments: Department[];
   activities: Activity[];
   notifications: NotificationItem[];
+  technicians: Technician[];
   settings: Settings;
   mobileNavOpen: boolean;
 }
@@ -188,7 +193,10 @@ type Action =
   | { type: "ADD_ACTIVITY"; activity: Activity }
   | { type: "ADD_NOTIFICATION"; notification: NotificationItem }
   | { type: "MARK_NOTIFICATIONS_READ" }
-  | { type: "TOGGLE_SIDEBAR" };
+  | { type: "TOGGLE_SIDEBAR" }
+  | { type: "ADD_TECHNICIAN"; technician: Technician }
+  | { type: "UPDATE_TECHNICIAN"; technician: Technician }
+  | { type: "DELETE_TECHNICIAN"; id: string };
 
 const defaultSettings: Settings = {
   orgName: "Acme Manufacturing Pvt. Ltd.",
@@ -398,11 +406,12 @@ function reducer(state: AppState, action: Action): AppState {
         ...state,
         departments: state.departments.map((d) => (d.id === action.departmentId ? { ...d, subDepartments: mapSubs(d.subDepartments, action.subDepartmentId, (s) => ({ ...s, ...action.patch })) } : d)),
       };
-    case "DELETE_SUB_DEPARTMENT":
-      return {
-        ...state,
-        departments: state.departments.map((d) => (d.id === action.departmentId ? { ...d, subDepartments: filterSubs(d.subDepartments, action.subDepartmentId) } : d)),
-      };
+    case "ADD_TECHNICIAN":
+      return { ...state, technicians: [action.technician, ...state.technicians] };
+    case "UPDATE_TECHNICIAN":
+      return { ...state, technicians: state.technicians.map((t) => (t.id === action.technician.id ? action.technician : t)) };
+    case "DELETE_TECHNICIAN":
+      return { ...state, technicians: state.technicians.filter((t) => t.id !== action.id) };
     case "ADD_ACTIVITY":
       return { ...state, activities: [action.activity, ...state.activities] };
     case "ADD_NOTIFICATION":
@@ -451,6 +460,7 @@ const initialState: AppState = {
   departments: seedDepartments,
   activities: seedActivities,
   notifications: seedNotifications,
+  technicians: seedTechnicians,
   settings: defaultSettings,
   mobileNavOpen: false,
 };
@@ -521,6 +531,9 @@ interface AppContextValue {
   deleteSubDepartment: (departmentId: string, subDepartmentId: string) => void;
   subDepartmentsFor: (department: string) => SubDepartment[];
   findSubDepartment: (departmentId: string, subDepartmentId: string) => SubDepartment | null;
+  addTechnician: (t: Omit<Technician, "id">) => void;
+  updateTechnician: (t: Technician) => void;
+  deleteTechnician: (id: string) => void;
   log: (action: string, module: string, item: string, department?: string) => void;
   markNotificationsRead: () => void;
 }
@@ -989,13 +1002,37 @@ const logout = React.useCallback(() => dispatch({ type: "LOGOUT" }), []);
     []
   );
 
-  const deleteSubDepartment = React.useCallback(
-    (departmentId: string, subDepartmentId: string) => {
-      dispatch({ type: "DELETE_SUB_DEPARTMENT", departmentId, subDepartmentId });
-      toast.success("Sub-department deleted");
-    },
-    []
-  );
+const deleteSubDepartment = React.useCallback(
+      (departmentId: string, subDepartmentId: string) => {
+        dispatch({ type: "DELETE_SUB_DEPARTMENT", departmentId, subDepartmentId });
+        toast.success("Sub-department deleted");
+      },
+      []
+    );
+
+    const addTechnician = React.useCallback(
+      (t: Omit<Technician, "id">) => {
+        dispatch({ type: "ADD_TECHNICIAN", technician: { ...t, id: uid("TECH") } });
+        toast.success("Technician added successfully");
+      },
+      []
+    );
+
+    const updateTechnician = React.useCallback(
+      (t: Technician) => {
+        dispatch({ type: "UPDATE_TECHNICIAN", technician: t });
+        toast.success("Technician updated successfully");
+      },
+      []
+    );
+
+    const deleteTechnician = React.useCallback(
+      (id: string) => {
+        dispatch({ type: "DELETE_TECHNICIAN", id });
+        toast.success("Technician deleted");
+      },
+      []
+    );
 
   const subDepartmentsFor = React.useCallback(
     (department: string) => state.departments.find((d) => d.name === department)?.subDepartments ?? [],
@@ -1012,75 +1049,78 @@ const logout = React.useCallback(() => dispatch({ type: "LOGOUT" }), []);
 
   const markNotificationsRead = React.useCallback(() => dispatch({ type: "MARK_NOTIFICATIONS_READ" }), []);
 
-  const value: AppContextValue = {
-    state,
-    user: state.user,
-    role,
-    permissions,
-    can,
-    visibleDepartments,
-    departmentOptions,
-    activeDepartment,
-    departmentItems,
-    allItems,
-    login,
-    logout,
-    setDepartment,
-    toggleNav,
-    toggleSidebar,
-    updateSettings,
-    addItem,
-    updateItem,
-    archiveItems,
-    assignDepartment,
-    changeLocation,
-    stockIn,
-    stockOut,
-    updateStockInStatus,
-    updateStockOutStatus,
-    adjustStock,
-    addTransfer,
-    updateTransfer,
-    addRequest,
-    updateRequest,
-    addTicket,
-    addTicketIssue,
-    updateIssue,
-    removeIssue,
-    addTicketAsset,
-    updateTicketAsset,
-    removeTicketAsset,
-    addMovement,
-    removeMovement,
-    updateTicket,
-    closeTicket,
-    addPO,
-    updatePO,
-    addSupplier,
-    updateSupplier,
-    deleteSupplier,
-    addAsset,
-    updateAsset,
-    addCategory,
-    updateCategory,
-    deleteCategory,
-    addLocation,
-    updateLocation,
-    deleteLocation,
-    addUser,
-    updateUser,
-    deleteUser,
-    addDepartment,
-    updateDepartment,
-    deleteDepartment,
-    addSubDepartment,
-    updateSubDepartment,
-    deleteSubDepartment,
-    subDepartmentsFor,
-    findSubDepartment,
-    log,
-    markNotificationsRead,
-  };
+const value: AppContextValue = {
+  state,
+  user: state.user,
+  role,
+  permissions,
+  can,
+  visibleDepartments,
+  departmentOptions,
+  activeDepartment,
+  departmentItems,
+  allItems,
+  login,
+  logout,
+  setDepartment,
+  toggleNav,
+  toggleSidebar,
+  updateSettings,
+  addItem,
+  updateItem,
+  archiveItems,
+  assignDepartment,
+  changeLocation,
+  stockIn,
+  stockOut,
+  updateStockInStatus,
+  updateStockOutStatus,
+  adjustStock,
+  addTransfer,
+  updateTransfer,
+  addRequest,
+  updateRequest,
+  addTicket,
+  addTicketIssue,
+  updateIssue,
+  removeIssue,
+  addTicketAsset,
+  updateTicketAsset,
+  removeTicketAsset,
+  addMovement,
+  removeMovement,
+  updateTicket,
+  closeTicket,
+  addPO,
+  updatePO,
+  addSupplier,
+  updateSupplier,
+  deleteSupplier,
+  addAsset,
+  updateAsset,
+  addCategory,
+  updateCategory,
+  deleteCategory,
+  addLocation,
+  updateLocation,
+  deleteLocation,
+  addUser,
+  updateUser,
+  deleteUser,
+  addDepartment,
+  updateDepartment,
+  deleteDepartment,
+  addSubDepartment,
+  updateSubDepartment,
+  deleteSubDepartment,
+  subDepartmentsFor,
+  findSubDepartment,
+  addTechnician,
+  updateTechnician,
+  deleteTechnician,
+  log,
+  markNotificationsRead,
+};
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

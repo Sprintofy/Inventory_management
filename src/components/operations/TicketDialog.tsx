@@ -25,6 +25,7 @@ const schema = z.object({
   department: z.string().min(1, "Select a department"),
   subDepartment: z.string().optional(),
   priority: z.string().min(1, "Select priority"),
+  technicianId: z.string().optional(),
 });
 type SV = z.output<typeof schema>;
 
@@ -42,7 +43,7 @@ export function TicketDialog({ open, onOpenChange }: { open: boolean; onOpenChan
 
   React.useEffect(() => {
     if (open) {
-      form.reset({ title: "", description: "", category: "", department: "", subDepartment: "", priority: "medium" });
+      form.reset({ title: "", description: "", category: "", department: "", subDepartment: "", priority: "medium", technicianId: "" });
       setIssues([""]);
       setIssuesError(null);
     }
@@ -71,6 +72,7 @@ export function TicketDialog({ open, onOpenChange }: { open: boolean; onOpenChan
       issues: ticketIssues,
       assets: [],
       customer: undefined,
+      technicianId: values.technicianId || undefined,
     });
     onOpenChange(false);
   };
@@ -181,6 +183,24 @@ export function TicketDialog({ open, onOpenChange }: { open: boolean; onOpenChan
                     <SelectContent>
                       {(["low", "medium", "high", "critical"] as const).map((p) => (
                         <SelectItem key={p} value={p} className="capitalize">{p}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="technicianId" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Assigned Technician</FormLabel>
+                <FormControl>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger className="w-full"><SelectValue placeholder="Select technician (optional)" /></SelectTrigger>
+                    <SelectContent>
+                      {state.technicians.map((tech) => (
+                        <SelectItem key={tech.id} value={tech.id} className="capitalize">
+                          {tech.name} ({tech.employeeId}) - {tech.specialization}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

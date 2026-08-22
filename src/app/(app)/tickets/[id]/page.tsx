@@ -3,7 +3,8 @@
 import * as React from "react";
 import { use, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Boxes, Check, CircleDot, FileDown, ListChecks, MoreHorizontal, Pencil, Plus, Ticket, TicketCheck, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, Boxes, Check, CircleDot, FileDown, ListChecks, MoreHorizontal, Pencil, Plus, Ticket, TicketCheck, Trash2, User } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +17,8 @@ import { CloseTicketDialog } from "@/components/operations/CloseTicketDialog";
 import { TicketAssetDialog } from "@/components/operations/TicketAssetDialog";
 import { IssueDialog } from "@/components/operations/IssueDialog";
 import { MovementDialog } from "@/components/operations/MovementDialog";
+import { AssignTechnicianDialog } from "@/components/operations/AssignTechnicianDialog";
+import { TicketAssetInfo } from "@/components/operations/TicketAssetInfo";
 import { useApp } from "@/store/app-store";
 import { useFakeLoading } from "@/hooks/use-fake-loading";
 import { formatDate, formatDateTime } from "@/lib/utils";
@@ -109,8 +112,11 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const [movementAsset, setMovementAsset] = useState<TicketAsset | null>(null);
   const [deleteAsset, setDeleteAsset] = useState<TicketAsset | null>(null);
   const [deleteIssue, setDeleteIssue] = useState<TicketIssue | null>(null);
+  const [assignTechnicianOpen, setAssignTechnicianOpen] = useState(false);
+  const [selectedTechnicianId, setSelectedTechnicianId] = useState<string | null>(null);
 
   const ticket = useMemo(() => state.tickets.find((t) => t.id === id), [state.tickets, id]);
+  const assignedTechnician = useMemo(() => state.technicians.find((t) => t.id === ticket?.technicianId), [state.technicians, ticket]);
   const admin = can("tickets.manage");
 
   const counts = useMemo(() => (ticket ? issueCounts(ticket.issues) : { open: 0, inProgress: 0, resolved: 0, total: 0 }), [ticket]);
@@ -196,6 +202,45 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
           </div>
         )}
       </div>
+
+      {/* Technician Assignment */}
+      <Card>
+        <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            {assignedTechnician ? (
+              <>
+                <Link href={`/technicians/${assignedTechnician.id}`} className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
+                  {assignedTechnician.name.split(" ").map((p) => p[0]).join("").slice(0, 2)}
+                </Link>
+                <div>
+                  <p className="text-muted-foreground text-xs">Assigned Technician</p>
+                  <p className="text-sm font-medium">{assignedTechnician.name}</p>
+                  <p className="text-muted-foreground text-xs">{assignedTechnician.specialization} Specialist</p>
+                  <StatusBadge status={assignedTechnician.availability} className="mt-1" />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="bg-muted text-muted-foreground flex size-10 items-center justify-center rounded-full">
+                  <User className="size-5" />
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Assigned Technician</p>
+                  <p className="text-muted-foreground text-sm font-medium">No technician assigned</p>
+                </div>
+              </>
+            )}
+          </div>
+          {admin && (
+            <Button
+              variant={ticket.technicianId ? "outline" : "default"}
+              onClick={() => { setSelectedTechnicianId(ticket.technicianId ?? null); setAssignTechnicianOpen(true); }}
+            >
+              <User className="size-4" /> {ticket.technicianId ? "Change Technician" : "Assign Technician"}
+            </Button>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card>
@@ -323,6 +368,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                         </div>
 
                         <div className="space-y-3 p-4">
+                          <TicketAssetInfo ticketAsset={asset} currentTicketId={ticket.id} />
+
                           <div className="flex items-center justify-between">
                             <h5 className="flex items-center gap-1.5 text-sm font-semibold">
                               <ListChecks className="text-primary size-4" /> Issues ({assetIssues.length})
@@ -460,6 +507,13 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         description={deleteIssue ? `"${deleteIssue.title}" will be removed from this ticket.` : ""}
         confirmLabel="Delete Issue"
         onConfirm={() => { if (deleteIssue) removeIssue(ticket.id, deleteIssue.id); setDeleteIssue(null); }}
+      />
+      <AssignTechnicianDialog
+        open={assignTechnicianOpen}
+        onOpenChange={setAssignTechnicianOpen}
+        ticket={ticket}
+        selectedTechnicianId={selectedTechnicianId}
+        onSelectTechnician={setSelectedTechnicianId}
       />
     </div>
   );

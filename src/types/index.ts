@@ -83,6 +83,7 @@ export interface Ticket {
   closedBy?: string;
   closedAt?: string;
   resolution?: string;
+  technicianId?: string;
 }
 
 export interface SubDepartment {
@@ -225,6 +226,27 @@ export interface Asset {
   warranty: string;
   condition: AssetCondition;
   status: AssetStatus;
+  // Extended fields for detailed asset information
+  hardware?: {
+    cpu: string;
+    ram: string;
+    storage: string;
+    gpu: string;
+    display: string;
+    battery: string;
+    network: string;
+  };
+  software?: Array<{
+    name: string;
+    version: string;
+    licenseStatus: string;
+  }>;
+  warrantyDetails?: {
+    provider: string;
+    status: "Active" | "Expiring Soon" | "Expired";
+    startDate: string;
+    expiryDate: string;
+  };
 }
 
 export interface Category {
@@ -333,4 +355,20 @@ export type PageSection =
   | "Reports"
   | "System"
   | "Activity Log"
-  | "Settings";
+  | "Settings"
+  | "Technicians";
+
+export interface Technician {
+  id: string;
+  name: string;
+  email: string;
+  employeeId: string;
+  specialization: string;
+  availability: "Available" | "Busy" | "Offline";
+  status: "Active" | "Inactive";
+  activeTickets: number;
+  resolvedTickets: number;
+  phone?: string;
+  lastActive?: string;
+  color?: string;
+}

@@ -17,6 +17,7 @@ import {
   ScrollText,
   Settings,
   LifeBuoy,
+  User,
 } from "lucide-react";
 import type { Role } from "@/types";
 
@@ -75,6 +76,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { title: "Departments", href: "/departments", icon: Building2, roles: DEPT_ROLES, keywords: ["department", "dept", "team", "division"] },
       { title: "Users", href: "/users", icon: Users, roles: ADMIN, keywords: ["user", "people", "staff", "employee", "account"] },
+      { title: "Technicians", href: "/technicians", icon: User, roles: ADMIN, keywords: ["technician", "tech", "support", "staff"] },
     ],
   },
   {
