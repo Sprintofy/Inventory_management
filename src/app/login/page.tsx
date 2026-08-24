@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Boxes, Eye, EyeOff, KeyRound, Lock, Mail, ShieldCheck, UserRound } from "lucide-react";
+import { Boxes, Eye, EyeOff, KeyRound, Lock, Mail, ShieldCheck, UserRound, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,6 +24,7 @@ const demoList = [
   { label: "Super Admin", email: demoAccounts[0].email, password: demoAccounts[0].password, icon: ShieldCheck, color: "bg-danger/10 text-danger" },
   { label: "Department", email: demoAccounts[1].email, password: demoAccounts[1].password, icon: UserRound, color: "bg-warning/15 text-warning" },
   { label: "Department User", email: demoAccounts[2].email, password: demoAccounts[2].password, icon: UserRound, color: "bg-primary/10 text-primary" },
+  { label: "Technician", email: "technician@gmail.com", password: "123456", icon: Wrench, color: "bg-warning/15 text-warning" },
 ];
 
 export default function LoginPage() {

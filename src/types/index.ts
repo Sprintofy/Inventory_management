@@ -1,4 +1,4 @@
-export type Role = "super-admin" | "admin" | "department-manager" | "department-user" | "viewer";
+export type Role = "super-admin" | "admin" | "department-manager" | "department-user" | "viewer" | "technician";
 
 export type StockStatus = "in-stock" | "low-stock" | "out-of-stock" | "overstock";
 

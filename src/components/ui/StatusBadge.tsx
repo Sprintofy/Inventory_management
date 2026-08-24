@@ -50,6 +50,7 @@ const statusMap: Record<string, { label: string; variant: StatusVariant }> = {
   "department-manager": { label: "Department", variant: "warning" },
   "department-user": { label: "Department User", variant: "neutral" },
   viewer: { label: "Viewer", variant: "neutral" },
+  technician: { label: "Technician", variant: "info" },
   new: { label: "New", variant: "success" },
   good: { label: "Good", variant: "success" },
   fair: { label: "Fair", variant: "warning" },

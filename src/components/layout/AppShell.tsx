@@ -98,10 +98,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
     if (!user) {
       router.replace("/login");
+    } else if (role === "technician") {
+      // Technicians may access their own dashboard and the technicians list/detail pages.
+      const allowed = ["/technicians", "/tickets"].some((p) =>
+        pathname === p || pathname.startsWith(`${p}/`),
+      );
+      if (!allowed) router.replace("/technician/dashboard");
     } else if (isBlocked) {
       router.replace("/dashboard");
     }
-  }, [user, router, isBlocked, mounted]);
+  }, [user, router, isBlocked, mounted, role, pathname]);
 
   // 3. Render identical loading state during Server rendering and initial Client hydration
   if (!mounted || !user) {

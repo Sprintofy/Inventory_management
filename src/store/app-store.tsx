@@ -28,26 +28,26 @@ import type {
   DemoAccount,
 } from "@/types";
 import {
-  activities as seedActivities,
-  assetMovements as seedMovements,
-  assets as seedAssets,
-  categories as seedCategories,
-  departments as seedDepartments,
-  inventoryItems as seedInventory,
-  locations as seedLocations,
-  notifications as seedNotifications,
-  purchaseOrders as seedPOs,
-  requests as seedRequests,
-  technicians as seedTechnicians,
-  stockInRecords as seedStockIn,
-  stockOutRecords as seedStockOut,
-  suppliers as seedSuppliers,
-  tickets as seedTickets,
-  transactions as seedTransactions,
-  transfers as seedTransfers,
-  users as seedUsers,
-  demoAccounts,
-  computeStatus,
+    activities as seedActivities,
+    assetMovements as seedMovements,
+    assets as seedAssets,
+    categories as seedCategories,
+    departments as seedDepartments,
+    inventoryItems as seedInventory,
+    locations as seedLocations,
+    notifications as seedNotifications,
+    purchaseOrders as seedPOs,
+    requests as seedRequests,
+    technicians as seedTechnicians,
+    stockInRecords as seedStockIn,
+    stockOutRecords as seedStockOut,
+    suppliers as seedSuppliers,
+    tickets as seedTickets,
+    transactions as seedTransactions,
+    transfers as seedTransfers,
+    users as seedUsers,
+    demoAccounts,
+    computeStatus,
 } from "@/data/mock";
 import { uid } from "@/lib/utils";
 import { ticketStatusFromIssues } from "@/lib/ticket-utils";
@@ -95,6 +95,8 @@ const rolePermissions: Record<Role, Permission[]> = {
   ],
   "department-user": ["inventory.manage", "requests.create", "transfers.create", "reports.view"],
   viewer: ["reports.view"],
+  // Technicians manage their own assignments and the technicians list/detail pages.
+  technician: ["technicians.manage"],
 };
 
 export interface Settings {
@@ -588,7 +590,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [state, activeDepartment]
   );
 
-  const login = React.useCallback((email: string, password: string) => {
+    const login = React.useCallback((email: string, password: string) => {
+    // Dummy technician portal login — maps to an existing technician record so
+    // the Technician Dashboard can show that technician's assigned tickets.
+    if (email === "technician@gmail.com" && password === "123456") {
+      const tech = seedTechnicians.find((t) => t.id === "TECH-001") ?? seedTechnicians[0];
+      if (tech) {
+        dispatch({
+          type: "LOGIN",
+          user: {
+            id: tech.id,
+            name: tech.name,
+            email: tech.email,
+            employeeId: tech.employeeId,
+            department: "Maintenance",
+            role: "technician",
+            status: tech.status === "Active" ? "active" : "inactive",
+            lastActive: new Date().toISOString(),
+            color: tech.color ?? "#4f46e5",
+          },
+        });
+        return true;
+      }
+    }
+
     const account = demoAccounts.find((a) => a.email === email && a.password === password);
     if (!account) return false;
     const user = seedUsers.find((u) => u.email === email);
