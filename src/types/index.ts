@@ -16,7 +16,7 @@ export type AssetCondition = "new" | "good" | "fair" | "poor";
 
 export type TransactionType = "stock-in" | "stock-out" | "transfer" | "adjustment";
 
-export type TicketStatus = "open" | "in-progress" | "partially-resolved" | "resolved" | "closed";
+export type TicketStatus = "open" | "in-progress" | "partially-resolved" | "resolved" | "closed" | "work-completed";
 
 export type IssueStatus = "open" | "in-progress" | "resolved" | "closed";
 
@@ -84,6 +84,8 @@ export interface Ticket {
   closedAt?: string;
   resolution?: string;
   technicianId?: string;
+  technicianRemark?: string;
+  completedAt?: string;
 }
 
 export interface SubDepartment {

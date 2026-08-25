@@ -22,6 +22,7 @@ import type {
   Ticket,
   TicketAsset,
   TicketIssue,
+  TicketStatus,
   Transfer,
   User,
   Technician,
@@ -885,6 +886,43 @@ const logout = React.useCallback(() => dispatch({ type: "LOGOUT" }), []);
       const t = state.tickets.find((x) => x.id === id);
       toast.success("Ticket closed successfully");
       dispatch({ type: "ADD_ACTIVITY", activity: pushActivity(state, state.user?.name ?? "Admin", "closed ticket", "Tickets", t?.title ?? "", t?.department ?? "-") });
+    },
+    [state]
+  );
+
+const updateTicketStatus = React.useCallback(
+    (id: string, status: TicketStatus) => {
+      const now = new Date().toISOString();
+      let patch: Partial<Ticket> = { status };
+      if (status === "work-completed") {
+        patch.completedAt = now;
+      }
+      dispatch({ type: "UPDATE_TICKET", id, patch });
+      const statusLabels: Record<TicketStatus, string> = {
+        open: "Open",
+        "in-progress": "In Progress",
+        "partially-resolved": "Partially Resolved",
+        resolved: "Resolved",
+        closed: "Closed",
+        "work-completed": "Work Completed",
+      };
+      toast.success(`Ticket status updated to ${statusLabels[status]}`);
+      const t = state.tickets.find((x) => x.id === id);
+      if (t) {
+        dispatch({ type: "ADD_ACTIVITY", activity: pushActivity(state, state.user?.name ?? "Admin", `${statusLabels[status]} ticket`, "Tickets", t.title, t.department) });
+      }
+    },
+    [state]
+  );
+
+  const updateTicketRemark = React.useCallback(
+    (id: string, remark: string) => {
+      dispatch({ type: "UPDATE_TICKET", id, patch: { technicianRemark: remark } });
+      const t = state.tickets.find((x) => x.id === id);
+      toast.success("Technician remark saved");
+      if (t) {
+        dispatch({ type: "ADD_ACTIVITY", activity: pushActivity(state, state.user?.name ?? "Admin", "technician remark updated", "Tickets", t.title, t.department) });
+      }
     },
     [state]
   );

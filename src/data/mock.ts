@@ -1346,6 +1346,8 @@ export const tickets: Ticket[] = [
       ticketIssue(3, "Condenser drain line blocked", { agoMin: 25, priority: "medium", assignedTo: "Pooja Reddy", description: "Water leaking near the indoor unit." }),
     ],
     technicianId: "TECH-001",
+    technicianRemark: "Checked capacitor and refrigerant levels. AC unit requires professional servicing.",
+    completedAt: undefined,
   },
   {
     id: "TKT-2026-013", title: "Laptop battery swelling — MacBook Pro", description: "MacBook Pro 14\" assigned to Finance shows a swollen battery. Needs replacement before it damages the chassis.", customer: "Arun Mehta", category: "IT Support", priority: "high", department: "Finance", subDepartment: "Accounting", createdBy: "Arun Mehta", createdAt: iso(3 * HOUR), status: "in-progress",
@@ -1395,6 +1397,8 @@ export const tickets: Ticket[] = [
       ticketIssue(13, "Structural inspection scheduled", { agoMin: 2800, priority: "medium", assignedTo: "Karan Johar", description: "Third-party inspection to be scheduled." }),
     ],
     technicianId: "TECH-001",
+    technicianRemark: "Inspected bent upright, documented damage. Structural engineer scheduled for review.",
+    completedAt: undefined,
   },
   {
     id: "TKT-2026-009", title: "Printer toner out — Admin wing", description: "HP LaserJet Pro M404dn in the admin wing shows low toner. Requesting replacement cartridge.", customer: "Admin Wing", category: "Inventory", priority: "medium", department: "Administration", subDepartment: "Office Management", createdBy: "Anita Desai", createdAt: iso(2 * DAY), status: "open",
