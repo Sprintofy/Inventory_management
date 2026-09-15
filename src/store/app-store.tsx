@@ -426,7 +426,7 @@ function reducer(state: AppState, action: Action): AppState {
   }
 }
 
-const STORAGE_KEY = "inventoryos-state-v1";
+const STORAGE_KEY = "inventoryos-state-v2";
 
 function loadInitialState(): AppState {
   if (typeof window === "undefined") return initialState;
