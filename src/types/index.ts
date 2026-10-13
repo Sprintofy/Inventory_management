@@ -86,6 +86,12 @@ export interface Ticket {
   technicianId?: string;
   technicianRemark?: string;
   completedAt?: string;
+  /** When the technician last submitted the ticket back to the Admin as solved. */
+  submittedAt?: string;
+  /** How many times the Admin has sent this ticket back to the technician. */
+  reissueCount?: number;
+  /** Why the Admin re-issued the ticket the last time. */
+  lastReissueNote?: string;
 }
 
 export interface SubDepartment {

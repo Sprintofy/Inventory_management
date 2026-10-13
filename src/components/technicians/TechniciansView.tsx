@@ -142,7 +142,6 @@ export function TechniciansView({ basePath = "/technicians" }: { basePath?: stri
         phone: values.phone,
         activeTickets: 0,
         resolvedTickets: 0,
-        lastActive: "Never",
         color: "#4f46e5"
       });
     }

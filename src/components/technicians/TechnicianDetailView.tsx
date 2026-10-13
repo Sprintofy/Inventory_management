@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useApp } from "@/store/app-store";
 import { useFakeLoading } from "@/hooks/use-fake-loading";
-import { formatDate } from "@/lib/utils";
+import { formatDate, toDate } from "@/lib/utils";
 import type { Ticket } from "@/types";
 
 const priorityClass: Record<string, string> = {
@@ -110,7 +110,7 @@ export function TechnicianDetailView({ id, basePath = "/technicians" }: { id: st
                 ["Specialization", technician.specialization],
                 ["Availability", technician.availability],
                 ["Status", technician.status],
-                ["Last Active", technician.lastActive ? formatDate(technician.lastActive) : "Never"],
+                ["Last Active", toDate(technician.lastActive) ? formatDate(technician.lastActive) : "Never"],
               ].map(([k, v]) => (
                 <div key={k} className="border-b pb-2">
                   <dt className="text-muted-foreground text-xs">{k}</dt>

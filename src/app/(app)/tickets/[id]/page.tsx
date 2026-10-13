@@ -4,7 +4,7 @@ import * as React from "react";
 import { use, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Boxes, Check, CircleDot, FileDown, ListChecks, MoreHorizontal, Pencil, Plus, Ticket, TicketCheck, Trash2, User } from "lucide-react";
+import { ArrowLeft, Boxes, Check, CircleDot, FileDown, ListChecks, MoreHorizontal, Pencil, Plus, RotateCcw, Ticket, TicketCheck, Trash2, User, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { CloseTicketDialog } from "@/components/operations/CloseTicketDialog";
+import { ReissueTicketDialog } from "@/components/operations/ReissueTicketDialog";
 import { TicketAssetDialog } from "@/components/operations/TicketAssetDialog";
 import { IssueDialog } from "@/components/operations/IssueDialog";
 import { MovementDialog } from "@/components/operations/MovementDialog";
@@ -100,8 +101,7 @@ function IssueItem({
 
 export default function TicketDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { state, can, updateTicket, updateIssue, removeIssue, removeTicketAsset } = useApp();
-  const router = useRouter();
+  const { state, can, updateTicket, updateIssue, removeIssue, removeTicketAsset } = useApp();  const router = useRouter();
   const loading = useFakeLoading(300);
   const [closeOpen, setCloseOpen] = useState(false);
   const [assetDialogOpen, setAssetDialogOpen] = useState(false);
@@ -113,6 +113,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const [deleteAsset, setDeleteAsset] = useState<TicketAsset | null>(null);
   const [deleteIssue, setDeleteIssue] = useState<TicketIssue | null>(null);
   const [assignTechnicianOpen, setAssignTechnicianOpen] = useState(false);
+  const [reissueOpen, setReissueOpen] = useState(false);
   const [selectedTechnicianId, setSelectedTechnicianId] = useState<string | null>(null);
 
   const ticket = useMemo(() => state.tickets.find((t) => t.id === id), [state.tickets, id]);
@@ -120,6 +121,9 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const admin = can("tickets.manage");
 
   const counts = useMemo(() => (ticket ? issueCounts(ticket.issues) : { open: 0, inProgress: 0, resolved: 0, total: 0 }), [ticket]);
+
+  // A ticket the technician has submitted back for the Admin to review.
+  const awaitingReview = ticket?.status === "work-completed" || ticket?.status === "resolved";
 
   if (!loading && !ticket) {
     return (
@@ -188,10 +192,23 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                 <Button variant="outline" onClick={() => setTicketStatus("open")}>Reopen</Button>
               </>
             )}
-            {ticket.status === "resolved" && (
+            {(ticket.status === "resolved" || ticket.status === "work-completed") && (
               <Button variant="outline" onClick={() => setTicketStatus("open")}>Reopen</Button>
             )}
-            {ticket.status !== "closed" && (
+
+            {/* --- Admin review of a technician-submitted (solved) ticket --- */}
+            {awaitingReview && (
+              <>
+                <Button variant="outline" onClick={() => setReissueOpen(true)} disabled={!ticket.technicianId}>
+                  <RotateCcw className="size-4" /> Re-issue to Technician
+                </Button>
+                <Button onClick={() => setCloseOpen(true)}>
+                  <TicketCheck className="size-4" /> Close Ticket
+                </Button>
+              </>
+            )}
+
+            {!awaitingReview && ticket.status !== "closed" && (
               <Button onClick={() => setCloseOpen(true)}><TicketCheck className="size-4" /> Close Ticket</Button>
             )}
             {ticket.status === "closed" && (
@@ -311,6 +328,40 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                 <h4 className="text-sm font-semibold">Description</h4>
                 <p className="text-muted-foreground mt-1.5 text-sm">{ticket.description}</p>
               </div>
+
+              {/* Re-issue history */}
+              {ticket.reissueCount ? (
+                <div className="bg-danger/5 mt-6 rounded-lg border p-4">
+                  <h4 className="text-danger flex items-center gap-1.5 text-sm font-semibold">
+                    <RotateCcw className="size-4" /> Re-issued {ticket.reissueCount} time{ticket.reissueCount === 1 ? "" : "s"}
+                  </h4>
+                  {ticket.lastReissueNote && (
+                    <p className="text-muted-foreground mt-1.5 text-sm">{ticket.lastReissueNote}</p>
+                  )}
+                </div>
+              ) : null}
+
+              {/* Technician's resolution remarks — the Admin review loop */}
+              {ticket.technicianRemark && (
+                <div className={`mt-6 rounded-lg border p-4 ${awaitingReview ? "bg-info/5" : "bg-muted/30"}`}>
+                  <h4 className="text-info flex flex-wrap items-center gap-1.5 text-sm font-semibold">
+                    <Wrench className="size-4" /> Technician Remarks
+                    {assignedTechnician && <span className="text-muted-foreground font-normal">— {assignedTechnician.name}</span>}
+                    {ticket.submittedAt && (
+                      <span className="text-muted-foreground font-normal">
+                        · submitted {formatDateTime(ticket.submittedAt)}
+                      </span>
+                    )}
+                  </h4>
+                  <p className="text-muted-foreground mt-1.5 text-sm italic">{ticket.technicianRemark}</p>
+                  {awaitingReview && (
+                    <p className="text-info mt-2 text-xs font-medium">
+                      Awaiting your review — close the ticket or re-issue it back to the technician.
+                    </p>
+                  )}
+                </div>
+              )}
+
               {ticket.status === "closed" && ticket.resolution && (
                 <div className="mt-6 rounded-lg border bg-success/5 p-4">
                   <h4 className="flex items-center gap-1.5 text-sm font-semibold text-success"><TicketCheck className="size-4" /> Resolution</h4>
@@ -470,12 +521,25 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
             <Card>
               <CardHeader><CardTitle className="text-base">Quick Actions</CardTitle></CardHeader>
               <CardContent className="space-y-2">
-                {ticket.issues.filter((iss) => iss.status === "open" || iss.status === "in-progress").map((iss) => (
+                {awaitingReview && (
+                  <>
+                    <p className="text-muted-foreground text-xs">
+                      The technician submitted this ticket as solved. Review the remarks and decide.
+                    </p>
+                    <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => setReissueOpen(true)} disabled={!ticket.technicianId}>
+                      <RotateCcw className="size-3.5" /> Re-issue to {assignedTechnician?.name.split(" ")[0] ?? "technician"}
+                    </Button>
+                    <Button size="sm" className="w-full justify-start" onClick={() => setCloseOpen(true)}>
+                      <TicketCheck className="size-3.5 text-success" /> Close Ticket &amp; return asset
+                    </Button>
+                  </>
+                )}
+                {!awaitingReview && ticket.issues.filter((iss) => iss.status === "open" || iss.status === "in-progress").map((iss) => (
                   <Button key={iss.id} variant="outline" size="sm" className="w-full justify-start" onClick={() => markIssueResolved(iss.id)}>
                     <Check className="size-3.5 text-success" /> Resolve: {iss.title}
                   </Button>
                 ))}
-                {ticket.issues.every((iss) => iss.status === "resolved" || iss.status === "closed") && ticket.issues.length > 0 && (
+                {!awaitingReview && ticket.issues.every((iss) => iss.status === "resolved" || iss.status === "closed") && ticket.issues.length > 0 && (
                   <Button size="sm" className="w-full" onClick={() => setCloseOpen(true)}><TicketCheck className="size-4" /> Close Ticket</Button>
                 )}
               </CardContent>
@@ -492,6 +556,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         <MovementDialog open={!!movementAsset} onOpenChange={(o) => !o && setMovementAsset(null)} ticketId={ticket.id} asset={movementAsset} />
       )}
       <CloseTicketDialog open={closeOpen} onOpenChange={setCloseOpen} ticket={ticket} />
+      <ReissueTicketDialog open={reissueOpen} onOpenChange={setReissueOpen} ticket={ticket} />
       <ConfirmDialog
         open={!!deleteAsset}
         onOpenChange={(o) => !o && setDeleteAsset(null)}

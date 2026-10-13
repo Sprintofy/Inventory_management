@@ -31,7 +31,7 @@ import {
   getTechnicianWorkload,
   getTotalTickets,
 } from "@/lib/dashboard-selectors";
-import { workloadLevel } from "@/data/mock";
+import { workloadLevel, type WorkloadLevelKey } from "@/data/mock";
 import type { Ticket } from "@/types";
 
 const priorityClass: Record<string, string> = {
@@ -41,10 +41,11 @@ const priorityClass: Record<string, string> = {
   critical: "bg-danger/10 text-danger",
 };
 
-const workloadBarColor: Record<"low" | "medium" | "high", string> = {
+const workloadBarColor: Record<WorkloadLevelKey, string> = {
   low: "#10b981",
   medium: "#f59e0b",
   high: "#ef4444",
+  critical: "#b91c1c",
 };
 
 interface ActivityItem {
@@ -380,7 +381,7 @@ export default function DashboardPage() {
                       <div className="bg-muted h-2 overflow-hidden rounded-full">
                         <div
                           className="h-full rounded-full transition-all duration-700"
-                          style={{ width: `${Math.min(100, Math.max(count > 0 ? 6 : 0, (count / maxWorkload) * 100))}%`, backgroundColor: workloadBarColor[level] }}
+                          style={{ width: `${Math.min(100, Math.max(count > 0 ? 6 : 0, (count / maxWorkload) * 100))}%`, backgroundColor: workloadBarColor[level.key] }}
                         />
                       </div>
                     </Link>

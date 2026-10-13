@@ -148,8 +148,11 @@ export default function AssetsPage() {
                   {can("assets.manage") && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon-sm"><MoreHorizontal className="size-4" /></Button></DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-40">
+                      <DropdownMenuContent align="end" className="w-48">
                         <DropdownMenuItem onClick={() => router.push(`/assets/${a.id}`)}>View details</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => { setFaultyAssetId(a.assetId); setFaultyOpen(true); }}>
+                          <Wrench className="size-3.5" /> Report faulty
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => { setEditing(a); setDialogOpen(true); }}>Edit</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

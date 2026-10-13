@@ -10,6 +10,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useApp } from "@/store/app-store";
+import { AssetHistoryTimeline } from "@/components/assets/AssetHistoryTimeline";
 import { useFakeLoading } from "@/hooks/use-fake-loading";
 import { formatCompact, formatDate } from "@/lib/utils";
 
@@ -111,7 +112,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
             <CardContent>
               {history.length === 0 ? (
                 <div className="text-muted-foreground flex items-center gap-2 py-4 text-sm">
-                  <CalendarDays className="size-4 opacity-40" /> No activity recorded yet
+                  <CalendarDays className="size-4 opacity-40" /> No stock activity recorded yet
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -127,6 +128,9 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
           </Card>
         </div>
       </div>
+
+      {/* Step 6 — full service/repair history for this specific asset */}
+      <AssetHistoryTimeline asset={asset} />
     </div>
   );
 }

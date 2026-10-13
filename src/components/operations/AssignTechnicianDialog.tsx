@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useApp } from "@/store/app-store";
 import { getTechnicianWorkload } from "@/lib/dashboard-selectors";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { workloadLevel } from "@/data/mock";
+import { workloadLevel, type WorkloadLevelKey } from "@/data/mock";
 import { cn } from "@/lib/utils";
 import type { Ticket } from "@/types";
 
@@ -29,10 +29,11 @@ const schema = z.object({
 });
 type SV = z.output<typeof schema>;
 
-const workloadClass: Record<"low" | "medium" | "high", string> = {
+const workloadClass: Record<WorkloadLevelKey, string> = {
   low: "bg-success/10 text-success",
   medium: "bg-warning/15 text-warning",
   high: "bg-danger/10 text-danger",
+  critical: "bg-danger/15 text-danger",
 };
 
 export function AssignTechnicianDialog({ open, onOpenChange, ticket, selectedTechnicianId, onSelectTechnician }: AssignTechnicianDialogProps) {
@@ -121,7 +122,7 @@ export function AssignTechnicianDialog({ open, onOpenChange, ticket, selectedTec
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium">{tech.name}</span>
                               <span className="text-muted-foreground text-xs">{tech.specialization}</span>
-                              <span className={cn("ml-auto rounded-full px-2 py-0.5 text-[11px] font-medium", workloadClass[level])}>
+                              <span className={cn("ml-auto rounded-full px-2 py-0.5 text-[11px] font-medium", workloadClass[level.key])}>
                                 {workload.get(tech.id) ?? 0} active
                               </span>
                               <StatusBadge status={tech.availability} className="h-5 px-1.5 text-[11px]" />
@@ -150,7 +151,7 @@ export function AssignTechnicianDialog({ open, onOpenChange, ticket, selectedTec
                 </div>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 border-t pt-3 text-xs">
                   <div className="flex items-center justify-between gap-2"><span className="text-muted-foreground">Active Tickets</span><span className="font-medium">{breakdown?.total ?? workload.get(selected.id) ?? 0}</span></div>
-                  <div className="flex items-center justify-between gap-2"><span className="text-muted-foreground">Workload</span><span className={cn("rounded-full px-2 py-0.5 font-medium capitalize", workloadClass[workloadLevel(breakdown?.total ?? workload.get(selected.id) ?? 0)])}>{workloadLevel(breakdown?.total ?? workload.get(selected.id) ?? 0)}</span></div>
+                  <div className="flex items-center justify-between gap-2"><span className="text-muted-foreground">Workload</span><span className={cn("rounded-full px-2 py-0.5 font-medium capitalize", workloadClass[workloadLevel(breakdown?.total ?? workload.get(selected.id) ?? 0).key])}>{workloadLevel(breakdown?.total ?? workload.get(selected.id) ?? 0).label}</span></div>
                   <div className="flex items-center justify-between gap-2"><span className="text-muted-foreground">High Priority</span><span className="font-medium">{breakdown?.high ?? 0}</span></div>
                   <div className="flex items-center justify-between gap-2"><span className="text-muted-foreground">Medium Priority</span><span className="font-medium">{breakdown?.medium ?? 0}</span></div>
                   <div className="flex items-center justify-between gap-2"><span className="text-muted-foreground">Low Priority</span><span className="font-medium">{breakdown?.low ?? 0}</span></div>

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDownToLine, MoreHorizontal, Plus, X } from "lucide-react";
+import { ArrowDownToLine, MoreHorizontal, Plus, Wrench, X } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { StockInDialog } from "@/components/inventory/StockDialogs";
+import { ReportFaultyAssetDialog } from "@/components/operations/ReportFaultyAssetDialog";
 import { useApp } from "@/store/app-store";
 import { useFakeLoading } from "@/hooks/use-fake-loading";
 import { formatDate } from "@/lib/utils";
@@ -25,6 +26,7 @@ export default function StockInPage() {
   const loading = useFakeLoading();
   const [page, setPage] = React.useState(1);
   const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [faultyOpen, setFaultyOpen] = React.useState(false);
   const [cancelTarget, setCancelTarget] = React.useState<StockInRecord | null>(null);
   const pageSize = 10;
 
@@ -41,9 +43,16 @@ export default function StockInPage() {
     <div className="space-y-5">
       <PageHeader
         title="Stock In"
-        description="Record incoming inventory from suppliers and purchase orders."
+        description="Receive incoming inventory, or log a faulty computer/laptop from previous inventory for repair."
         breadcrumb={[{ label: "Stock In" }]}
-        actions={<Button onClick={() => setDialogOpen(true)}><Plus className="size-4" /> Record Stock In</Button>}
+        actions={
+          <>
+            <Button variant="outline" onClick={() => setFaultyOpen(true)}>
+              <Wrench className="size-4" /> Report Faulty Asset
+            </Button>
+            <Button onClick={() => setDialogOpen(true)}><Plus className="size-4" /> Record Stock In</Button>
+          </>
+        }
       />
 
       <Card className="py-4">
@@ -117,6 +126,7 @@ export default function StockInPage() {
       </div>
 
       <StockInDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      <ReportFaultyAssetDialog open={faultyOpen} onOpenChange={setFaultyOpen} />
       <ConfirmDialog
         open={!!cancelTarget}
         onOpenChange={(o) => !o && setCancelTarget(null)}

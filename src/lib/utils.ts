@@ -26,8 +26,20 @@ export function formatNumber(value: number) {
   return new Intl.NumberFormat("en-IN").format(value);
 }
 
-export function formatDate(date: string | Date, opts?: Intl.DateTimeFormatOptions) {
+/**
+ * Guards against placeholder/non-date strings (e.g. a technician's
+ * `lastActive: "Never"`), which would otherwise throw
+ * `RangeError: Invalid time value` inside Intl.DateTimeFormat.
+ */
+export function toDate(date: string | Date | undefined | null): Date | null {
+  if (!date) return null;
   const d = typeof date === "string" ? new Date(date) : date;
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+export function formatDate(date: string | Date | undefined | null, opts?: Intl.DateTimeFormatOptions) {
+  const d = toDate(date);
+  if (!d) return "—";
   return new Intl.DateTimeFormat("en-IN", {
     day: "numeric",
     month: "short",
@@ -36,8 +48,9 @@ export function formatDate(date: string | Date, opts?: Intl.DateTimeFormatOption
   }).format(d);
 }
 
-export function formatDateTime(date: string | Date) {
-  const d = typeof date === "string" ? new Date(date) : date;
+export function formatDateTime(date: string | Date | undefined | null) {
+  const d = toDate(date);
+  if (!d) return "—";
   return new Intl.DateTimeFormat("en-IN", {
     day: "numeric",
     month: "short",
@@ -46,8 +59,9 @@ export function formatDateTime(date: string | Date) {
   }).format(d);
 }
 
-export function timeAgo(date: string | Date) {
-  const d = typeof date === "string" ? new Date(date) : date;
+export function timeAgo(date: string | Date | undefined | null) {
+  const d = toDate(date);
+  if (!d) return "—";
   const seconds = Math.floor((Date.now() - d.getTime()) / 1000);
   const intervals: [number, string][] = [
     [31536000, "year"],

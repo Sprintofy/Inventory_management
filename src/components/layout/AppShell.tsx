@@ -99,10 +99,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (!user) {
       router.replace("/login");
     } else if (role === "technician") {
-      // Technicians may access their own dashboard and the technicians list/detail pages.
-      const allowed = ["/technicians", "/tickets"].some((p) =>
-        pathname === p || pathname.startsWith(`${p}/`),
-      );
+      // Technicians live entirely inside the Technician Portal. They must not
+      // reach the Admin Panel routes, where they would see other technicians'
+      // tickets, stock and inventory.
+      const allowed = pathname === "/technician" || pathname.startsWith("/technician/");
       if (!allowed) router.replace("/technician/dashboard");
     } else if (isBlocked) {
       router.replace("/dashboard");

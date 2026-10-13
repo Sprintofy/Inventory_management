@@ -12,6 +12,7 @@ import type {
   Location,
   NotificationItem,
   PurchaseOrder,
+  RequestPriority,
   RequestRecord,
   Role,
   StockInRecord,
@@ -49,6 +50,7 @@ import {
     users as seedUsers,
     demoAccounts,
     computeStatus,
+    TECHNICIAN_DEMO_PASSWORD,
 } from "@/data/mock";
 import { uid } from "@/lib/utils";
 import { ticketStatusFromIssues } from "@/lib/ticket-utils";
@@ -154,6 +156,7 @@ type Action =
   | { type: "CHANGE_LOCATION"; ids: string[]; location: string }
   | { type: "STOCK_IN"; itemId: string; quantity: number; ref: string; supplier: string; note?: string }
   | { type: "STOCK_OUT"; itemId: string; quantity: number; ref: string; recipient: string; purpose: string; note?: string }
+  | { type: "ADD_STOCK_IN_RECORD"; record: StockInRecord }
   | { type: "UPDATE_STOCK_IN"; id: string; status: StockInRecord["status"] }
   | { type: "UPDATE_STOCK_OUT"; id: string; status: StockOutRecord["status"] }
   | { type: "ADD_TRANSFER"; transfer: Transfer }
@@ -168,6 +171,15 @@ type Action =
   | { type: "UPDATE_TICKET_ASSET"; ticketId: string; assetId: string; patch: Partial<TicketAsset> }
   | { type: "REMOVE_TICKET_ASSET"; ticketId: string; assetId: string }
   | { type: "UPDATE_TICKET"; id: string; patch: Partial<Ticket> }
+  | {
+      type: "CLOSE_TICKET";
+      id: string;
+      resolution: string;
+      resolvedIssueIds: string[];
+      closedBy: string;
+      closedAt: string;
+      returnedAssetIds: string[];
+    }
   | { type: "ADD_MOVEMENT"; movement: AssetMovement }
   | { type: "UPDATE_MOVEMENT"; id: string; patch: Partial<AssetMovement> }
   | { type: "REMOVE_MOVEMENT"; id: string }
@@ -309,6 +321,8 @@ function reducer(state: AppState, action: Action): AppState {
         ],
       };
     }
+    case "ADD_STOCK_IN_RECORD":
+      return { ...state, stockIn: [action.record, ...state.stockIn] };
     case "UPDATE_STOCK_IN":
       return { ...state, stockIn: state.stockIn.map((r) => (r.id === action.id ? { ...r, status: action.status } : r)) };
     case "UPDATE_STOCK_OUT":
@@ -355,6 +369,43 @@ function reducer(state: AppState, action: Action): AppState {
       };
     case "UPDATE_TICKET":
       return { ...state, tickets: state.tickets.map((t) => (t.id === action.id ? { ...t, ...action.patch } : t)) };
+    case "CLOSE_TICKET": {
+      // One atomic update so the issues/asset changes computed from the same
+      // snapshot are never overwritten by a later dispatch built from stale state.
+      const ticket = state.tickets.find((t) => t.id === action.id);
+      if (!ticket) return state;
+      return {
+        ...state,
+        tickets: state.tickets.map((t) =>
+          t.id === action.id
+            ? {
+                ...t,
+                status: "closed",
+                closedBy: action.closedBy,
+                closedAt: action.closedAt,
+                resolution: action.resolution,
+                issues: t.issues.map((iss) =>
+                  action.resolvedIssueIds.includes(iss.id)
+                    ? { ...iss, status: "resolved" as const, resolvedAt: iss.resolvedAt ?? action.closedAt, resolution: iss.resolution ?? action.resolution }
+                    : iss
+                ),
+                // The repaired item is handed back, so the ticket asset is
+                // checked out and dated.
+                assets: t.assets.map((a) => ({
+                  ...a,
+                  status: "out" as const,
+                  checkOutDate: a.checkOutDate ?? action.closedAt,
+                  currentLocation: a.currentLocation || "Technician Bench",
+                })),
+              }
+            : t
+        ),
+        // Repaired assets become available again.
+        assets: state.assets.map((a) =>
+          action.returnedAssetIds.includes(a.assetId) ? { ...a, status: "available" as const } : a
+        ),
+      };
+    }
     case "ADD_MOVEMENT":
       return { ...state, movements: [action.movement, ...state.movements] };
     case "UPDATE_MOVEMENT":
@@ -426,7 +477,10 @@ function reducer(state: AppState, action: Action): AppState {
   }
 }
 
-const STORAGE_KEY = "inventoryos-state-v2";
+// Bumped to v3: the seeded tickets now carry technician assignments and the
+// technician portal resolves accounts by email, so cached demo state from an
+// older session is discarded and the new seed data is used.
+const STORAGE_KEY = "inventoryos-state-v3";
 
 function loadInitialState(): AppState {
   if (typeof window === "undefined") return initialState;
@@ -509,6 +563,18 @@ interface AppContextValue {
   addMovement: (ticketId: string, assetId: string, m: Omit<AssetMovement, "id" | "ticketId" | "assetId" | "date" | "performedBy">) => void;
   removeMovement: (id: string) => void;
   updateTicket: (id: string, patch: Partial<Ticket>) => void;
+  updateTicketStatus: (id: string, status: TicketStatus) => void;
+  updateTicketRemark: (id: string, remark: string) => void;
+  submitTicketSolution: (id: string, remark: string, issueResolutions?: Record<string, string>) => void;
+  reissueTicket: (id: string, note: string) => void;
+  reportFaultyAsset: (input: {
+    assetId: string;
+    issueTitle: string;
+    issueDescription: string;
+    priority: RequestPriority;
+    department: string;
+    notes?: string;
+  }) => string | undefined;
   closeTicket: (id: string, resolution: string, resolvedIssueIds: string[]) => void;
   addPO: (po: Omit<PurchaseOrder, "id" | "status">) => void;
   updatePO: (id: string, status: PurchaseOrder["status"]) => void;
@@ -591,37 +657,54 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [state, activeDepartment]
   );
 
-    const login = React.useCallback((email: string, password: string) => {
-    // Dummy technician portal login — maps to an existing technician record so
-    // the Technician Dashboard can show that technician's assigned tickets.
-    if (email === "technician@gmail.com" && password === "123456") {
-      const tech = seedTechnicians.find((t) => t.id === "TECH-001") ?? seedTechnicians[0];
-      if (tech) {
+  /**
+   * Dummy authentication for the demo app.
+   *
+   * Technicians sign in to the Technician Portal with their OWN email address
+   * plus the shared demo password (`TECHNICIAN_DEMO_PASSWORD`). The resolved
+   * `User.id` is the technician's id, which is what every technician-facing
+   * screen uses to scope tickets/issues to that person. Technicians created by
+   * an Admin are resolved from live state too, so they can sign in as well.
+   *
+   * Staff accounts keep using the `demoAccounts` table.
+   */
+  const login = React.useCallback(
+    (email: string, password: string) => {
+      const normalized = email.trim().toLowerCase();
+
+      const technician = state.technicians.find((t) => t.email.trim().toLowerCase() === normalized);
+      if (technician) {
+        if (password !== TECHNICIAN_DEMO_PASSWORD) return false;
+        if (technician.status !== "Active") {
+          toast.error(`${technician.name} is deactivated. Contact your administrator.`);
+          return false;
+        }
         dispatch({
           type: "LOGIN",
           user: {
-            id: tech.id,
-            name: tech.name,
-            email: tech.email,
-            employeeId: tech.employeeId,
+            id: technician.id,
+            name: technician.name,
+            email: technician.email,
+            employeeId: technician.employeeId,
             department: "Maintenance",
             role: "technician",
-            status: tech.status === "Active" ? "active" : "inactive",
+            status: "active",
             lastActive: new Date().toISOString(),
-            color: tech.color ?? "#4f46e5",
+            color: technician.color ?? "#4f46e5",
           },
         });
         return true;
       }
-    }
 
-    const account = demoAccounts.find((a) => a.email === email && a.password === password);
-    if (!account) return false;
-    const user = seedUsers.find((u) => u.email === email);
-    if (!user) return false;
-    dispatch({ type: "LOGIN", user });
-    return true;
-  }, []);
+      const account = demoAccounts.find((a) => a.email.toLowerCase() === normalized && a.password === password && a.role !== "technician");
+      if (!account) return false;
+      const user = seedUsers.find((u) => u.email.toLowerCase() === normalized);
+      if (!user) return false;
+      dispatch({ type: "LOGIN", user });
+      return true;
+    },
+    [state.technicians]
+  );
 
 const logout = React.useCallback(() => dispatch({ type: "LOGOUT" }), []);
 
@@ -869,33 +952,83 @@ const logout = React.useCallback(() => dispatch({ type: "LOGOUT" }), []);
     [state]
   );
 
+  /**
+   * Admin closes a ticket that the technician marked as solved.
+   * Besides stamping the ticket as closed, every linked asset is returned:
+   * the master Asset becomes `available` again and a check-out movement is
+   * recorded so the asset's history timeline shows the return.
+   */
   const closeTicket = React.useCallback(
     (id: string, resolution: string, resolvedIssueIds: string[]) => {
       const now = new Date().toISOString();
-      dispatch({
-        type: "UPDATE_TICKET",
-        id,
-        patch: {
-          status: "closed",
-          closedBy: state.user?.name ?? "Admin",
-          closedAt: now,
-          resolution,
-          issues: state.tickets.find((x) => x.id === id)?.issues.map((iss) => (resolvedIssueIds.includes(iss.id) ? { ...iss, status: "resolved" as const, resolvedAt: iss.resolvedAt ?? now, resolution: iss.resolution ?? resolution } : iss)) ?? [],
-        },
-      });
       const t = state.tickets.find((x) => x.id === id);
-      toast.success("Ticket closed successfully");
-      dispatch({ type: "ADD_ACTIVITY", activity: pushActivity(state, state.user?.name ?? "Admin", "closed ticket", "Tickets", t?.title ?? "", t?.department ?? "-") });
+      if (!t) return;
+
+      const linkedAssets = t.assets
+        .map((ta) => state.assets.find((a) => a.assetId === ta.assetId))
+        .filter((a): a is Asset => Boolean(a));
+
+      dispatch({
+        type: "CLOSE_TICKET",
+        id,
+        resolution,
+        resolvedIssueIds,
+        closedBy: state.user?.name ?? "Admin",
+        closedAt: now,
+        returnedAssetIds: linkedAssets.map((a) => a.assetId),
+      });
+
+      for (const asset of linkedAssets) {
+        dispatch({
+          type: "ADD_MOVEMENT",
+          movement: {
+            id: uid("MOV"),
+            ticketId: id,
+            assetId: asset.assetId,
+            serialNumber: asset.serialNumber,
+            itemType: asset.category,
+            itemName: asset.name,
+            movementType: "check-out",
+            fromLocation: t.assets.find((ta) => ta.assetId === asset.assetId)?.currentLocation ?? "Technician Bench",
+            toLocation: asset.location,
+            performedBy: state.user?.name ?? "Admin",
+            date: now,
+            remarks: `Repaired and returned \u2014 ticket ${id} closed. ${resolution}`.trim(),
+          },
+        });
+      }
+
+      toast.success(
+        linkedAssets.length > 0
+          ? `Ticket closed \u2014 ${linkedAssets.map((a) => a.assetId).join(", ")} marked available`
+          : "Ticket closed successfully"
+      );
+      dispatch({ type: "ADD_ACTIVITY", activity: pushActivity(state, state.user?.name ?? "Admin", "closed ticket", "Tickets", t.title, t.department) });
     },
     [state]
   );
 
-const updateTicketStatus = React.useCallback(
+  const updateTicketStatus = React.useCallback(
     (id: string, status: TicketStatus) => {
+      const t = state.tickets.find((x) => x.id === id);
+      if (!t) return;
+      // Technicians may only move their OWN ticket forward through the
+      // work-in-progress -> work-completed steps. Closing and re-issuing stay
+      // Admin-only.
+      if (state.user?.role === "technician" && t.technicianId !== state.user.id) {
+        toast.error("You can only update tickets assigned to you");
+        return;
+      }
+      if (state.user?.role === "technician" && status !== "in-progress" && status !== "work-completed") {
+        toast.error("Technicians can only start work or submit the ticket as solved");
+        return;
+      }
       const now = new Date().toISOString();
-      let patch: Partial<Ticket> = { status };
-      if (status === "work-completed") {
-        patch.completedAt = now;
+      const patch: Partial<Ticket> = { status };
+      if (status === "work-completed") patch.completedAt = now;
+      if (status === "in-progress") {
+        patch.completedAt = undefined;
+        patch.submittedAt = undefined;
       }
       dispatch({ type: "UPDATE_TICKET", id, patch });
       const statusLabels: Record<TicketStatus, string> = {
@@ -907,10 +1040,7 @@ const updateTicketStatus = React.useCallback(
         "work-completed": "Work Completed",
       };
       toast.success(`Ticket status updated to ${statusLabels[status]}`);
-      const t = state.tickets.find((x) => x.id === id);
-      if (t) {
-        dispatch({ type: "ADD_ACTIVITY", activity: pushActivity(state, state.user?.name ?? "Admin", `${statusLabels[status]} ticket`, "Tickets", t.title, t.department) });
-      }
+      dispatch({ type: "ADD_ACTIVITY", activity: pushActivity(state, state.user?.name ?? "Admin", `${statusLabels[status]} ticket`, "Tickets", t.title, t.department) });
     },
     [state]
   );
@@ -923,6 +1053,193 @@ const updateTicketStatus = React.useCallback(
       if (t) {
         dispatch({ type: "ADD_ACTIVITY", activity: pushActivity(state, state.user?.name ?? "Admin", "technician remark updated", "Tickets", t.title, t.department) });
       }
+    },
+    [state]
+  );
+
+  /**
+   * Technician submits the ticket back to the Admin as resolved.
+   *
+   * A ticket can carry many issues, so each issue keeps its OWN remark
+   * (`issueResolutions[issueId]`); the ticket-level `remark` is an optional
+   * overall summary. Every open issue must have a remark before the ticket can
+   * be submitted. The ticket moves to `work-completed` so the Admin sees it
+   * awaiting review.
+   */
+  const submitTicketSolution = React.useCallback(
+    (id: string, remark: string, issueResolutions: Record<string, string> = {}) => {
+      const t = state.tickets.find((x) => x.id === id);
+      if (!t) return;
+      if (state.user?.role === "technician" && t.technicianId !== state.user.id) {
+        toast.error("You can only submit tickets assigned to you");
+        return;
+      }
+
+      const pending = t.issues.filter((i) => i.status === "open" || i.status === "in-progress");
+      const missing = pending.filter((i) => !(issueResolutions[i.id] ?? "").trim());
+      if (missing.length > 0) {
+        toast.error(`Add a remark for every issue \u2014 ${missing.length} still missing`);
+        return;
+      }
+
+      const now = new Date().toISOString();
+      const summary =
+        remark.trim() ||
+        pending.map((i) => `${i.title}: ${(issueResolutions[i.id] ?? "").trim()}`).join("\n");
+
+      dispatch({
+        type: "UPDATE_TICKET",
+        id,
+        patch: {
+          status: "work-completed",
+          technicianRemark: summary,
+          submittedAt: now,
+          completedAt: now,
+          issues: t.issues.map((iss) => {
+            const own = (issueResolutions[iss.id] ?? "").trim();
+            if (iss.status === "resolved" || iss.status === "closed") {
+              // Keep any remark already recorded for an already-resolved issue.
+              return own ? { ...iss, resolution: own } : iss;
+            }
+            return {
+              ...iss,
+              status: "resolved" as const,
+              resolvedAt: now,
+              resolution: own || iss.resolution || summary,
+            };
+          }),
+        },
+      });
+      toast.success("Ticket submitted to Admin as resolved");
+      dispatch({ type: "ADD_ACTIVITY", activity: pushActivity(state, state.user?.name ?? "Admin", "submitted ticket as resolved", "Tickets", t.title, t.department) });
+    },
+    [state]
+  );
+
+  /**
+   * Admin sends a solved ticket back to the SAME technician when the fix did
+   * not hold. The ticket returns to `in-progress`, its issues reopen so the
+   * technician has to fix them again, and the reason is kept on the ticket.
+   */
+  const reissueTicket = React.useCallback(
+    (id: string, note: string) => {
+      const t = state.tickets.find((x) => x.id === id);
+      if (!t) return;
+      if (!t.technicianId) {
+        toast.error("Assign a technician before re-issuing this ticket");
+        return;
+      }
+      dispatch({
+        type: "UPDATE_TICKET",
+        id,
+        patch: {
+          status: "in-progress",
+          completedAt: undefined,
+          submittedAt: undefined,
+          reissueCount: (t.reissueCount ?? 0) + 1,
+          lastReissueNote: note.trim() || undefined,
+          issues: t.issues.map((iss) => ({
+            ...iss,
+            status: "open" as const,
+            resolvedAt: undefined,
+            resolution: undefined,
+          })),
+        },
+      });
+      const tech = state.technicians.find((x) => x.id === t.technicianId);
+      toast.success(`Ticket re-issued to ${tech?.name ?? "technician"}`);
+      dispatch({ type: "ADD_ACTIVITY", activity: pushActivity(state, state.user?.name ?? "Admin", "re-issued ticket to technician", "Tickets", t.title, t.department) });
+    },
+    [state]
+  );
+
+  /**
+   * Step 1 of the service flow \u2014 "Stock In" of a faulty asset.
+   *
+   * The Admin picks a computer/laptop that already exists in the asset
+   * register, describes the problem, and this creates (a) a Stock In record for
+   * the faulty return, (b) marks the master Asset as `under-repair`, and
+   * (c) a ticket carrying that asset plus the reported issue, ready to be
+   * assigned to a technician. Inventory quantities are never touched.
+   */
+  const reportFaultyAsset = React.useCallback(
+    (input: {
+      assetId: string;
+      issueTitle: string;
+      issueDescription: string;
+      priority: Ticket["priority"];
+      department: string;
+      notes?: string;
+    }) => {
+      const asset = state.assets.find((a) => a.assetId === input.assetId || a.id === input.assetId);
+      if (!asset) {
+        toast.error("Select an asset from the register");
+        return;
+      }
+      const now = new Date().toISOString();
+      const ticketId = uid("TKT-2026");
+      const ticketAssetId = uid("TAS");
+
+      dispatch({
+        type: "ADD_STOCK_IN_RECORD",
+        record: {
+          id: uid("SI"),
+          reference: uid("SI-2026"),
+          date: now,
+          supplier: "Internal \u2014 Faulty Return",
+          itemName: asset.name,
+          items: 1,
+          quantity: 1,
+          department: input.department || asset.department,
+          createdBy: state.user?.name ?? "Admin",
+          status: "received",
+        },
+      });
+
+      dispatch({ type: "UPDATE_ASSET", asset: { ...asset, status: "under-repair" } });
+
+      dispatch({
+        type: "ADD_TICKET",
+        ticket: {
+          id: ticketId,
+          title: `${asset.name} \u2014 ${input.issueTitle}`,
+          description: input.issueDescription,
+          category: asset.category === "IT Equipment" ? "IT Support" : "Maintenance",
+          department: input.department || asset.department,
+          priority: input.priority,
+          createdBy: state.user?.name ?? "Admin",
+          createdAt: now,
+          status: "open",
+          assets: [
+            {
+              id: ticketAssetId,
+              assetId: asset.assetId,
+              serialNumber: asset.serialNumber,
+              itemType: asset.category,
+              name: asset.name,
+              currentLocation: asset.location,
+              status: "in",
+              checkInDate: now,
+              notes: input.notes,
+            },
+          ],
+          issues: [
+            {
+              id: uid("ISS"),
+              assetId: ticketAssetId,
+              title: input.issueTitle,
+              description: input.issueDescription,
+              priority: input.priority,
+              status: "open",
+              createdAt: now,
+            },
+          ],
+        },
+      });
+
+      toast.success(`Faulty asset received \u2014 ticket ${ticketId} generated`);
+      dispatch({ type: "ADD_ACTIVITY", activity: pushActivity(state, state.user?.name ?? "Admin", "received faulty asset", "Stock In", asset.name, input.department || asset.department) });
+      return ticketId;
     },
     [state]
   );
@@ -1153,6 +1470,11 @@ const value: AppContextValue = {
   addMovement,
   removeMovement,
   updateTicket,
+  updateTicketStatus,
+  updateTicketRemark,
+  submitTicketSolution,
+  reissueTicket,
+  reportFaultyAsset,
   closeTicket,
   addPO,
   updatePO,

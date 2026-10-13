@@ -4181,6 +4181,7 @@ export const tickets: Ticket[] = [
     status: "in-progress",
     createdBy: "Priya Sharma",
     createdAt: iso(2 * HOUR),
+    technicianId: "TECH-001",
     issues: [
       {
         id: "ISS-001",
@@ -4214,6 +4215,7 @@ export const tickets: Ticket[] = [
     status: "open",
     createdBy: "Anita Desai",
     createdAt: iso(5 * HOUR),
+    technicianId: "TECH-002",
     issues: [
       {
         id: "ISS-002",
@@ -4236,6 +4238,10 @@ export const tickets: Ticket[] = [
     status: "resolved",
     createdBy: "Meera Iyer",
     createdAt: iso(2 * DAY),
+    technicianId: "TECH-001",
+    technicianRemark:
+      "Inspected the projector, replaced the lamp assembly (OEM) and reset the lamp timer. Lamp hours now read 0 and the 'Replace Lamp' warning is cleared. Projector is working fine and handed back.",
+    submittedAt: iso(1 * DAY),
     resolution: "Replaced lamp assembly and reset timer.",
     issues: [
       {
@@ -4273,6 +4279,10 @@ export const tickets: Ticket[] = [
     createdBy: "Vikram Singh",
     createdAt: iso(3 * DAY),
     completedAt: iso(4 * HOUR),
+    technicianId: "TECH-004",
+    technicianRemark:
+      "Ruptured main cylinder seal replaced on Unit 2. Hydraulic oil topped up and pressure tested for 30 minutes with no further leakage. Unit is ready for use.",
+    submittedAt: iso(4 * HOUR),
     issues: [
       {
         id: "ISS-004",
@@ -4327,6 +4337,13 @@ export const notifications: NotificationItem[] = [
   },
 ];
 
+/**
+ * Shared dummy password for every technician account in the Technician Portal.
+ * Each technician signs in with their OWN email (see `technicians`) plus this
+ * password, so the portal can resolve exactly which technician is logged in.
+ */
+export const TECHNICIAN_DEMO_PASSWORD = "123456";
+
 export const demoAccounts: DemoAccount[] = [
   {
     name: "Super Admin",
@@ -4369,30 +4386,32 @@ export const assetMovements: AssetMovement[] = [];
 // ==========================================
 // WORKLOAD LEVEL HELPER (Required by Dashboard)
 // ==========================================
-export function workloadLevel(val: any = 0) {
+export type WorkloadLevelKey = "low" | "medium" | "high" | "critical";
+
+export interface WorkloadLevel {
+  key: WorkloadLevelKey;
+  label: string;
+  color: string;
+  bg: string;
+}
+
+/**
+ * Presentation data for a workload band. Properly typed (rather than the old
+ * `String` object) so callers can index `Record<WorkloadLevelKey, string>` maps
+ * without TypeScript errors, and can render the label directly.
+ */
+export function workloadLevel(val: unknown = 0): WorkloadLevel {
   const count = typeof val === "number" ? val : Array.isArray(val) ? val.length : 0;
-  
-  let label = "Low";
-  let color = "text-emerald-500";
-  let bg = "bg-emerald-500/10";
 
-  if (count >= 10) {
-    label = "Critical";
-    color = "text-red-500";
-    bg = "bg-red-500/10";
-  } else if (count >= 7) {
-    label = "High";
-    color = "text-amber-500";
-    bg = "bg-amber-500/10";
-  } else if (count >= 3) {
-    label = "Medium";
-    color = "text-blue-500";
-    bg = "bg-blue-500/10";
-  }
+  const key: WorkloadLevelKey =
+    count >= 10 ? "critical" : count >= 7 ? "high" : count >= 3 ? "medium" : "low";
 
-  const result = new String(label) as any;
-  result.label = label;
-  result.color = color;
-  result.bg = bg;
-  return result;
+  const presets: Record<WorkloadLevelKey, { label: string; color: string; bg: string }> = {
+    low: { label: "Low", color: "text-emerald-500", bg: "bg-emerald-500/10" },
+    medium: { label: "Medium", color: "text-blue-500", bg: "bg-blue-500/10" },
+    high: { label: "High", color: "text-amber-500", bg: "bg-amber-500/10" },
+    critical: { label: "Critical", color: "text-red-500", bg: "bg-red-500/10" },
+  };
+
+  return { key, ...presets[key] };
 }
