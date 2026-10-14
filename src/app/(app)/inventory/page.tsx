@@ -13,13 +13,12 @@ import { InventoryForm } from "@/components/inventory/InventoryForm";
 import { InventoryImportDialog } from "@/components/inventory/InventoryImportDialog";
 import { StockInDialog, StockOutDialog } from "@/components/inventory/StockDialogs";
 import { useApp } from "@/store/app-store";
-import { useFakeLoadingOn } from "@/hooks/use-fake-loading";
 import { downloadCSV, formatDate } from "@/lib/toast-utils";
 import { exportInventoryExcel } from "@/lib/excel";
 import type { InventoryItem } from "@/types";
 
 export default function InventoryPage() {
-  const { departmentItems, can, state, activeDepartment, user } = useApp();
+  const { departmentItems, can, activeDepartment, user } = useApp();
   const searchParams = useSearchParams();
   const [search, setSearch] = React.useState(searchParams.get("q") ?? "");
   const [filters, setFilters] = React.useState<InventoryFiltersState>(emptyFilters);
@@ -29,20 +28,23 @@ export default function InventoryPage() {
   const [stockOutOpen, setStockOutOpen] = React.useState(false);
   const [stockTarget, setStockTarget] = React.useState<InventoryItem | null>(null);
   const [importOpen, setImportOpen] = React.useState(false);
-  const loading = useFakeLoadingOn(searchParams.toString());
 
   React.useEffect(() => {
-    if (searchParams.get("new") === "1") setFormOpen(true);
+    if (searchParams.get("new") === "1") {
+      setTimeout(() => {
+        setFormOpen(true);
+      }, 0);
+    }
   }, [searchParams]);
 
   const filtered = React.useMemo(() => {
     const term = search.trim().toLowerCase();
     return departmentItems.filter((i) => {
       if (term && !(
-        i.deviceName.toLowerCase().includes(term) ||
-        i.sku.toLowerCase().includes(term) ||
-        (i.serialNumber ?? "").toLowerCase().includes(term) ||
-        i.category.toLowerCase().includes(term)
+        (i.deviceName ?? '').toLowerCase().includes(term) ||
+        (i.sku ?? '').toLowerCase().includes(term) ||
+        ((i.serialNumber ?? '').toLowerCase().includes(term)) ||
+        (i.category ?? '').toLowerCase().includes(term)
       )) return false;
       if (filters.department !== "all" && i.department !== filters.department) return false;
       if (filters.category !== "all" && i.category !== filters.category) return false;
@@ -120,7 +122,7 @@ export default function InventoryPage() {
           </>
         }
       />
-
+    
       {/* Count header — All vs Dept (Mar 4). No Current/Daily/Movement tabs. */}
       <div className="bg-card flex flex-wrap items-center gap-2 rounded-xl border px-4 py-3 shadow-sm">
         <p className="text-sm">
@@ -149,10 +151,7 @@ export default function InventoryPage() {
           </div>
 
           <InventoryTable
-            loading={loading}
             onEdit={openEdit}
-            onStockIn={openStockIn}
-            onStockOut={openStockOut}
           />
       </div>
 
