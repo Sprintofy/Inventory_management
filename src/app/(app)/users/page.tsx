@@ -22,13 +22,12 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useApp } from "@/store/app-store";
 import { useFakeLoadingOn } from "@/hooks/use-fake-loading";
 import { uid } from "@/lib/utils";
-import { DEFAULT_USER_PASSWORD } from "@/data/mock";
 import type { SubDepartment, User } from "@/types";
 
 const schema = z.object({
   name: z.string().min(2, "Name is required"),
   email: z.string().email("Invalid email"),
-  password: z.string().min(6, "Min 6 characters"),
+  password: z.string().optional(),
   department: z.string().min(1, "Select a department"),
   subDepartment: z.string().optional(),
   post: z.string().min(2, "Post / rank is required (Army field)"),
@@ -50,7 +49,7 @@ export default function UsersPage() {
 
   const form = useForm<SV>({
     resolver: zodResolver(schema) as unknown as Resolver<SV>,
-    defaultValues: { name: "", email: "", password: DEFAULT_USER_PASSWORD, department: "", subDepartment: "", post: "" },
+    defaultValues: { name: "", email: "", password: "password", department: "", subDepartment: "", post: "" },
   });
 
   const deptName = form.watch("department");
@@ -64,7 +63,7 @@ export default function UsersPage() {
   }, [deptName, state.departments]);
 
   React.useEffect(() => {
-    if (dialogOpen) form.reset(editing ? { name: editing.name, email: editing.email, password: editing.password ?? DEFAULT_USER_PASSWORD, department: editing.department, subDepartment: editing.subDepartment ?? "", post: editing.post ?? "" } : { name: "", email: "", password: DEFAULT_USER_PASSWORD, department: "", subDepartment: "", post: "" });
+    if (dialogOpen) form.reset(editing ? { name: editing.name, email: editing.email, password: "", department: editing.department, subDepartment: editing.subDepartment ?? "", post: editing.post ?? "" } : { name: "", email: "", password: "password", department: "", subDepartment: "", post: "" });
   }, [dialogOpen, editing, form]);
 
   const users = React.useMemo(() => {
@@ -86,10 +85,11 @@ export default function UsersPage() {
 
   const onSubmit = (values: SV) => {
     // Every user is a scoped "user" — no role picker (Mar 10).
+    // Blank password on edit keeps the stored hash.
     if (editing) {
-      updateUser({ ...editing, name: values.name, email: values.email, password: values.password, department: values.department, subDepartment: values.subDepartment || undefined, post: values.post, role: editing.role === "super-admin" ? editing.role : "user" });
+      updateUser({ ...editing, name: values.name, email: values.email, password: values.password || undefined, department: values.department, subDepartment: values.subDepartment || undefined, post: values.post, role: editing.role === "super-admin" ? editing.role : "user" });
     } else {
-      addUser({ id: uid("USR"), name: values.name, email: values.email, password: values.password, employeeId: uid("EMP"), department: values.department, subDepartment: values.subDepartment || undefined, post: values.post, role: "user", status: "active", lastActive: "Never", color: "#4f46e5" });
+      addUser({ id: uid("USR"), name: values.name, email: values.email, password: values.password || "password", employeeId: uid("EMP"), department: values.department, subDepartment: values.subDepartment || undefined, post: values.post, role: "user", status: "active", lastActive: "Never", color: "#4f46e5" });
     }
     setDialogOpen(false);
     setEditing(null);
@@ -188,7 +188,7 @@ export default function UsersPage() {
               )} />
               <div className="grid grid-cols-2 gap-4">
                 <FormField control={form.control} name="password" render={({ field }) => (
-                  <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="text" placeholder="Min 6 characters" {...field} /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>Password{editing ? " (blank keeps current)" : ""}</FormLabel><FormControl><Input type="text" placeholder={editing ? "Leave blank to keep current" : "Min 6 characters"} {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="post" render={({ field }) => (
                   <FormItem><FormLabel>Post (Army)</FormLabel><FormControl><Input placeholder="e.g. Col, Maj, OIC" {...field} /></FormControl><FormMessage /></FormItem>

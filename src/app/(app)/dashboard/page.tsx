@@ -31,7 +31,7 @@ import {
   getTechnicianWorkload,
   getTotalTickets,
 } from "@/lib/dashboard-selectors";
-import { workloadLevel, type WorkloadLevelKey } from "@/data/mock";
+import { workloadLevel, type WorkloadLevelKey } from "@/lib/workload";
 import type { Ticket } from "@/types";
 
 const priorityClass: Record<string, string> = {
@@ -235,24 +235,13 @@ export default function DashboardPage() {
         });
       }
     }
-    for (const m of state.movements) {
-      derived.push({
-        id: `mvd-${m.id}`,
-        user: m.performedBy,
-        action: m.movementType === "transfer" ? "moved asset" : m.movementType === "check-out" ? "checked out asset" : "checked in asset",
-        module: "asset",
-        item: `${m.assetId} — ${m.itemName}`,
-        department: m.toLocation,
-        date: m.date,
-      });
-    }
     const merged: ActivityItem[] = [
       ...state.activities.map((a) => ({ ...a })),
       ...derived,
     ];
     merged.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     return merged.slice(0, 8);
-  }, [state.activities, state.tickets, state.movements, state.technicians, technicianName]);
+  }, [state.activities, state.tickets, state.technicians, technicianName]);
 
   const ticketLinkFor = (t: Ticket) => `/tickets/${t.id}`;
 

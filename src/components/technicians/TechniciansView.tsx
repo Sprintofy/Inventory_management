@@ -24,13 +24,12 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useApp } from "@/store/app-store";
 import { getTechnicianWorkload } from "@/lib/dashboard-selectors";
 import { useFakeLoadingOn } from "@/hooks/use-fake-loading";
-import { TECHNICIAN_DEMO_PASSWORD } from "@/data/mock";
 import type { Technician } from "@/types";
 
 const schema = z.object({
   name: z.string().min(2, "Name is required"),
   email: z.string().email("Invalid email"),
-  password: z.string().min(6, "Min 6 characters"),
+  password: z.string().optional(),
   employeeId: z.string().min(1, "Employee ID is required"),
   specialization: z.string().min(1, "Select a specialization"),
   phone: z.string().optional(),
@@ -54,18 +53,18 @@ export function TechniciansView({ basePath = "/technicians" }: { basePath?: stri
 
   const form = useForm<SV>({
     resolver: zodResolver(schema) as unknown as Resolver<SV>,
-    defaultValues: { name: "", email: "", password: TECHNICIAN_DEMO_PASSWORD, employeeId: "", specialization: "", phone: "" },
+    defaultValues: { name: "", email: "", password: "123456", employeeId: "", specialization: "", phone: "" },
   });
 
   React.useEffect(() => {
     if (dialogOpen) form.reset(editing ? {
       name: editing.name,
       email: editing.email,
-      password: editing.password ?? TECHNICIAN_DEMO_PASSWORD,
+      password: "",
       employeeId: editing.employeeId,
       specialization: editing.specialization,
       phone: editing.phone ?? ""
-    } : { name: "", email: "", password: TECHNICIAN_DEMO_PASSWORD, employeeId: "", specialization: "", phone: "" });
+    } : { name: "", email: "", password: "123456", employeeId: "", specialization: "", phone: "" });
   }, [dialogOpen, editing, form]);
 
   const specializations = React.useMemo(
@@ -107,7 +106,7 @@ export function TechniciansView({ basePath = "/technicians" }: { basePath?: stri
       updateTechnician({ ...editing,
         name: values.name,
         email: values.email,
-        password: values.password,
+        password: values.password || undefined,
         employeeId: values.employeeId,
         specialization: values.specialization,
         phone: values.phone
@@ -116,7 +115,7 @@ export function TechniciansView({ basePath = "/technicians" }: { basePath?: stri
       addTechnician({
         name: values.name,
         email: values.email,
-        password: values.password,
+        password: values.password || "123456",
         employeeId: values.employeeId,
         specialization: values.specialization,
         availability: "Available",
@@ -250,7 +249,7 @@ export function TechniciansView({ basePath = "/technicians" }: { basePath?: stri
                   <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="name@company.com" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="password" render={({ field }) => (
-                  <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="text" placeholder="Min 6 characters" {...field} /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>Password{editing ? " (blank keeps current)" : ""}</FormLabel><FormControl><Input type="text" placeholder={editing ? "Leave blank to keep current" : "Min 6 characters"} {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
               </div>
               <FormField control={form.control} name="employeeId" render={({ field }) => (

@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useApp } from "@/store/app-store";
 import { getTechnicianWorkload } from "@/lib/dashboard-selectors";
-import { workloadLevel, type WorkloadLevelKey } from "@/data/mock";
+import { workloadLevel, type WorkloadLevelKey } from "@/lib/workload";
 import { cn } from "@/lib/utils";
 import type { Ticket } from "@/types";
 

@@ -84,7 +84,7 @@ export const navGroups: NavGroup[] = [
   },
 ];
 
-// Help tab removed (Mar 11/12). Technicians use /technician/login portal.
+// Help tab removed (Mar 11/12). Single login at /login for every role.
 export const bottomNav: NavItem[] = [];
 
 export function navForRole(role: Role): NavGroup[] {

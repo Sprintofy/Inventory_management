@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useApp } from "@/store/app-store";
-import { demoAccounts } from "@/data/mock";
 
 const loginSchema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -28,7 +27,7 @@ const demoList = [
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, state } = useApp();
+  const { login, user } = useApp();
   const [showPassword, setShowPassword] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -37,33 +36,22 @@ export default function LoginPage() {
     defaultValues: { email: "", password: "" },
   });
 
-  const onSubmit = (values: LoginValues) => {
+  const onSubmit = async (values: LoginValues) => {
     setError(null);
-    if (login(values.email, values.password)) {
-      // Resolve role from live state (not demo table) so Super Admin-created
-      // users/technicians route correctly.
-      const normalized = values.email.trim().toLowerCase();
-      const tech = state.technicians.find((t) => t.email.trim().toLowerCase() === normalized);
-      if (tech) {
-        router.push("/technician/dashboard");
-        return;
-      }
-      const u = state.users.find((x) => x.email.trim().toLowerCase() === normalized);
-      const role = u?.role ?? demoAccounts.find((a) => a.email.toLowerCase() === normalized)?.role;
-      if (role === "technician") {
-        router.push("/technician/dashboard");
-        return;
-      }
-      if (role === "super-admin" || role === "admin") {
-        router.push("/dashboard");
-        return;
-      }
-      // Scoped user lands on its own department data.
-      router.push("/dashboard");
-    } else {
+    const ok = await login(values.email, values.password);
+    if (!ok) {
       setError("Invalid credentials. Use one of the demo accounts below.");
     }
   };
+
+  React.useEffect(() => {
+    if (!user) return;
+    if (user.role === "technician") {
+      router.push("/technician/dashboard");
+    } else {
+      router.push("/dashboard");
+    }
+  }, [user, router]);
 
   const fillDemo = (email: string, password: string) => {
     form.setValue("email", email);

@@ -51,7 +51,7 @@ export default function TechnicianTicketPage({ params }: { params: Promise<{ id:
   // Guard: a technician may only open a ticket assigned to them.
   React.useEffect(() => {
     if (!mounted) return;
-    if (!user || user.role !== "technician") router.replace("/technician/login");
+    if (!user || user.role !== "technician") router.replace("/login");
   }, [mounted, user, router]);
 
   const ticket = useMemo(() => state.tickets.find((t) => t.id === id), [state.tickets, id]);
