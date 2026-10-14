@@ -1,5 +1,4 @@
 // "use client";
-
 // import * as React from "react";
 // import { usePathname, useRouter } from "next/navigation";
 // import { Sidebar } from "@/components/layout/Sidebar";
@@ -92,7 +91,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         "/users",
         "/technicians",
         "/activity",
-        "/settings",
         "/help",
       );
     }
@@ -111,7 +109,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         "/users",
         "/technicians",
         "/activity",
-        "/settings",
         "/help",
       );
     }

@@ -10,7 +10,6 @@ import {
   Users,
   BarChart3,
   ScrollText,
-  Settings,
   User,
 } from "lucide-react";
 import type { Role } from "@/types";
@@ -81,7 +80,6 @@ export const navGroups: NavGroup[] = [
     label: "System",
     items: [
       { title: "Activity Log", href: "/activity", icon: ScrollText, roles: ADMIN, keywords: ["activity", "log", "audit", "history", "trail"] },
-      { title: "Settings", href: "/settings", icon: Settings, roles: ADMIN, keywords: ["setting", "config", "preference"] },
     ],
   },
 ];
