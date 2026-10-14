@@ -104,7 +104,7 @@ export default function DepartmentsPage() {
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {departments.map((d) => {
             const items = state.inventory.filter((i) => i.department === d.name);
-            const low = items.filter((i) => i.status === "low-stock" || i.status === "out-of-stock").length;
+            const low = items.filter((i) => i.quantity <= 10).length;
             const openTickets = state.tickets.filter((t) => t.department === d.name && t.status !== "closed").length;
             const deptUsers = state.users.filter((u) => u.department === d.name).length;
             return (
@@ -164,8 +164,8 @@ export default function DepartmentsPage() {
                                   <button className="text-muted-foreground hover:text-foreground" aria-label={`Manage ${s.name}`} onClick={(e) => e.stopPropagation()}><MoreHorizontal className="size-3" /></button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="start" className="w-40">
-                                  <DropdownMenuItem onClick={() => setSubDialog({ open: true, parent: d, sub: s })}><Pencil className="size-3.5" /> Edit</DropdownMenuItem>
-                                  <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeletingSub({ parent: d, sub: s })}><Trash2 className="size-3.5" /> Delete</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSubDialog({ open: true, parent: d, sub: s }); }}><Pencil className="size-3.5" /> Edit</DropdownMenuItem>
+                                  <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={(e) => { e.stopPropagation(); setDeletingSub({ parent: d, sub: s }); }}><Trash2 className="size-3.5" /> Delete</DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             )}
@@ -203,7 +203,21 @@ export default function DepartmentsPage() {
                   <FormItem><FormLabel>Code</FormLabel><FormControl><Input placeholder="e.g. QLT" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="manager" render={({ field }) => (
-                  <FormItem><FormLabel>Manager</FormLabel><FormControl><Input placeholder="Full name" {...field} /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>Manager</FormLabel>
+                    <FormControl>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger className="w-full"><SelectValue placeholder="Assign a manager" /></SelectTrigger>
+                        <SelectContent>
+                          {editing && !state.users.some((u) => u.name === editing.manager) && (
+                            <SelectItem value={editing.manager}>{editing.manager} (current)</SelectItem>
+                          )}
+                          {state.users.map((u) => <SelectItem key={u.id} value={u.name}>{u.name} · {u.department}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    {editing && <p className="text-muted-foreground text-xs">Currently assigned: <span className="font-medium text-foreground">{editing.manager}</span> — pick another user to reassign.</p>}
+                    <FormMessage />
+                  </FormItem>
                 )} />
                 <FormField control={form.control} name="status" render={({ field }) => (
                   <FormItem><FormLabel>Status</FormLabel>

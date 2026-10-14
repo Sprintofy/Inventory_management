@@ -241,11 +241,10 @@ export function InventoryImportDialog({
     const valid = rows.filter((r) => r.errors.length === 0);
     const now = new Date().toISOString();
     for (const { item } of valid) {
-      const qty = item.quantity;
       addItem({
         ...item,
         id: uid("INV"),
-        status: qty <= 0 ? "out-of-stock" : qty <= 10 ? "low-stock" : "in-stock",
+        status: "active",
         lastUpdated: now,
         createdAt: now,
       });

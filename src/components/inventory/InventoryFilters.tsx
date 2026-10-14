@@ -10,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useApp } from "@/store/app-store";
-import type { StockStatus } from "@/types";
 
 export interface InventoryFiltersState {
   department: string;

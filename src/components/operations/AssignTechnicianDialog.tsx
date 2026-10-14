@@ -11,7 +11,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useApp } from "@/store/app-store";
 import { getTechnicianWorkload } from "@/lib/dashboard-selectors";
-import { StatusBadge } from "@/components/ui/StatusBadge";
 import { workloadLevel, type WorkloadLevelKey } from "@/data/mock";
 import { cn } from "@/lib/utils";
 import type { Ticket } from "@/types";
@@ -113,7 +112,6 @@ export function AssignTechnicianDialog({ open, onOpenChange, ticket, selectedTec
                               <span className={cn("ml-auto rounded-full px-2 py-0.5 text-[11px] font-medium", workloadClass[level.key])}>
                                 {workload.get(tech.id) ?? 0} active
                               </span>
-                              <StatusBadge status={tech.availability} className="h-5 px-1.5 text-[11px]" />
                             </div>
                           </SelectItem>
                         );
@@ -135,7 +133,6 @@ export function AssignTechnicianDialog({ open, onOpenChange, ticket, selectedTec
                     <p className="truncate text-sm font-medium">{selected.name}</p>
                     <p className="text-muted-foreground text-xs">{selected.specialization} Specialist</p>
                   </div>
-                  <StatusBadge status={selected.availability} />
                 </div>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 border-t pt-3 text-xs">
                   <div className="flex items-center justify-between gap-2"><span className="text-muted-foreground">Active Tickets</span><span className="font-medium">{breakdown?.total ?? workload.get(selected.id) ?? 0}</span></div>

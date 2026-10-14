@@ -132,7 +132,7 @@ export interface InventoryItem {
   supplier?: string;
   quantity: number;
   unit: string;
-  status: string;
+  status: "active" | "inactive";
   lastUpdated: string;
   createdAt: string;
   department: string;

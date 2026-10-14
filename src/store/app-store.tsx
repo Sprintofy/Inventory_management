@@ -465,7 +465,6 @@ function reducer(state: AppState, action: Action): AppState {
           return {
             ...i,
             quantity: qty,
-            status,
             lastUpdated: now,
           };
         }),
@@ -501,7 +500,6 @@ function reducer(state: AppState, action: Action): AppState {
           return {
             ...i,
             quantity: qty,
-            status,
             lastUpdated: now,
           };
         }),
@@ -554,7 +552,6 @@ function reducer(state: AppState, action: Action): AppState {
           return {
             ...i,
             quantity: qty,
-            status: qty <= 0 ? "out-of-stock" : qty <= 10 ? "low-stock" : "in-stock",
             lastUpdated: now,
           };
         }),
@@ -1434,8 +1431,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const stockIn = React.useCallback(
     (itemId: string, quantity: number, supplier: string, note?: string) => {
       const ref = uid("PO");
-      dispatch({ type: "STOCK_IN", itemId, quantity, ref, supplier, note });
+      const now = new Date().toISOString();
       const item = state.inventory.find((i) => i.id === itemId);
+      dispatch({ type: "STOCK_IN", itemId, quantity, ref, supplier, note });
+      dispatch({
+        type: "ADD_STOCK_IN_RECORD",
+        record: {
+          id: uid("SI"),
+          reference: ref,
+          date: now,
+          supplier,
+          itemName: item?.deviceName ?? "item",
+          items: 1,
+          quantity,
+          department: item?.department ?? state.department,
+          createdBy: state.user?.name ?? "Admin",
+          status: "received",
+        },
+      });
       toast.success(
         `Stock received — ${quantity} × ${item?.deviceName ?? "item"}`,
       );

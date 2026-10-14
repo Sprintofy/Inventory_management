@@ -107,8 +107,8 @@ export default function DashboardPage() {
   const stats = React.useMemo(() => {
     const totalItems = items.length;
     const totalStock = items.reduce((s, i) => s + i.quantity, 0);
-    const lowStock = items.filter((i) => i.status === "low-stock").length;
-    const outOfStock = items.filter((i) => i.status === "out-of-stock").length;
+    const lowStock = items.filter((i) => i.quantity > 0 && i.quantity <= 10).length;
+    const outOfStock = items.filter((i) => i.quantity <= 0).length;
     const pendingRequests = state.requests.filter((r) => r.status === "pending" && (activeDepartment === "all" || r.department === activeDepartment)).length;
     return { totalItems, totalStock, lowStock, outOfStock, pendingRequests };
   }, [items, state.requests, activeDepartment]);
@@ -128,9 +128,9 @@ export default function DashboardPage() {
 
   const health = React.useMemo(() => {
     const source = activeDepartment === "all" ? allItems : items;
-    const healthy = source.filter((i) => i.status === "in-stock" || i.status === "overstock").length;
-    const lowStock = source.filter((i) => i.status === "low-stock").length;
-    const outOfStock = source.filter((i) => i.status === "out-of-stock").length;
+    const healthy = source.filter((i) => i.quantity > 10).length;
+    const lowStock = source.filter((i) => i.quantity > 0 && i.quantity <= 10).length;
+    const outOfStock = source.filter((i) => i.quantity <= 0).length;
     return [
       { label: "Healthy", value: healthy, color: "#10b981" },
       { label: "Low Stock", value: lowStock, color: "#f59e0b" },

@@ -1083,7 +1083,7 @@ const heroItems: any[] = [
     supplier: "TechNova Distributors",
     quantity: 24,
     unit: "unit",
-    status: "in-stock",
+    status: "active",
     lastUpdated: iso(3 * HOUR),
     createdAt: iso(210 * DAY),
     archived: false,
@@ -1103,7 +1103,7 @@ const heroItems: any[] = [
     supplier: "TechNova Distributors",
     quantity: 58,
     unit: "unit",
-    status: "in-stock",
+    status: "active",
     lastUpdated: iso(1 * DAY),
     createdAt: iso(180 * DAY),
     archived: false,
@@ -1123,7 +1123,7 @@ const heroItems: any[] = [
     supplier: "OfficeWorld Supplies",
     quantity: 4,
     unit: "unit",
-    status: "low-stock",
+    status: "active",
     lastUpdated: iso(2 * DAY),
     createdAt: iso(320 * DAY),
     archived: false,
@@ -1147,7 +1147,7 @@ const heroItems: any[] = [
     reorderLevel: 200,
     maxStock: 1500,
     unitCost: 350,
-    status: "in-stock",
+    status: "active",
     lastUpdated: iso(5 * HOUR),
     createdAt: iso(90 * DAY),
     archived: false,
@@ -1171,7 +1171,7 @@ const heroItems: any[] = [
     reorderLevel: 6,
     maxStock: 30,
     unitCost: 12500,
-    status: "in-stock",
+    status: "active",
     lastUpdated: iso(6 * DAY),
     createdAt: iso(400 * DAY),
     archived: false,
@@ -1195,7 +1195,7 @@ const heroItems: any[] = [
     reorderLevel: 5,
     maxStock: 20,
     unitCost: 8900,
-    status: "low-stock",
+    status: "active",
     lastUpdated: iso(4 * DAY),
     createdAt: iso(250 * DAY),
     archived: false,
@@ -1219,7 +1219,7 @@ const heroItems: any[] = [
     reorderLevel: 10,
     maxStock: 60,
     unitCost: 6400,
-    status: "out-of-stock",
+    status: "active",
     lastUpdated: iso(12 * HOUR),
     createdAt: iso(150 * DAY),
     archived: false,
@@ -1243,7 +1243,7 @@ const heroItems: any[] = [
     reorderLevel: 100,
     maxStock: 800,
     unitCost: 480,
-    status: "in-stock",
+    status: "active",
     lastUpdated: iso(3 * DAY),
     createdAt: iso(120 * DAY),
     archived: false,
@@ -1267,7 +1267,7 @@ const heroItems: any[] = [
     reorderLevel: 12,
     maxStock: 80,
     unitCost: 98500,
-    status: "in-stock",
+    status: "active",
     lastUpdated: iso(18 * HOUR),
     createdAt: iso(140 * DAY),
     archived: false,
@@ -1291,7 +1291,7 @@ const heroItems: any[] = [
     reorderLevel: 400,
     maxStock: 3000,
     unitCost: 1200,
-    status: "in-stock",
+    status: "active",
     lastUpdated: iso(2 * DAY),
     createdAt: iso(200 * DAY),
     archived: false,
@@ -2343,14 +2343,7 @@ export const inventoryItems: InventoryItem[] = [
       seed % 7 === 0 ? 0 : Math.round(Math.pow(seed / 10, 1.6) * 3) + 2;
     const unitCost = 450 + ((seed * 137 + 61) % 900) * 8;
     const lastUpdated = iso(((seed % 14) + 1) * 8 * HOUR);
-    const status =
-      qty === 0
-        ? "out-of-stock"
-        : qty <= t.reorderLevel
-          ? "low-stock"
-          : qty >= t.maxStock
-            ? "overstock"
-            : "in-stock";
+    const status = "active";
     const id = `INV-${String(seq).padStart(3, "0")}`;
     seq++;
     return {

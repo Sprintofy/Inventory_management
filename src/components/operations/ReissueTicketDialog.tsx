@@ -5,7 +5,6 @@ import { RotateCcw, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useApp } from "@/store/app-store";
 import { formatDateTime } from "@/lib/utils";
 import type { Ticket } from "@/types";
@@ -67,7 +66,6 @@ export function ReissueTicketDialog({
                 </p>
               </div>
             </div>
-            {technician && <StatusBadge status={technician.availability} />}
           </div>
 
           {ticket.technicianRemark && (

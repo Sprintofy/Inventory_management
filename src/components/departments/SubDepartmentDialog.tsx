@@ -55,7 +55,7 @@ export function SubDepartmentDialog({
   parentSub,
   editing,
 }: SubDepartmentDialogProps) {
-  const { addSubDepartment, updateSubDepartment } = useApp();
+  const { state, addSubDepartment, updateSubDepartment } = useApp();
   const form = useForm<SV>({
     resolver: zodResolver(schema) as unknown as Resolver<SV>,
     defaultValues: { name: "", code: "", manager: "", status: "active" },
@@ -152,8 +152,24 @@ export function SubDepartmentDialog({
                   <FormItem>
                     <FormLabel>Manager</FormLabel>
                     <FormControl>
-                      <Input placeholder="Full name" {...field} />
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Assign a manager" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {editing && !state.users.some((u) => u.name === editing.manager) && (
+                            <SelectItem value={editing.manager}>{editing.manager} (current)</SelectItem>
+                          )}
+                          {state.users.map((u) => (
+                            <SelectItem key={u.id} value={u.name}>{u.name} · {u.department}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </FormControl>
+                    {editing && <p className="text-muted-foreground text-xs">Currently assigned: <span className="font-medium text-foreground">{editing.manager}</span> — pick another user to reassign.</p>}
                     <FormMessage />
                   </FormItem>
                 )}

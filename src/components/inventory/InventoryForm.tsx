@@ -34,7 +34,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { cn, uid } from "@/lib/utils";
 import { useApp } from "@/store/app-store";
-import type { InventoryItem } from "@/types";
+import type { InventoryItem, SubDepartment } from "@/types";
 
 const formSchema = z.object({
   deviceName: z.string().min(2, "Device name is required"),
@@ -44,12 +44,17 @@ const formSchema = z.object({
   description: z.string().optional(),
   specifications: z.string().optional(),
   warrantyPeriod: z.string().optional(),
+  serialNumber: z.string().optional(),
+  notes: z.string().optional(),
   sku: z.string().min(2, "SKU is required"),
   supplier: z.string().optional(),
   quantity: z.coerce.number().min(0, "Quantity cannot be negative"),
   unit: z.string().min(1, "Unit is required"),
+  status: z.enum(["active", "inactive"]),
   department: z.string().min(1, "Department is required"),
   subDepartment: z.string().optional(),
+  layer2: z.string().optional(),
+  layer3: z.string().optional(),
 });
 
 type FormValues = z.output<typeof formSchema>;
@@ -71,9 +76,83 @@ const stepFields: Record<string, (keyof FormValues)[]> = {
     "department",
     "subDepartment",
   ],
-  details: ["description", "specifications", "warrantyPeriod"],
-  inventory: ["quantity", "unit"],
-};
+  details: ["description", "specifications", "warrantyPeriod", "serialNumber", "notes"],
+  inventory: ["quantity", "unit", "status"],};
+
+function emptyValues(department: string): FormValues {
+  return {
+    deviceName: "",
+    brand: "",
+    modelNumber: "",
+    category: "",
+    description: "",
+    specifications: "",
+    warrantyPeriod: "",
+    serialNumber: "",
+    notes: "",
+    sku: "",
+    supplier: "",
+    quantity: 0,
+    unit: "unit",
+    status: "active" as const,
+    department,
+    subDepartment: "",
+    layer2: "",
+    layer3: "",
+  };
+}
+
+function valuesOf(item: InventoryItem, tree: SubDepartment[]): FormValues {
+  const base = {
+    deviceName: item.deviceName,
+    brand: item.brand,
+    modelNumber: item.modelNumber,
+    category: item.category,
+    description: item.description ?? "",
+    specifications: item.specifications ?? "",
+    warrantyPeriod: item.warrantyPeriod ?? "",
+    serialNumber: item.serialNumber ?? "",
+    notes: item.notes ?? "",
+    sku: item.sku,
+    supplier: item.supplier ?? "",
+    quantity: item.quantity,
+    unit: item.unit,
+    status: item.status,
+    department: item.department,
+    subDepartment: "",
+    layer2: "",
+    layer3: "",
+  };
+  if (item.subDepartment) {
+    const path = findPath(tree, item.subDepartment);
+    if (path) {
+      base.subDepartment = path[0] ?? "";
+      base.layer2 = path[1] ?? "";
+      base.layer3 = path[2] ?? "";
+    } else {
+      base.subDepartment = item.subDepartment;
+    }
+  }
+  return base;
+}
+
+function findNode(subs: SubDepartment[], name: string): SubDepartment | null {
+  for (const s of subs) {
+    if (s.name === name) return s;
+    const found = findNode(s.children, name);
+    if (found) return found;
+  }
+  return null;
+}
+
+function findPath(subs: SubDepartment[], name: string, trail: string[] = []): string[] | null {
+  for (const s of subs) {
+    if (s.name === name) return [...trail, s.name];
+    const found = findPath(s.children, name, [...trail, s.name]);
+    if (found) return found;
+  }
+  return null;
+}
 
 interface InventoryFormProps {
   open: boolean;
@@ -86,35 +165,54 @@ export function InventoryForm({
   onOpenChange,
   item,
 }: InventoryFormProps) {
-  const { state, addItem, updateItem, log } = useApp();
+  const { state, activeDepartment, subDepartmentsFor, addItem, updateItem, log } = useApp();
   const [step, setStep] = React.useState(0);
+
+  const departmentOptions = React.useMemo(
+    () =>
+      activeDepartment === "all"
+        ? state.departments.map((d) => d.name)
+        : [activeDepartment],
+    [activeDepartment, state.departments],
+  );
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema) as unknown as Resolver<FormValues>,
-    defaultValues: {
-      deviceName: item?.deviceName ?? "",
-      brand: item?.brand ?? "",
-      modelNumber: item?.modelNumber ?? "",
-      category: item?.category ?? "",
-      description: item?.description ?? "",
-      specifications: item?.specifications ?? "",
-      warrantyPeriod: item?.warrantyPeriod ?? "",
-      sku: item?.sku ?? "",
-      supplier: item?.supplier ?? "",
-      quantity: item?.quantity ?? 0,
-      unit: item?.unit ?? "unit",
-      department: item?.department ?? "",
-      subDepartment: item?.subDepartment ?? "",
-    },
+    defaultValues: item
+      ? valuesOf(item, subDepartmentsFor(item.department))
+      : emptyValues(activeDepartment === "all" ? "" : activeDepartment),
   });
 
   React.useEffect(() => {
     if (open) {
       setStep(0);
-      if (!item) form.reset();
+      if (item) form.reset(valuesOf(item, subDepartmentsFor(item.department)));
+      else
+        form.reset(
+          emptyValues(activeDepartment === "all" ? "" : activeDepartment),
+        );
     }
-  }, [open, item, form]);
+  }, [open, item, form, activeDepartment, subDepartmentsFor]);
   // eslint-disable-line react-hooks/set-state-in-effect
+
+  const watchedDepartment = form.watch("department");
+  const watchedSub = form.watch("subDepartment");
+  const watchedLayer2 = form.watch("layer2");
+  const topSubs = React.useMemo(
+    () => (watchedDepartment ? subDepartmentsFor(watchedDepartment) : []),
+    [watchedDepartment, subDepartmentsFor],
+  );
+  const layer2Options = React.useMemo(
+    () => (watchedSub ? (findNode(topSubs, watchedSub)?.children ?? []) : []),
+    [watchedSub, topSubs],
+  );
+  const layer3Options = React.useMemo(
+    () =>
+      watchedLayer2
+        ? (findNode(layer2Options, watchedLayer2)?.children ?? [])
+        : [],
+    [watchedLayer2, layer2Options],
+  );
 
   const validateStep = async (i: number) => {
     const fields = stepFields[steps[i].id];
@@ -132,13 +230,34 @@ export function InventoryForm({
   const onSubmit = (values: FormValues) => {
     const now = new Date().toISOString();
 
-    const status =
-      item?.status ?? (values.quantity <= 0 ? "out-of-stock" : "in-stock");
+    const status = values.status;
+
+    const payload = {
+      deviceName: values.deviceName.trim(),
+      brand: values.brand.trim(),
+      modelNumber: values.modelNumber.trim(),
+      category: values.category,
+      description: values.description?.trim() || undefined,
+      specifications: values.specifications?.trim() || undefined,
+      warrantyPeriod: values.warrantyPeriod?.trim() || undefined,
+      serialNumber: values.serialNumber?.trim() || undefined,
+      notes: values.notes?.trim() || undefined,
+      sku: values.sku.trim(),
+      supplier: values.supplier?.trim() || undefined,
+      quantity: values.quantity,
+      unit: values.unit,
+      department: values.department,
+      subDepartment:
+        values.layer3?.trim() ||
+        values.layer2?.trim() ||
+        values.subDepartment?.trim() ||
+        undefined,
+    };
 
     if (item) {
       updateItem({
         ...item,
-        ...values,
+        ...payload,
         status,
         lastUpdated: now,
       });
@@ -147,7 +266,7 @@ export function InventoryForm({
       toast.success("Inventory item updated successfully");
     } else {
       addItem({
-        ...values,
+        ...payload,
         id: uid("INV"),
         status,
         lastUpdated: now,
@@ -311,6 +430,136 @@ export function InventoryForm({
                     </FormItem>
                   )}
                 />
+                <FormField
+                  control={form.control}
+                  name="department"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Department</FormLabel>
+                      <FormControl>
+                        <Select
+                          value={field.value}
+                          onValueChange={(v) => {
+                            field.onChange(v);
+                            form.setValue("subDepartment", "");
+                            form.setValue("layer2", "");
+                            form.setValue("layer3", "");
+                          }}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select department" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {departmentOptions.map((d) => (
+                              <SelectItem key={d} value={d}>
+                                {d}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="subDepartment"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sub-department (optional)</FormLabel>
+                      <FormControl>
+                        <Select
+                          value={field.value ?? ""}
+                          onValueChange={(v) => {
+                            field.onChange(v);
+                            form.setValue("layer2", "");
+                            form.setValue("layer3", "");
+                          }}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select sub-department" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {topSubs.length === 0 ? (
+                              <SelectItem value="__none" disabled>
+                                No sub-departments
+                              </SelectItem>
+                            ) : (
+                              topSubs.map((s) => (
+                                <SelectItem key={s.id} value={s.name}>
+                                  {s.name}
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                {layer2Options.length > 0 && (
+                  <FormField
+                    control={form.control}
+                    name="layer2"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Layer 2 (optional)</FormLabel>
+                        <FormControl>
+                          <Select
+                            value={field.value ?? ""}
+                            onValueChange={(v) => {
+                              field.onChange(v);
+                              form.setValue("layer3", "");
+                            }}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Select layer 2" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {layer2Options.map((s) => (
+                                <SelectItem key={s.id} value={s.name}>
+                                  {s.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+                {layer3Options.length > 0 && (
+                  <FormField
+                    control={form.control}
+                    name="layer3"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Layer 3 (optional)</FormLabel>
+                        <FormControl>
+                          <Select
+                            value={field.value ?? ""}
+                            onValueChange={field.onChange}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Select layer 3" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {layer3Options.map((s) => (
+                                <SelectItem key={s.id} value={s.name}>
+                                  {s.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </div>
             )}
 
@@ -352,12 +601,42 @@ export function InventoryForm({
                 />
                 <FormField
                   control={form.control}
+                  name="serialNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Serial Number (optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. SN-MBP-1001" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
                   name="warrantyPeriod"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Warranty Period</FormLabel>
                       <FormControl>
                         <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem className="sm:col-span-2">
+                      <FormLabel>Notes (optional)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={2}
+                          placeholder="Additional notes about this item"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -415,6 +694,31 @@ export function InventoryForm({
                                 {u}
                               </SelectItem>
                             ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <FormControl>
+                        <Select
+                          value={field.value}
+                          onValueChange={field.onChange}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="inactive">Inactive</SelectItem>
                           </SelectContent>
                         </Select>
                       </FormControl>
