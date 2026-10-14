@@ -3927,6 +3927,7 @@ export const transfers: Transfer[] = [
 export const stockInRecords: StockInRecord[] = [
   {
     id: "SIN-01",
+    itemId: "INV-001",
     reference: "PO-2026-0148",
     date: iso(38 * MINUTE),
     supplier: "TechNova Distributors",
@@ -3939,6 +3940,7 @@ export const stockInRecords: StockInRecord[] = [
   },
   {
     id: "SIN-02",
+    itemId: "INV-002",
     reference: "PO-2026-0147",
     date: iso(3 * HOUR),
     supplier: "TechNova Distributors",
@@ -3951,6 +3953,7 @@ export const stockInRecords: StockInRecord[] = [
   },
   {
     id: "SIN-03",
+    itemId: "INV-010",
     reference: "PO-2026-0145",
     date: iso(26 * HOUR),
     supplier: "MetalWorks Ltd.",
@@ -3963,6 +3966,7 @@ export const stockInRecords: StockInRecord[] = [
   },
   {
     id: "SIN-04",
+    itemId: "INV-008",
     reference: "PO-2026-0144",
     date: iso(2 * DAY),
     supplier: "SafeGuard PPE",
@@ -3975,6 +3979,7 @@ export const stockInRecords: StockInRecord[] = [
   },
   {
     id: "SIN-05",
+    itemId: "INV-004",
     reference: "PO-2026-0142",
     date: iso(3 * DAY),
     supplier: "OfficeWorld Supplies",
@@ -3987,6 +3992,7 @@ export const stockInRecords: StockInRecord[] = [
   },
   {
     id: "SIN-06",
+    itemId: "INV-005",
     reference: "PO-2026-0140",
     date: iso(5 * DAY),
     supplier: "IndustrialMart",
@@ -3999,6 +4005,7 @@ export const stockInRecords: StockInRecord[] = [
   },
   {
     id: "SIN-07",
+    itemId: "INV-005",
     reference: "PO-2026-0138",
     date: iso(6 * DAY),
     supplier: "IndustrialMart",
@@ -4011,6 +4018,7 @@ export const stockInRecords: StockInRecord[] = [
   },
   {
     id: "SIN-08",
+    itemId: "INV-004",
     reference: "PO-2026-0135",
     date: iso(7 * DAY),
     supplier: "OfficeWorld Supplies",
@@ -4278,6 +4286,7 @@ export const technicians: Technician[] = [
 export const tickets: Ticket[] = [
   {
     id: "TKT-2026-001",
+    itemIds: [],
     title: "Network Switch Offline",
     description: "Main switch in Server Room is unresponsive. No link lights.",
     priority: "critical",
@@ -4311,6 +4320,7 @@ export const tickets: Ticket[] = [
   },
   {
     id: "TKT-2026-002",
+    itemIds: [],
     title: "AC Cooling Issue",
     description:
       "Air conditioning in HQ Records Room is leaking water and not cooling.",
@@ -4335,6 +4345,7 @@ export const tickets: Ticket[] = [
   },
   {
     id: "TKT-2026-003",
+    itemIds: [],
     title: "Projector Bulb Replacement",
     description: "Projector in Training Lab is showing 'Replace Lamp' warning.",
     priority: "medium",
@@ -4375,6 +4386,7 @@ export const tickets: Ticket[] = [
   },
   {
     id: "TKT-2026-004",
+    itemIds: [],
     title: "Forklift Hydraulic Leak",
     description: "Unit 2 forklift leaving oil spots in MT Park.",
     priority: "high",

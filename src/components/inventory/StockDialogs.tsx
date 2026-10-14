@@ -133,7 +133,11 @@ export function StockOutDialog({ open, onOpenChange, presetItem }: { open: boole
 
   const selectedItem = state.inventory.find((i) => i.id === itemId);
   const overAvailable = selectedItem && quantity > selectedItem.quantity;
-  const options = state.inventory.filter((i) => (visibleDepartments.length === 0 || visibleDepartments.includes(i.department)) && i.quantity > 0);
+  const closedItemIds = React.useMemo(
+    () => new Set(state.tickets.filter((t) => t.status === "closed").flatMap((t) => t.itemIds ?? [])),
+    [state.tickets]
+  );
+  const options = state.inventory.filter((i) => (visibleDepartments.length === 0 || visibleDepartments.includes(i.department)) && i.quantity > 0 && closedItemIds.has(i.id));
 
   const onSubmit = () => {
     if (!itemId || quantity < 1 || purpose.trim().length < 2) {
@@ -158,7 +162,7 @@ export function StockOutDialog({ open, onOpenChange, presetItem }: { open: boole
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label className="text-xs">Item</Label>
+            <Label className="text-xs">Item (closed tickets only)</Label>
             <Select value={itemId} onValueChange={setItemId}>
               <SelectTrigger className="w-full"><SelectValue placeholder="Select item" /></SelectTrigger>
               <SelectContent>
@@ -167,6 +171,9 @@ export function StockOutDialog({ open, onOpenChange, presetItem }: { open: boole
                 ))}
               </SelectContent>
             </Select>
+            {options.length === 0 && (
+              <p className="text-muted-foreground text-[11px]">No items with closed tickets — only items from closed tickets can be issued.</p>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">

@@ -950,11 +950,29 @@ function backfillClosedTicketStockOut(state: AppState): AppState {
   return { ...state, stockOut: [...records.reverse(), ...state.stockOut] };
 }
 
+/**
+ * Links legacy Stock In records to inventory items by name. Records written
+ * before the itemId join existed (and old stored states) carry only itemName.
+ */
+function backfillStockInItemIds(state: AppState): AppState {
+  let changed = false;
+  const stockIn = state.stockIn.map((r) => {
+    if (r.itemId) return r;
+    const item = state.inventory.find(
+      (i) => i.deviceName.trim().toLowerCase() === r.itemName.trim().toLowerCase(),
+    );
+    if (!item) return r;
+    changed = true;
+    return { ...r, itemId: item.id };
+  });
+  return changed ? { ...state, stockIn } : state;
+}
+
 function loadInitialState(): AppState {
   if (typeof window === "undefined") return initialState;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return backfillClosedTicketStockOut(initialState);
+    if (!raw) return backfillStockInItemIds(backfillClosedTicketStockOut(initialState));
     const parsed = JSON.parse(raw) as Partial<AppState>;
     if (
       !parsed ||
@@ -962,14 +980,14 @@ function loadInitialState(): AppState {
       !Array.isArray(parsed.departments) ||
       !Array.isArray(parsed.users)
     ) {
-      return backfillClosedTicketStockOut(initialState);
+      return backfillStockInItemIds(backfillClosedTicketStockOut(initialState));
     }
-    return backfillClosedTicketStockOut({
+    return backfillStockInItemIds(backfillClosedTicketStockOut({
       ...initialState,
       ...parsed,
-    } as AppState);
+    } as AppState));
   } catch {
-    return backfillClosedTicketStockOut(initialState);
+    return backfillStockInItemIds(backfillClosedTicketStockOut(initialState));
   }
 }
 
@@ -1441,6 +1459,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           reference: ref,
           date: now,
           supplier,
+          itemId,
           itemName: item?.deviceName ?? "item",
           items: 1,
           quantity,
@@ -2314,6 +2333,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           id: uid("SI"),
           reference: uid("SI-2026"),
           date: now,
+          itemId: "",
           supplier: "Internal \u2014 Faulty Return",
           itemName: asset.name,
           items: 1,
@@ -2342,6 +2362,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           createdBy: state.user?.name ?? "Admin",
           createdAt: now,
           status: "open",
+          itemIds: [],
           assets: [
             {
               id: ticketAssetId,

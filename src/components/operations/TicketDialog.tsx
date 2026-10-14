@@ -64,7 +64,13 @@ export function TicketDialog({ open, onOpenChange }: { open: boolean; onOpenChan
 
   const productOptions = React.useMemo(() => {
     const scope = isScopedUser ? activeDepartment : (selectedDepartment || "all");
-    return state.inventory.filter((i) => (scope === "all" || i.department === scope)).slice(0, 100);
+    const stockedIds = new Set(state.stockIn.map((r) => r.itemId));
+    return state.inventory.filter((i) => (scope === "all" || i.department === scope) && stockedIds.has(i.id)).slice(0, 100);
+  }, [state.inventory, state.stockIn, isScopedUser, activeDepartment, selectedDepartment]);
+
+  const scopeHasUnstockedProducts = React.useMemo(() => {
+    const scope = isScopedUser ? activeDepartment : (selectedDepartment || "all");
+    return state.inventory.some((i) => (scope === "all" || i.department === scope));
   }, [state.inventory, isScopedUser, activeDepartment, selectedDepartment]);
 
   const onSubmit = (values: SV) => {
@@ -85,6 +91,7 @@ export function TicketDialog({ open, onOpenChange }: { open: boolean; onOpenChan
       subDepartment: (isScopedUser ? (user?.subDepartment || values.subDepartment) : values.subDepartment) || undefined,
       priority: values.priority as RequestPriority,
       issues: ticketIssues,
+      itemIds: productIds,
       assets: [],
       customer: undefined,
       technicianId: values.technicianId || undefined,
@@ -138,9 +145,9 @@ export function TicketDialog({ open, onOpenChange }: { open: boolean; onOpenChan
               </Button>
             </FormItem>
             <FormItem>
-              <FormLabel>Products (multiple select)</FormLabel>
+              <FormLabel>Products (multiple select, stock-in items only)</FormLabel>
               <div className="max-h-36 space-y-1 overflow-y-auto rounded-md border p-2">
-                {productOptions.length === 0 && <p className="text-muted-foreground text-xs">No products in scope.</p>}
+                {productOptions.length === 0 && <p className="text-muted-foreground text-xs">{scopeHasUnstockedProducts ? "No stock-in items in scope — record a Stock In first." : "No products in scope."}</p>}
                 {productOptions.map((p) => (
                   <label key={p.id} className="flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-xs hover:bg-accent">
                     <input type="checkbox" checked={productIds.includes(p.id)} onChange={() => toggleProduct(p.id)} className="size-3.5 accent-primary" />

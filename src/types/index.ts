@@ -80,6 +80,8 @@ export interface Ticket {
   status: TicketStatus;
   assets: TicketAsset[];
   issues: TicketIssue[];
+  /** Inventory items this ticket was raised from (stock-in items only). */
+  itemIds: string[];
   closedBy?: string;
   closedAt?: string;
   resolution?: string;
@@ -292,6 +294,7 @@ export interface StockInRecord {
   reference: string;
   date: string;
   supplier: string;
+  itemId: string;
   itemName: string;
   items: number;
   quantity: number;
