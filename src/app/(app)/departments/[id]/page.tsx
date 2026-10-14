@@ -1,34 +1,51 @@
 "use client";
 
 import * as React from "react";
-import { use, useMemo } from "react";
+import { use, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, BarChart3, Building2, ChevronRight, FileDown, Layers, Package, Plus, Ticket } from "lucide-react";
+import { ArrowLeft, BarChart3, Building2, ChevronRight, FileDown, FileText, Layers, MoreHorizontal, Package, Pencil, Plus, Ticket as TicketIcon, Trash2, User, Users as UsersIcon } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { SubDepartmentDialog } from "@/components/departments/SubDepartmentDialog";
+import { AssignManagerDialog } from "@/components/departments/AssignManagerDialog";
 import { useApp } from "@/store/app-store";
 import { useFakeLoading } from "@/hooks/use-fake-loading";
 import { downloadCSV, formatDate } from "@/lib/utils";
-import { toast } from "sonner";
+import type { SubDepartment } from "@/types";
 
 export default function DepartmentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { state, can } = useApp();
+  const { state, can, updateDepartment, deleteSubDepartment } = useApp();
   const router = useRouter();
   const loading = useFakeLoading(300);
 
   const dept = state.departments.find((d) => d.id === id);
 
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<SubDepartment | null>(null);
+  const [deleting, setDeleting] = useState<SubDepartment | null>(null);
+  const [managerOpen, setManagerOpen] = useState(false);
+
   const items = useMemo(
     () => state.inventory.filter((i) => i.department === dept?.name),
     [state.inventory, dept]
   );
-  const openTickets = state.tickets.filter((t) => t.department === dept?.name && t.status !== "closed");
   const deptUsers = state.users.filter((u) => u.department === dept?.name);
-  const activities = state.activities.filter((a) => a.department === dept?.name).slice(0, 5);
+  const routedRequests = React.useMemo(
+    () => (dept ? state.requests.filter((r) => r.department === dept.name) : []),
+    [state.requests, dept]
+  );
+  const routedTickets = React.useMemo(
+    () => (dept ? state.tickets.filter((t) => t.department === dept.name) : []),
+    [state.tickets, dept]
+  );
+  const openTickets = routedTickets.filter((t) => t.status !== "closed");
 
   if (!loading && !dept) {
     return (
@@ -60,35 +77,56 @@ export default function DepartmentDetailPage({ params }: { params: Promise<{ id:
             <p className="text-muted-foreground mt-0.5 text-xs">{dept.code} · Manager: {dept.manager}</p>
           </div>
         </div>
-        {can("reports.view") && (
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => {
-              downloadCSV(`${dept.name}-export-${new Date().toISOString().slice(0, 10)}.csv`, items.map((i) => ({ Name: i.deviceName, SKU: i.sku, Quantity: i.quantity })));
-              toast.success(`Exported ${items.length} items`);
-            }}><FileDown className="size-4" /> Export</Button>
-            <Button variant="outline" onClick={() => router.push(`/reports?dept=${encodeURIComponent(dept.name)}`)}>
-              <BarChart3 className="size-4" /> Inventory Report
+        <div className="flex flex-wrap items-center gap-2">
+          {can("reports.view") && (
+            <>
+              <Button variant="outline" onClick={() => {
+                downloadCSV(`${dept.name}-export-${new Date().toISOString().slice(0, 10)}.csv`, items.map((i) => ({ Name: i.deviceName, SKU: i.sku, Quantity: i.quantity })));
+                toast.success(`Exported ${items.length} items`);
+              }}><FileDown className="size-4" /> Export</Button>
+              <Button variant="outline" onClick={() => router.push(`/reports?dept=${encodeURIComponent(dept.name)}`)}>
+                <BarChart3 className="size-4" /> Inventory Report
+              </Button>
+            </>
+          )}
+          {can("departments.manage") && (
+            <Button variant="outline" onClick={() => setManagerOpen(true)}>
+              <User className="size-4" /> Assign Manager
             </Button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <nav className="text-muted-foreground flex flex-wrap items-center gap-1 text-sm">
+        <button type="button" className="hover:text-foreground cursor-pointer" onClick={() => router.push("/departments")}>Departments</button>
+        <ChevronRight className="size-3.5" />
+        <span className="text-foreground font-medium">{dept.name}</span>
+      </nav>
+
+      <div className="grid gap-4 sm:grid-cols-4">
         <Card className="py-4"><CardContent>
-          <p className="text-muted-foreground flex items-center gap-2 text-xs"><Package className="size-3.5" /> Total Items ({items.length})</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums">{items.length}</p>
+          <p className="text-muted-foreground flex items-center gap-2 text-xs"><Layers className="size-3.5" /> Sub-departments</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums">{dept.subDepartments.length}</p>
         </CardContent></Card>
         <Card className="py-4"><CardContent>
-          <p className="text-muted-foreground flex items-center gap-2 text-xs"><Ticket className="size-3.5" /> Open Tickets ({openTickets.length})</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums">{openTickets.length}</p>
+          <p className="text-muted-foreground flex items-center gap-2 text-xs"><UsersIcon className="size-3.5" /> Members</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums">{deptUsers.length}</p>
+        </CardContent></Card>
+        <Card className="py-4"><CardContent>
+          <p className="text-muted-foreground flex items-center gap-2 text-xs"><FileText className="size-3.5" /> Routed Requests</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums">{routedRequests.length}</p>
+        </CardContent></Card>
+        <Card className="py-4"><CardContent>
+          <p className="text-muted-foreground flex items-center gap-2 text-xs"><TicketIcon className="size-3.5" /> Routed Tickets</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums">{routedTickets.length}</p>
         </CardContent></Card>
       </div>
 
       <Card>
         <CardHeader className="flex-row items-center justify-between space-y-0">
-          <CardTitle className="flex items-center gap-2 text-base"><Layers className="text-primary size-4" /> Sub-departments <Badge variant="secondary">{dept.subDepartments.length}</Badge></CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base"><Layers className="text-primary size-4" /> Sub-departments of {dept.name} <Badge variant="secondary">{dept.subDepartments.length}</Badge></CardTitle>
           {can("departments.manage") && (
-            <Button variant="outline" size="sm" onClick={() => router.push(`/departments?addSub=${encodeURIComponent(dept.id)}`)}>
+            <Button variant="outline" size="sm" onClick={() => { setEditing(null); setDialogOpen(true); }}>
               <Plus className="size-3.5" /> Add Sub-department
             </Button>
           )}
@@ -117,6 +155,19 @@ export default function DepartmentDetailPage({ params }: { params: Promise<{ id:
                     </div>
                     <div className="flex items-center gap-1">
                       <Badge variant={s.status === "active" ? "success" : "neutral"}>{s.status}</Badge>
+                      {can("departments.manage") && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon-sm" className="size-6" onClick={(e) => e.stopPropagation()} aria-label={`Manage ${s.name}`}>
+                              <MoreHorizontal className="size-3.5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setEditing(s); setDialogOpen(true); }}><Pencil className="size-3.5" /> Edit</DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={(e) => { e.stopPropagation(); setDeleting(s); }}><Trash2 className="size-3.5" /> Delete</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                       <ChevronRight className="text-muted-foreground size-4 transition-transform group-hover:translate-x-0.5" />
                     </div>
                   </div>
@@ -129,30 +180,82 @@ export default function DepartmentDetailPage({ params }: { params: Promise<{ id:
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader className="flex-row items-center justify-between space-y-0">
+          <CardTitle className="flex items-center gap-2 text-base"><Package className="text-primary size-4" /> Inventory Items <Badge variant="secondary">{items.length}</Badge></CardTitle>
+          <Button variant="outline" size="sm" onClick={() => router.push(`/inventory?dept=${encodeURIComponent(dept.name)}`)}>View All</Button>
+        </CardHeader>
+        <CardContent>
+          {items.length === 0 ? (
+            <p className="text-muted-foreground text-sm">No inventory assigned to this department.</p>
+          ) : (
+            <div className="space-y-2">
+              {items.slice(0, 6).map((i) => (
+                <div key={i.id} className="flex items-center justify-between rounded-lg border px-3 py-2.5">
+                  <div className="flex items-center gap-3">
+                    <div className="flex size-8 items-center justify-center rounded-md bg-muted">
+                      <Package className="text-muted-foreground size-4" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">{i.deviceName}</p>
+                      <p className="text-muted-foreground font-mono text-xs">{i.sku} · {i.subDepartment ?? dept.name}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm font-semibold tabular-nums">{i.quantity}</span>
+                  </div>
+                </div>
+              ))}
+              {items.length > 6 && <p className="text-muted-foreground pt-1 text-center text-xs">+{items.length - 6} more items — see the Inventory Report</p>}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+        <Card>
           <CardHeader className="flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-base">Inventory Items ({items.length})</CardTitle>
-            <Button variant="outline" size="sm" onClick={() => router.push(`/inventory?dept=${encodeURIComponent(dept.name)}`)}>View All</Button>
+            <CardTitle className="text-base">Team Members</CardTitle>
+            <Badge variant="secondary">{deptUsers.length}</Badge>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {deptUsers.length === 0 ? (
+              <p className="text-muted-foreground text-sm">No users in this department yet.</p>
+            ) : (
+              deptUsers.slice(0, 6).map((u) => (
+                <div key={u.id} className="flex items-center gap-2.5">
+                  <div className="bg-primary/10 text-primary flex size-8 items-center justify-center rounded-full text-xs font-semibold">
+                    {u.name.split(" ").map((p) => p[0]).join("").slice(0, 2)}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{u.name}</p>
+                    <p className="text-muted-foreground text-xs">{u.email}</p>
+                  </div>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex-row items-center justify-between space-y-0">
+            <CardTitle className="flex items-center gap-2 text-base"><FileText className="text-primary size-4" /> Routed Requests</CardTitle>
+            <Badge variant="secondary">{routedRequests.length}</Badge>
           </CardHeader>
           <CardContent>
-            {items.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No inventory assigned to this department.</p>
+            {routedRequests.length === 0 ? (
+              <p className="text-muted-foreground text-sm">No requests routed to {dept.name}.</p>
             ) : (
               <div className="space-y-2">
-                {items.slice(0, 6).map((i) => (
-                  <div key={i.id} className="flex items-center justify-between rounded-lg border px-3 py-2.5">
-                    <div className="flex items-center gap-3">
-                      <div className="flex size-8 items-center justify-center rounded-md bg-muted">
-                        <Package className="text-muted-foreground size-4" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">{i.deviceName}</p>
-                        <p className="text-muted-foreground text-xs">{i.sku}</p>
-                      </div>
+                {routedRequests.slice(0, 5).map((r) => (
+                  <div key={r.id} className="flex items-center justify-between rounded-lg border px-3 py-2.5">
+                    <div>
+                      <p className="text-sm font-medium">{r.itemName}</p>
+                      <p className="text-muted-foreground text-xs">{r.id} · {r.requestedBy}</p>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm font-semibold tabular-nums">{i.quantity}</span>
+                    <div className="text-right">
+                      <Badge variant={r.status === "completed" ? "success" : r.status === "approved" ? "info" : r.status === "rejected" ? "danger" : "warning"} className="capitalize">{r.status}</Badge>
+                      <p className="text-muted-foreground mt-1 text-xs">{formatDate(r.date)}</p>
                     </div>
                   </div>
                 ))}
@@ -161,50 +264,68 @@ export default function DepartmentDetailPage({ params }: { params: Promise<{ id:
           </CardContent>
         </Card>
 
-        <div className="space-y-6">
-          <Card>
-            <CardHeader className="flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-base">Team Members</CardTitle>
-              <Badge variant="secondary">{deptUsers.length}</Badge>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {deptUsers.length === 0 ? (
-                <p className="text-muted-foreground text-sm">No users in this department yet.</p>
-              ) : (
-                deptUsers.map((u) => (
-                  <div key={u.id} className="flex items-center gap-2.5">
-                    <div className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                      {u.name.split(" ").map((p) => p[0]).join("").slice(0, 2)}
-                    </div>
+        <Card>
+          <CardHeader className="flex-row items-center justify-between space-y-0">
+            <CardTitle className="flex items-center gap-2 text-base"><TicketIcon className="text-primary size-4" /> Routed Tickets</CardTitle>
+            <Badge variant="secondary">{routedTickets.length}</Badge>
+          </CardHeader>
+          <CardContent>
+            {routedTickets.length === 0 ? (
+              <p className="text-muted-foreground text-sm">No tickets routed to {dept.name}.</p>
+            ) : (
+              <div className="space-y-2">
+                {routedTickets.slice(0, 5).map((t) => (
+                  <div key={t.id} className="flex items-center justify-between rounded-lg border px-3 py-2.5">
                     <div>
-                      <p className="text-sm font-medium">{u.name}</p>
-                      <p className="text-muted-foreground text-xs">{u.email}</p>
+                      <p className="text-sm font-medium">{t.title}</p>
+                      <p className="text-muted-foreground text-xs">{t.id} · {t.category}</p>
+                    </div>
+                    <div className="text-right">
+                      <Badge variant={t.status === "closed" ? "success" : t.status === "in-progress" ? "info" : "warning"} className="capitalize">{t.status}</Badge>
+                      <p className="text-muted-foreground mt-1 text-xs">{formatDate(t.createdAt)}</p>
                     </div>
                   </div>
-                ))
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader><CardTitle className="text-base">Recent Stock (dept-wise)</CardTitle></CardHeader>
-            <CardContent>
-              {activities.length === 0 ? (
-                <p className="text-muted-foreground text-sm">No recent activity.</p>
-              ) : (
-                <div className="space-y-3">
-                  {activities.map((a) => (
-                    <div key={a.id} className="text-sm">
-                      <p className="line-clamp-1">{a.action} — {a.item}</p>
-                      <p className="text-muted-foreground text-xs">{formatDate(a.date)}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
+
+      <SubDepartmentDialog
+        open={dialogOpen}
+        onOpenChange={(o) => { setDialogOpen(o); if (!o) setEditing(null); }}
+        department={dept}
+        parentSub={null}
+        editing={editing}
+      />
+
+      <ConfirmDialog
+        open={deleting !== null}
+        onOpenChange={(o) => !o && setDeleting(null)}
+        title="Delete this sub-department?"
+        description={deleting ? `"${deleting.name}" and its ${deleting.children.length} nested sub-departments will be removed from ${dept.name}.` : undefined}
+        confirmLabel="Delete"
+        onConfirm={() => {
+          if (deleting) {
+            deleteSubDepartment(dept.id, deleting.id);
+            toast.success("Sub-department deleted");
+            setDeleting(null);
+          }
+        }}
+      />
+
+      <AssignManagerDialog
+        open={managerOpen}
+        onOpenChange={setManagerOpen}
+        title={`Assign Manager — ${dept.name}`}
+        description="Pick a user as this department's manager. The current manager is shown below."
+        current={dept.manager}
+        onSave={(manager) => {
+          updateDepartment({ ...dept, manager });
+          toast.success(`Manager assigned — ${manager}`);
+        }}
+      />
     </div>
   );
 }

@@ -52,9 +52,7 @@ const formSchema = z.object({
   unit: z.string().min(1, "Unit is required"),
   status: z.enum(["active", "inactive"]),
   department: z.string().min(1, "Department is required"),
-  subDepartment: z.string().optional(),
-  layer2: z.string().optional(),
-  layer3: z.string().optional(),
+  subLevels: z.array(z.string()).optional(),
 });
 
 type FormValues = z.output<typeof formSchema>;
@@ -74,7 +72,6 @@ const stepFields: Record<string, (keyof FormValues)[]> = {
     "sku",
     "supplier",
     "department",
-    "subDepartment",
   ],
   details: ["description", "specifications", "warrantyPeriod", "serialNumber", "notes"],
   inventory: ["quantity", "unit", "status"],};
@@ -96,9 +93,7 @@ function emptyValues(department: string): FormValues {
     unit: "unit",
     status: "active" as const,
     department,
-    subDepartment: "",
-    layer2: "",
-    layer3: "",
+    subLevels: [],
   };
 }
 
@@ -119,18 +114,14 @@ function valuesOf(item: InventoryItem, tree: SubDepartment[]): FormValues {
     unit: item.unit,
     status: item.status,
     department: item.department,
-    subDepartment: "",
-    layer2: "",
-    layer3: "",
+    subLevels: [] as string[],
   };
   if (item.subDepartment) {
     const path = findPath(tree, item.subDepartment);
-    if (path) {
-      base.subDepartment = path[0] ?? "";
-      base.layer2 = path[1] ?? "";
-      base.layer3 = path[2] ?? "";
+    if (path && path.length > 0) {
+      base.subLevels = path;
     } else {
-      base.subDepartment = item.subDepartment;
+      base.subLevels = [item.subDepartment];
     }
   }
   return base;
@@ -196,23 +187,33 @@ export function InventoryForm({
   // eslint-disable-line react-hooks/set-state-in-effect
 
   const watchedDepartment = form.watch("department");
-  const watchedSub = form.watch("subDepartment");
-  const watchedLayer2 = form.watch("layer2");
+  const watchedLevels = form.watch("subLevels") ?? [];
+
   const topSubs = React.useMemo(
     () => (watchedDepartment ? subDepartmentsFor(watchedDepartment) : []),
     [watchedDepartment, subDepartmentsFor],
   );
-  const layer2Options = React.useMemo(
-    () => (watchedSub ? (findNode(topSubs, watchedSub)?.children ?? []) : []),
-    [watchedSub, topSubs],
-  );
-  const layer3Options = React.useMemo(
-    () =>
-      watchedLayer2
-        ? (findNode(layer2Options, watchedLayer2)?.children ?? [])
-        : [],
-    [watchedLayer2, layer2Options],
-  );
+
+  const levelChain = React.useMemo(() => {
+    const chain: { options: SubDepartment[]; value: string }[] = [];
+    let pool = topSubs;
+    chain.push({ options: pool, value: watchedLevels[0] ?? "" });
+    for (let k = 0; k < watchedLevels.length; k++) {
+      const node = watchedLevels[k]
+        ? findNode(pool, watchedLevels[k])
+        : null;
+      if (!node || node.children.length === 0) break;
+      pool = node.children;
+      chain.push({ options: pool, value: watchedLevels[k + 1] ?? "" });
+    }
+    return chain;
+  }, [topSubs, watchedLevels]);
+
+  const setLevel = (k: number, v: string) => {
+    const next = [...(form.getValues("subLevels") ?? [])].slice(0, k);
+    if (v) next[k] = v;
+    form.setValue("subLevels", next, { shouldDirty: true });
+  };
 
   const validateStep = async (i: number) => {
     const fields = stepFields[steps[i].id];
@@ -248,10 +249,9 @@ export function InventoryForm({
       unit: values.unit,
       department: values.department,
       subDepartment:
-        values.layer3?.trim() ||
-        values.layer2?.trim() ||
-        values.subDepartment?.trim() ||
-        undefined,
+        [...(values.subLevels ?? [])]
+          .reverse()
+          .find((v) => v.trim() !== "") || undefined,
     };
 
     if (item) {
@@ -441,9 +441,7 @@ export function InventoryForm({
                           value={field.value}
                           onValueChange={(v) => {
                             field.onChange(v);
-                            form.setValue("subDepartment", "");
-                            form.setValue("layer2", "");
-                            form.setValue("layer3", "");
+                            form.setValue("subLevels", []);
                           }}
                         >
                           <SelectTrigger className="w-full">
@@ -462,104 +460,68 @@ export function InventoryForm({
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="subDepartment"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Sub-department (optional)</FormLabel>
-                      <FormControl>
-                        <Select
-                          value={field.value ?? ""}
-                          onValueChange={(v) => {
-                            field.onChange(v);
-                            form.setValue("layer2", "");
-                            form.setValue("layer3", "");
-                          }}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select sub-department" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {topSubs.length === 0 ? (
-                              <SelectItem value="__none" disabled>
-                                No sub-departments
-                              </SelectItem>
-                            ) : (
-                              topSubs.map((s) => (
-                                <SelectItem key={s.id} value={s.name}>
-                                  {s.name}
-                                </SelectItem>
-                              ))
-                            )}
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                {layer2Options.length > 0 && (
-                  <FormField
-                    control={form.control}
-                    name="layer2"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Layer 2 (optional)</FormLabel>
-                        <FormControl>
-                          <Select
-                            value={field.value ?? ""}
-                            onValueChange={(v) => {
-                              field.onChange(v);
-                              form.setValue("layer3", "");
-                            }}
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select layer 2" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {layer2Options.map((s) => (
-                                <SelectItem key={s.id} value={s.name}>
-                                  {s.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-                {layer3Options.length > 0 && (
-                  <FormField
-                    control={form.control}
-                    name="layer3"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Layer 3 (optional)</FormLabel>
-                        <FormControl>
-                          <Select
-                            value={field.value ?? ""}
-                            onValueChange={field.onChange}
-                          >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select layer 3" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {layer3Options.map((s) => (
-                                <SelectItem key={s.id} value={s.name}>
-                                  {s.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
+                {levelChain.map((level, k) => {
+                  const kept =
+                    level.value &&
+                    !level.options.some((s) => s.name === level.value)
+                      ? level.value
+                      : null;
+                  return (
+                    <FormField
+                      key={k}
+                      control={form.control}
+                      name="subLevels"
+                      render={() => (
+                        <FormItem>
+                          <FormLabel>
+                            {k === 0
+                              ? "Sub-department (optional)"
+                              : `Layer ${k + 1} (optional)`}
+                          </FormLabel>
+                          <FormControl>
+                            <Select
+                              value={level.value ?? ""}
+                              onValueChange={(v) => setLevel(k, v)}
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue
+                                  placeholder={
+                                    k === 0
+                                      ? "Select sub-department"
+                                      : `Select layer ${k + 1}`
+                                  }
+                                />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {level.options.length === 0 && !kept ? (
+                                  <SelectItem value="__none" disabled>
+                                    {k === 0
+                                      ? "No sub-departments"
+                                      : "No further layers"}
+                                  </SelectItem>
+                                ) : (
+                                  <>
+                                    {kept && (
+                                      <SelectItem value={kept}>
+                                        {kept} (kept)
+                                      </SelectItem>
+                                    )}
+                                    {level.options.map((s) => (
+                                      <SelectItem key={s.id} value={s.name}>
+                                        {s.name}
+                                      </SelectItem>
+                                    ))}
+                                  </>
+                                )}
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  );
+                })}
               </div>
             )}
 

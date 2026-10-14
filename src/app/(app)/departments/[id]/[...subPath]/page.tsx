@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { SubDepartmentDialog } from "@/components/departments/SubDepartmentDialog";
+import { AssignManagerDialog } from "@/components/departments/AssignManagerDialog";
 import { useApp } from "@/store/app-store";
 import { useFakeLoading } from "@/hooks/use-fake-loading";
 import { formatDate } from "@/lib/utils";
@@ -32,7 +33,7 @@ function walkPath(dept: Department, ids: string[]): { node: SubDepartment | null
 
 export default function SubDepartmentDetailPage({ params }: { params: Promise<{ id: string; subPath: string[] }> }) {
   const { id, subPath } = use(params);
-  const { state, can, deleteSubDepartment } = useApp();
+  const { state, can, deleteSubDepartment, updateSubDepartment } = useApp();
   const router = useRouter();
   const loading = useFakeLoading(250);
 
@@ -42,6 +43,7 @@ export default function SubDepartmentDetailPage({ params }: { params: Promise<{ 
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<SubDepartment | null>(null);
   const [deleting, setDeleting] = React.useState<{ parent: SubDepartment; sub: SubDepartment } | null>(null);
+  const [managerOpen, setManagerOpen] = React.useState(false);
 
   const childHref = (s: SubDepartment) => `/departments/${dept?.id}/${[...(subPath ?? []), s.id].join("/")}`;
 
@@ -116,6 +118,11 @@ export default function SubDepartmentDetailPage({ params }: { params: Promise<{ 
           {can("departments.manage") && (
             <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
               <Plus className="size-4" /> Add Sub-department
+            </Button>
+          )}
+          {can("departments.manage") && (
+            <Button variant="outline" onClick={() => setManagerOpen(true)}>
+              <UsersIcon className="size-4" /> Assign Manager
             </Button>
           )}
         </div>
@@ -303,6 +310,18 @@ export default function SubDepartmentDetailPage({ params }: { params: Promise<{ 
         department={dept}
         parentSub={node}
         editing={editing}
+      />
+
+      <AssignManagerDialog
+        open={managerOpen}
+        onOpenChange={setManagerOpen}
+        title={`Assign Manager — ${node.name}`}
+        description="Pick a user as this sub-department's manager. The current manager is shown below."
+        current={node.manager}
+        onSave={(manager) => {
+          updateSubDepartment(dept.id, node.id, { manager });
+          toast.success(`Manager assigned — ${manager}`);
+        }}
       />
 
       <ConfirmDialog
