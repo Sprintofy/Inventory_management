@@ -191,6 +191,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
           {admin && (
             <Button
               variant={ticket.technicianId ? "outline" : "default"}
+              disabled={ticket.status === "closed"}
               onClick={() => { setSelectedTechnicianId(ticket.technicianId ?? null); setAssignTechnicianOpen(true); }}
             >
               <User className="size-4" /> {ticket.technicianId ? "Change Technician" : "Assign Technician"}
