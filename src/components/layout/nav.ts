@@ -47,8 +47,8 @@ export const navGroups: NavGroup[] = [
     items: [
       // Inventory shows counts for All (super-admin) or own dept (user).
       { title: "Inventory", href: "/inventory", icon: Package, roles: USER_SCOPED, keywords: ["stock", "items", "sku", "products"] },
-      { title: "Stock In", href: "/stock-in", icon: PackagePlus, roles: USER_SCOPED, keywords: ["stock", "inbound", "receive", "receipts", "goods"] },
-      { title: "Stock Out", href: "/stock-out", icon: PackageMinus, roles: USER_SCOPED, keywords: ["stock", "outbound", "issue", "issued", "goods"] },
+      { title: "Stock In", href: "/stock-in", icon: PackagePlus, roles: ADMIN, keywords: ["stock", "inbound", "receive", "receipts", "goods"] },
+      { title: "Stock Out", href: "/stock-out", icon: PackageMinus, roles: ADMIN, keywords: ["stock", "outbound", "issue", "issued", "goods"] },
     ],
   },
   {

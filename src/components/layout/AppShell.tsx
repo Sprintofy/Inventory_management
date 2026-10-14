@@ -81,6 +81,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (role === "user" || role === "department-manager" || role === "department-user") {
       blocked.push(
         "/tickets",
+        "/stock-in",
+        "/stock-out",
         "/categories",
         "/departments",
         "/users",

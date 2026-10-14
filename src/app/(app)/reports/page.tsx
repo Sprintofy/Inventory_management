@@ -3,17 +3,16 @@
 import * as React from "react";
 import { useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import { ArrowDownToLine, ArrowUpFromLine, FileDown, TrendingUp, Wallet } from "lucide-react";
+import { FileDown } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useApp } from "@/store/app-store";
-import { downloadCSV, formatCompact } from "@/lib/utils";
+import { downloadCSV } from "@/lib/utils";
 import type { SubDepartment } from "@/types";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell,
@@ -21,18 +20,10 @@ import {
 
 const palette = ["#4f46e5", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6", "#6366f1", "#f43f5e", "#84cc16"];
 
-function collectSubs(subs: SubDepartment[], out: SubDepartment[] = []): SubDepartment[] {
-  for (const s of subs) {
-    out.push(s);
-    collectSubs(s.children, out);
-  }
-  return out;
-}
-
-function findSubByName(subs: SubDepartment[], name: string): SubDepartment | null {
+function findNode(subs: SubDepartment[], name: string): SubDepartment | null {
   for (const s of subs) {
     if (s.name === name) return s;
-    const found = findSubByName(s.children, name);
+    const found = findNode(s.children, name);
     if (found) return found;
   }
   return null;
@@ -44,53 +35,117 @@ function subtreeNames(s: SubDepartment, out: string[] = []): string[] {
   return out;
 }
 
+const HISTOGRAM_BINS = [
+  { name: "Out of stock (0)", test: (q: number) => q <= 0 },
+  { name: "Low (1–10)", test: (q: number) => q > 0 && q <= 10 },
+  { name: "Medium (11–50)", test: (q: number) => q > 10 && q <= 50 },
+  { name: "High (51+)", test: (q: number) => q > 50 },
+];
+
 export default function ReportsPage() {
-  const { state, visibleDepartments, activeDepartment, role, setDepartment } = useApp();
+  const { state, visibleDepartments, activeDepartment, role, subDepartmentsFor } = useApp();
   const searchParams = useSearchParams();
   const isGlobal = role === "super-admin" || role === "admin";
-  const [range, setRange] = React.useState("30d");
 
   const urlDept = searchParams.get("dept");
-  const [dept, setDept] = React.useState(urlDept && visibleDepartments.includes(urlDept) ? urlDept : activeDepartment);
-  const [sub, setSub] = React.useState(searchParams.get("sub") ?? "all");
+  const [dept, setDept] = React.useState(
+    isGlobal
+      ? (urlDept && [...visibleDepartments, "all"].includes(urlDept) ? urlDept : activeDepartment)
+      : activeDepartment,
+  );
+  const [subLevels, setSubLevels] = React.useState<string[]>(() => {
+    const sub = searchParams.get("sub");
+    return sub ? [sub] : [];
+  });
 
   const deptObj = dept !== "all" ? state.departments.find((d) => d.name === dept) : null;
-  const subOptions = useMemo(() => (deptObj ? collectSubs(deptObj.subDepartments) : []), [deptObj]);
-  const effectiveSub = sub !== "all" && subOptions.some((s) => s.name === sub) ? sub : "all";
-
-  const scopeItems = useMemo(() => {
-    const items = dept === "all" ? state.inventory : state.inventory.filter((i) => i.department === dept);
-    if (dept !== "all" && effectiveSub !== "all") {
-      const node = findSubByName(deptObj?.subDepartments ?? [], effectiveSub);
-      const names = node ? subtreeNames(node) : [effectiveSub];
-      return items.filter((i) => names.includes(i.subDepartment ?? ""));
-    }
-    return items;
-  }, [state.inventory, dept, effectiveSub, deptObj]);
-
-  const scopeTransactions = useMemo(
-    () => (dept === "all" ? state.transactions : state.transactions.filter((t) => t.department === dept)),
-    [state.transactions, dept]
+  const topSubs = useMemo(
+    () => (deptObj ? subDepartmentsFor(deptObj.name) : []),
+    [deptObj, subDepartmentsFor],
   );
 
-  const metrics = useMemo(() => {
-    const stockValue = scopeItems.reduce((s, i) => s + i.quantity, 0);
-    const stockIn = scopeTransactions.filter((t) => t.type === "stock-in").reduce((s, t) => s + t.quantity, 0);
-    const stockOut = scopeTransactions.filter((t) => t.type === "stock-out").reduce((s, t) => s + t.quantity, 0);
-    const outValue = scopeTransactions.filter((t) => t.type === "stock-out").reduce((s, t) => s + t.quantity, 0);
-    const categories = Object.entries(scopeItems.reduce<Record<string, number>>((acc, i) => {
-      acc[i.category] = (acc[i.category] ?? 0) + i.quantity;
-      return acc;
-    }, {})).map(([name, quantity]) => ({ name, quantity }));
-    return { stockValue, stockIn, stockOut, outValue, categories };
-  }, [scopeItems, scopeTransactions]);
+  const levelChain = useMemo(() => {
+    const chain: { options: SubDepartment[]; value: string }[] = [];
+    let pool = topSubs;
+    chain.push({ options: pool, value: subLevels[0] ?? "" });
+    for (let k = 0; k < subLevels.length; k++) {
+      const node = subLevels[k] ? findNode(pool, subLevels[k]) : null;
+      if (!node || node.children.length === 0) break;
+      pool = node.children;
+      chain.push({ options: pool, value: subLevels[k + 1] ?? "" });
+    }
+    return chain;
+  }, [topSubs, subLevels]);
+
+  const setLevel = (k: number, v: string) => {
+    const next = [...subLevels].slice(0, k);
+    if (v) next[k] = v;
+    setSubLevels(next);
+  };
+
+  const scopeItems = useMemo(() => {
+    const base =
+      dept === "all"
+        ? state.inventory
+        : state.inventory.filter((i) => i.department === dept);
+    const deepest = [...subLevels].reverse().find((v) => v.trim() !== "");
+    if (!deepest || !deptObj) return base;
+    const node = findNode(topSubs, deepest);
+    if (!node) return base;
+    const names = subtreeNames(node);
+    return base.filter((i) => names.includes(i.subDepartment ?? ""));
+  }, [state.inventory, dept, subLevels, deptObj, topSubs]);
+
+  const byCategory = useMemo(() => {
+    const acc: Record<string, number> = {};
+    for (const i of scopeItems) acc[i.category] = (acc[i.category] ?? 0) + 1;
+    return Object.entries(acc)
+      .map(([name, items]) => ({ name, items }))
+      .sort((a, b) => b.items - a.items);
+  }, [scopeItems]);
+
+  const histogram = useMemo(
+    () =>
+      HISTOGRAM_BINS.map((b) => ({
+        name: b.name,
+        items: scopeItems.filter((i) => b.test(i.quantity)).length,
+      })),
+    [scopeItems],
+  );
+
+  const byScope = useMemo(() => {
+    if (dept === "all") {
+      return state.departments.map((d) => ({
+        name: d.name,
+        items: state.inventory.filter((i) => i.department === d.name).length,
+        color: d.color,
+      }));
+    }
+    const rows = topSubs.map((s) => {
+      const names = subtreeNames(s);
+      return {
+        name: s.name,
+        items: scopeItems.filter((i) => names.includes(i.subDepartment ?? "")).length,
+        color: s.color,
+      };
+    });
+    const unassigned = scopeItems.filter((i) => !i.subDepartment).length;
+    if (unassigned > 0)
+      rows.push({ name: "Department level", items: unassigned, color: "#94a3b8" });
+    return rows;
+  }, [dept, state.departments, state.inventory, topSubs, scopeItems]);
 
   const topItems = useMemo(
     () => [...scopeItems].sort((a, b) => b.quantity - a.quantity).slice(0, 8),
     [scopeItems]
   );
 
-  const scopeLabel = dept === "all" ? "All Departments" : effectiveSub === "all" ? dept : `${dept} / ${effectiveSub}`;
+  const scopeLabel =
+    dept === "all"
+      ? "All Departments"
+      : [...subLevels].reverse().find((v) => v.trim() !== "")
+        ? `${dept} / ${[...subLevels].reverse().find((v) => v.trim() !== "")}`
+        : dept;
 
   const exportReport = () => {
     downloadCSV("inventory-report.csv", [
@@ -102,43 +157,40 @@ export default function ReportsPage() {
 
   const handleDeptChange = (d: string) => {
     setDept(d);
-    setSub("all");
-    setDepartment(d);
+    setSubLevels([]);
   };
 
   return (
     <div className="space-y-5">
       <PageHeader
         title="Reports"
-        description="Analyze inventory value, movement and performance."
-        breadcrumb={[{ label: "Reports" }, ...(dept !== "all" && effectiveSub !== "all" ? [{ label: `${dept} / ${effectiveSub}` }] : [])]}
+        description={isGlobal ? "Department inventory reports with sub-level filtering." : "Your department's inventory report with sub-level filtering."}
+        breadcrumb={[{ label: "Reports" }]}
         actions={
-          <div className="flex items-center gap-2">
-            <Select value={dept} onValueChange={handleDeptChange}>
-              <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {isGlobal && <SelectItem value="all">All Departments</SelectItem>}
-                {visibleDepartments.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            {dept !== "all" && subOptions.length > 0 && (
-              <Select value={effectiveSub} onValueChange={setSub}>
+          <div className="flex flex-wrap items-center gap-2">
+            {isGlobal ? (
+              <Select value={dept} onValueChange={handleDeptChange}>
                 <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All sub-departments</SelectItem>
-                  {subOptions.map((s) => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
+                  <SelectItem value="all">All Departments</SelectItem>
+                  {visibleDepartments.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
                 </SelectContent>
               </Select>
+            ) : (
+              <span className="bg-muted rounded-md px-3 py-1.5 text-sm font-medium">{dept}</span>
             )}
-            <Select value={range} onValueChange={setRange}>
-              <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="7d">Last 7 days</SelectItem>
-                <SelectItem value="30d">Last 30 days</SelectItem>
-                <SelectItem value="90d">Last 90 days</SelectItem>
-                <SelectItem value="1y">Last year</SelectItem>
-              </SelectContent>
-            </Select>
+            {dept !== "all" && levelChain.map((level, k) => (
+              <Select key={k} value={level.value || "__all"} onValueChange={(v) => setLevel(k, v === "__all" ? "" : v)}>
+                <SelectTrigger className="w-44"><SelectValue placeholder={k === 0 ? "All sub-departments" : `All layer ${k + 1}`} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all">{k === 0 ? "All sub-departments" : `All layer ${k + 1}`}</SelectItem>
+                  {level.value && !level.options.some((s) => s.name === level.value) && (
+                    <SelectItem value={level.value}>{level.value} (kept)</SelectItem>
+                  )}
+                  {level.options.map((s) => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            ))}
             <Button variant="outline" onClick={exportReport}><FileDown className="size-4" /> Export</Button>
           </div>
         }
@@ -148,41 +200,52 @@ export default function ReportsPage() {
         Showing inventory for <span className="text-foreground font-medium">{scopeLabel}</span> · {scopeItems.length} item{scopeItems.length === 1 ? "" : "s"}
       </p>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card className="py-4"><CardContent>
-          <p className="text-muted-foreground flex items-center gap-2 text-xs"><Wallet className="size-3.5" /> Inventory Value</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums">{formatCompact(metrics.stockValue)}</p>
-          <p className="text-muted-foreground mt-1 text-xs">across {scopeItems.length} items</p>
-        </CardContent></Card>
-        <Card className="py-4"><CardContent>
-          <p className="text-success flex items-center gap-2 text-xs"><ArrowDownToLine className="size-3.5" /> Stock In</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums">{metrics.stockIn.toLocaleString()}</p>
-          <p className="text-muted-foreground mt-1 text-xs">units received</p>
-        </CardContent></Card>
-        <Card className="py-4"><CardContent>
-          <p className="text-primary flex items-center gap-2 text-xs"><ArrowUpFromLine className="size-3.5" /> Stock Out</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums">{metrics.stockOut.toLocaleString()}</p>
-          <p className="text-muted-foreground mt-1 text-xs">units issued</p>
-        </CardContent></Card>
-        <Card className="py-4"><CardContent>
-          <p className="text-warning flex items-center gap-2 text-xs"><TrendingUp className="size-3.5" /> Issued Value</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums">{formatCompact(metrics.outValue)}</p>
-          <p className="text-muted-foreground mt-1 text-xs">value of issues</p>
-        </CardContent></Card>
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Card>
+          <CardHeader><CardTitle className="text-base">Items by Category</CardTitle></CardHeader>
+          <CardContent className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={byCategory} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} interval={0} angle={-30} textAnchor="end" height={55} />
+                <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
+                <Tooltip formatter={(v) => [`${Number(v ?? 0).toLocaleString()} items`, "Items"]} cursor={{ fill: "hsl(var(--muted) / 0.4)" }} />
+                <Bar dataKey="items" radius={[4, 4, 0, 0]}>
+                  {byCategory.map((_, i) => <Cell key={i} fill={palette[i % palette.length]} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle className="text-base">Stock Quantity Histogram</CardTitle></CardHeader>
+          <CardContent className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={histogram} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} interval={0} angle={-30} textAnchor="end" height={55} />
+                <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
+                <Tooltip formatter={(v) => [`${Number(v ?? 0).toLocaleString()} items`, "Items"]} cursor={{ fill: "hsl(var(--muted) / 0.4)" }} />
+                <Bar dataKey="items" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2">
         <Card>
-          <CardHeader><CardTitle className="text-base">Stock Value by Category</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">{dept === "all" ? "Items by Department" : "Items by Sub-department"}</CardTitle></CardHeader>
           <CardContent className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={metrics.categories} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+              <BarChart data={byScope} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} interval={0} angle={-30} textAnchor="end" height={55} />
-                <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                <Tooltip formatter={(v) => [`${Number(v ?? 0).toLocaleString()} units`, "Quantity"]} cursor={{ fill: "hsl(var(--muted) / 0.4)" }} />
-                <Bar dataKey="quantity" radius={[4, 4, 0, 0]}>
-                  {metrics.categories.map((_, i) => <Cell key={i} fill={palette[i % palette.length]} />)}
+                <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
+                <Tooltip formatter={(v) => [`${Number(v ?? 0).toLocaleString()} items`, "Items"]} cursor={{ fill: "hsl(var(--muted) / 0.4)" }} />
+                <Bar dataKey="items" radius={[4, 4, 0, 0]}>
+                  {byScope.map((row, i) => <Cell key={i} fill={row.color ?? palette[i % palette.length]} />)}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -191,8 +254,7 @@ export default function ReportsPage() {
 
         <Card>
           <CardHeader className="flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-base">Top Items by Value</CardTitle>
-            <span className="text-muted-foreground text-xs">range: {range}</span>
+            <CardTitle className="text-base">Top Items by Quantity</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
@@ -223,31 +285,6 @@ export default function ReportsPage() {
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader className="flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-base">Movement Summary</CardTitle>
-          <Tabs value={range} onValueChange={setRange}>
-            <TabsList>
-              <TabsTrigger value="7d">7D</TabsTrigger>
-              <TabsTrigger value="30d">30D</TabsTrigger>
-              <TabsTrigger value="90d">90D</TabsTrigger>
-              <TabsTrigger value="1y">1Y</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </CardHeader>
-        <CardContent className="h-72">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={metrics.categories} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} interval={0} angle={-30} textAnchor="end" height={55} />
-              <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-              <Tooltip formatter={(v) => [`${Number(v ?? 0).toLocaleString()} units`, "Quantity"]} cursor={{ fill: "hsl(var(--muted) / 0.4)" }} />
-              <Bar dataKey="quantity" fill="var(--primary)" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
     </div>
   );
 }
