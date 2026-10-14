@@ -3,7 +3,7 @@
 import * as React from "react";
 import { use, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, BarChart3, Building2, ChevronRight, FileText, Layers, Package, Plus, Ticket } from "lucide-react";
+import { ArrowLeft, BarChart3, Building2, ChevronRight, FileDown, Layers, Package, Plus, Ticket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useApp } from "@/store/app-store";
 import { useFakeLoading } from "@/hooks/use-fake-loading";
-import { formatDate } from "@/lib/utils";
+import { downloadCSV, formatDate } from "@/lib/utils";
+import { toast } from "sonner";
 
 export default function DepartmentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -25,7 +26,6 @@ export default function DepartmentDetailPage({ params }: { params: Promise<{ id:
     () => state.inventory.filter((i) => i.department === dept?.name && !i.archived),
     [state.inventory, dept]
   );
-  const lowItems = items.filter((i) => i.status === "low-stock" || i.status === "out-of-stock");
   const openTickets = state.tickets.filter((t) => t.department === dept?.name && t.status !== "closed");
   const deptUsers = state.users.filter((u) => u.department === dept?.name);
   const activities = state.activities.filter((a) => a.department === dept?.name).slice(0, 5);
@@ -61,24 +61,26 @@ export default function DepartmentDetailPage({ params }: { params: Promise<{ id:
           </div>
         </div>
         {can("reports.view") && (
-          <Button variant="outline" onClick={() => router.push(`/reports?dept=${encodeURIComponent(dept.name)}`)}>
-            <BarChart3 className="size-4" /> Inventory Report
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => {
+              downloadCSV(`${dept.name}-export-${new Date().toISOString().slice(0, 10)}.csv`, items.map((i) => ({ Name: i.name, SKU: i.sku, Quantity: i.quantity, Location: i.location })));
+              toast.success(`Exported ${items.length} items`);
+            }}><FileDown className="size-4" /> Export</Button>
+            <Button variant="outline" onClick={() => router.push(`/reports?dept=${encodeURIComponent(dept.name)}`)}>
+              <BarChart3 className="size-4" /> Inventory Report
+            </Button>
+          </div>
         )}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         <Card className="py-4"><CardContent>
-          <p className="text-muted-foreground flex items-center gap-2 text-xs"><Package className="size-3.5" /> Total Items</p>
+          <p className="text-muted-foreground flex items-center gap-2 text-xs"><Package className="size-3.5" /> Total Items ({items.length})</p>
           <p className="mt-1 text-2xl font-semibold tabular-nums">{items.length}</p>
         </CardContent></Card>
         <Card className="py-4"><CardContent>
-          <p className="text-muted-foreground flex items-center gap-2 text-xs"><Ticket className="size-3.5" /> Open Tickets</p>
+          <p className="text-muted-foreground flex items-center gap-2 text-xs"><Ticket className="size-3.5" /> Open Tickets ({openTickets.length})</p>
           <p className="mt-1 text-2xl font-semibold tabular-nums">{openTickets.length}</p>
-        </CardContent></Card>
-        <Card className="py-4"><CardContent>
-          <p className="text-warning flex items-center gap-2 text-xs"><FileText className="size-3.5" /> Inventory Alerts</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums">{lowItems.length}</p>
         </CardContent></Card>
       </div>
 
@@ -130,7 +132,7 @@ export default function DepartmentDetailPage({ params }: { params: Promise<{ id:
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader className="flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-base">Inventory Items</CardTitle>
+            <CardTitle className="text-base">Inventory Items ({items.length})</CardTitle>
             <Button variant="outline" size="sm" onClick={() => router.push(`/inventory?dept=${encodeURIComponent(dept.name)}`)}>View All</Button>
           </CardHeader>
           <CardContent>
@@ -171,17 +173,14 @@ export default function DepartmentDetailPage({ params }: { params: Promise<{ id:
                 <p className="text-muted-foreground text-sm">No users in this department yet.</p>
               ) : (
                 deptUsers.map((u) => (
-                  <div key={u.id} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                        {u.name.split(" ").map((p) => p[0]).join("").slice(0, 2)}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">{u.name}</p>
-                        <p className="text-muted-foreground text-xs">{u.role}</p>
-                      </div>
+                  <div key={u.id} className="flex items-center gap-2.5">
+                    <div className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                      {u.name.split(" ").map((p) => p[0]).join("").slice(0, 2)}
                     </div>
-                    <Badge variant={u.status === "active" ? "success" : "neutral"} className="capitalize">{u.status}</Badge>
+                    <div>
+                      <p className="text-sm font-medium">{u.name}</p>
+                      <p className="text-muted-foreground text-xs">{u.email}</p>
+                    </div>
                   </div>
                 ))
               )}
@@ -189,7 +188,7 @@ export default function DepartmentDetailPage({ params }: { params: Promise<{ id:
           </Card>
 
           <Card>
-            <CardHeader><CardTitle className="text-base">Recent Activity</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">Recent Stock (dept-wise)</CardTitle></CardHeader>
             <CardContent>
               {activities.length === 0 ? (
                 <p className="text-muted-foreground text-sm">No recent activity.</p>
@@ -197,7 +196,7 @@ export default function DepartmentDetailPage({ params }: { params: Promise<{ id:
                 <div className="space-y-3">
                   {activities.map((a) => (
                     <div key={a.id} className="text-sm">
-                      <p className="line-clamp-1">{a.action}</p>
+                      <p className="line-clamp-1">{a.action} — {a.item}</p>
                       <p className="text-muted-foreground text-xs">{formatDate(a.date)}</p>
                     </div>
                   ))}

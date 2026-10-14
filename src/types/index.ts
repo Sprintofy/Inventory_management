@@ -1,4 +1,4 @@
-export type Role = "super-admin" | "admin" | "department-manager" | "department-user" | "viewer" | "technician";
+export type Role = "super-admin" | "admin" | "user" | "department-manager" | "department-user" | "viewer" | "technician";
 
 export type StockStatus = "in-stock" | "low-stock" | "out-of-stock" | "overstock";
 
@@ -150,8 +150,13 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  /** Login password (demo plain-text). Seeded users default to DEFAULT_USER_PASSWORD. */
+  password?: string;
   employeeId: string;
   department: string;
+  subDepartment?: string;
+  /** Army rank / post (e.g. Col, Maj, OIC). */
+  post?: string;
   role: Role;
   status: "active" | "invited" | "inactive";
   lastActive: string;
@@ -370,6 +375,8 @@ export interface Technician {
   id: string;
   name: string;
   email: string;
+  /** Login password (demo plain-text). Defaults to TECHNICIAN_DEMO_PASSWORD. */
+  password?: string;
   employeeId: string;
   specialization: string;
   availability: "Available" | "Busy" | "Offline";

@@ -62,8 +62,19 @@ function Greeting() {
   const { user, activeDepartment, role, state } = useApp();
   const hour = new Date().getHours();
   const part = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-  const isDeptView = role === "department-manager" || role === "department-user";
+  const isDeptView = role === "user" || role === "department-manager" || role === "department-user";
   const dept = state.departments.find((d) => d.name === activeDepartment);
+
+  if (isDeptView && dept) {
+    return (
+      <div>
+        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+          {dept.name} Inventory
+        </h1>
+        <p className="text-muted-foreground mt-1 text-sm">Your department&apos;s inventory overview{user?.subDepartment ? ` · ${user.subDepartment}` : ""}</p>
+      </div>
+    );
+  }
 
   if (isDeptView && dept) {
     return (
@@ -89,6 +100,7 @@ export default function DashboardPage() {
   const { departmentItems, allItems, activeDepartment, visibleDepartments, state, role, setDepartment } = useApp();
   const loading = useFakeLoading();
   const [range, setRange] = React.useState<"7 days" | "30 days" | "3 months" | "1 year">("30 days");
+  const isDeptUser = role === "user" || role === "department-manager" || role === "department-user";
 
   const items = activeDepartment === "all" ? allItems : departmentItems;
 
@@ -319,6 +331,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
+      {!isDeptUser && (
       <div className="space-y-4">
         <div>
           <h2 className="text-sm font-semibold tracking-tight">IT Support Overview</h2>
@@ -332,7 +345,9 @@ export default function DashboardPage() {
           <StatCard icon={UsersIcon} label="Technicians" value={formatNumber(state.technicians.length)} loading={loading} iconClass="bg-violet-500/10 text-violet-500" />
         </div>
       </div>
+      )}
 
+      {!isDeptUser && (
       <div className="grid gap-6 xl:grid-cols-3">
         <Card>
           <CardHeader>
@@ -393,7 +408,9 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+      )}
 
+      {!isDeptUser && (
       <Card>
         <CardHeader className="flex-row items-center justify-between">
           <div>
@@ -443,6 +460,7 @@ export default function DashboardPage() {
           )}
         </CardContent>
       </Card>
+      )}
 
       <div className="grid gap-6 xl:grid-cols-3">
         <Card>
@@ -500,10 +518,10 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {role === "department-user" && (
+      {(role === "user" || role === "department-user" || role === "department-manager") && (
         <div className="bg-muted/50 text-muted-foreground flex items-center gap-2 rounded-lg border px-4 py-3 text-xs">
           <AlertTriangle className="size-4" />
-          You're viewing as <span className="font-medium text-foreground">Department User</span> — actions are limited to your department ({activeDepartment}).
+          You&apos;re viewing as <span className="font-medium text-foreground">User</span> — actions are limited to your department ({activeDepartment}).
         </div>
       )}
     </div>

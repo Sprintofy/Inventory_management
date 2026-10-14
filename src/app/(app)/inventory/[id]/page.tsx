@@ -9,10 +9,8 @@ import {
   Building2,
   CalendarDays,
   ChevronDown,
-  FileText,
   Layers,
   MapPin,
-  MoreHorizontal,
   Package,
   PackageMinus,
   PackagePlus,
@@ -20,25 +18,21 @@ import {
   Tag,
   TrendingUp,
 } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { StockHistory } from "@/components/inventory/StockHistory";
 import { InventoryForm } from "@/components/inventory/InventoryForm";
 import { StockInDialog, StockOutDialog } from "@/components/inventory/StockDialogs";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useApp } from "@/store/app-store";
 import { useFakeLoading } from "@/hooks/use-fake-loading";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/utils";
 
 export default function InventoryDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { state, updateItem, archiveItems, can } = useApp();
+  const { state, can } = useApp();
   const router = useRouter();
   const loading = useFakeLoading(300);
 
@@ -47,12 +41,14 @@ export default function InventoryDetailPage({ params }: { params: Promise<{ id: 
   const [editOpen, setEditOpen] = React.useState(false);
   const [stockInOpen, setStockInOpen] = React.useState(false);
   const [stockOutOpen, setStockOutOpen] = React.useState(false);
-  const [archiveOpen, setArchiveOpen] = React.useState(false);
 
   const history = useMemo(
     () => state.transactions.filter((t) => t.itemId === id).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
     [state.transactions, id]
   );
+
+  const inHistory = useMemo(() => history.filter((t) => t.type === "stock-in"), [history]);
+  const outHistory = useMemo(() => history.filter((t) => t.type === "stock-out"), [history]);
 
   if (!loading && !item) {
     return (
@@ -99,16 +95,7 @@ export default function InventoryDetailPage({ params }: { params: Promise<{ id: 
           <Button variant="outline" onClick={() => setStockInOpen(true)}><PackagePlus className="size-4" /> Stock In</Button>
           <Button variant="outline" onClick={() => setStockOutOpen(true)} disabled={item.quantity === 0}><PackageMinus className="size-4" /> Stock Out</Button>
           {can("inventory.manage") && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline"><MoreHorizontal className="size-4" /></Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setEditOpen(true)}><Pencil className="size-3.5" /> Edit</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setArchiveOpen(true)}>Archive item</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Button variant="outline" onClick={() => setEditOpen(true)}><Pencil className="size-4" /> Edit</Button>
           )}
         </div>
       </div>
@@ -163,10 +150,7 @@ export default function InventoryDetailPage({ params }: { params: Promise<{ id: 
             <TabsList className="bg-transparent h-auto w-full justify-start gap-6 rounded-none border-b-0 p-0">
               {[
                 { v: "overview", l: "Overview" },
-                { v: "history", l: "Stock History" },
-                { v: "transactions", l: "Transactions" },
-                { v: "assets", l: "Assets" },
-                { v: "documents", l: "Documents" },
+                { v: "in-out", l: "In / Out History" },
               ].map((t) => (
                 <TabsTrigger key={t.v} value={t.v} className="data-[state=active]:shadow-none data-[state=active]:bg-transparent data-[state=active]:text-foreground rounded-none border-b-2 border-transparent px-1 pb-3 text-sm hover:text-foreground data-[state=active]:border-primary">
                   {t.l}
@@ -245,67 +229,59 @@ export default function InventoryDetailPage({ params }: { params: Promise<{ id: 
             </div>
           </TabsContent>
 
-          <TabsContent value="history" className="p-6">
-            <StockHistory transactions={history} itemName={item.name} />
-          </TabsContent>
-
-          <TabsContent value="transactions" className="p-6">
-            <div className="overflow-x-auto rounded-lg border">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-muted/50 text-muted-foreground">
-                    {["Reference", "Type", "Quantity", "Department", "Date", "By"].map((h) => <th key={h} className="px-4 py-2.5 text-left text-xs font-medium">{h}</th>)}
-                  </tr>
-                </thead>
-                <tbody>
-                  {history.length === 0 && (
-                    <tr><td colSpan={6} className="text-muted-foreground px-4 py-8 text-center">No transactions</td></tr>
-                  )}
-                  {history.map((t) => (
-                    <tr key={t.id} className="border-t">
-                      <td className="px-4 py-2.5 font-mono text-xs">{t.reference}</td>
-                      <td className="px-4 py-2.5"><StatusBadge status={t.type} dot={false} /></td>
-                      <td className={t.quantity > 0 ? "text-success px-4 py-2.5 font-medium tabular-nums" : "text-primary px-4 py-2.5 font-medium tabular-nums"}>{t.quantity > 0 ? "+" : ""}{t.quantity}</td>
-                      <td className="text-muted-foreground px-4 py-2.5 text-xs">{t.department}{t.toDepartment ? ` → ${t.toDepartment}` : ""}</td>
-                      <td className="text-muted-foreground px-4 py-2.5 text-xs">{formatDate(t.date)}</td>
-                      <td className="px-4 py-2.5 text-xs">{t.createdBy}</td>
+          <TabsContent value="in-out" className="space-y-6 p-6">
+            <div>
+              <h4 className="mb-3 text-sm font-semibold">Stock In History ({inHistory.length})</h4>
+              <div className="overflow-x-auto rounded-lg border">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-muted/50 text-muted-foreground">
+                      {["Reference", "Quantity", "Department", "Date", "By"].map((h) => <th key={h} className="px-4 py-2.5 text-left text-xs font-medium">{h}</th>)}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="assets" className="p-6">
-            {item.serialNumber || item.assetNumber ? (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="bg-muted/60 flex items-center gap-3 rounded-lg p-4">
-                  <Package className="text-primary size-5" />
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">Serial Number</p>
-                    <p className="font-mono text-sm">{item.serialNumber ?? "—"}</p>
-                  </div>
-                </div>
-                <div className="bg-muted/60 flex items-center gap-3 rounded-lg p-4">
-                  <Tag className="text-warning size-5" />
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">Asset Number</p>
-                    <p className="font-mono text-sm">{item.assetNumber ?? "—"}</p>
-                  </div>
-                </div>
+                  </thead>
+                  <tbody>
+                    {inHistory.length === 0 && (
+                      <tr><td colSpan={5} className="text-muted-foreground px-4 py-8 text-center">No stock in records</td></tr>
+                    )}
+                    {inHistory.map((t) => (
+                      <tr key={t.id} className="border-t">
+                        <td className="px-4 py-2.5 font-mono text-xs">{t.reference}</td>
+                        <td className="text-success px-4 py-2.5 font-medium tabular-nums">+{t.quantity}</td>
+                        <td className="text-muted-foreground px-4 py-2.5 text-xs">{t.department}{t.toDepartment ? ` → ${t.toDepartment}` : ""}</td>
+                        <td className="text-muted-foreground px-4 py-2.5 text-xs">{formatDate(t.date)}</td>
+                        <td className="px-4 py-2.5 text-xs">{t.createdBy}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            ) : (
-              <EmptyState icon={Package} title="No assets linked" description="This item is not registered as an asset." />
-            )}
-          </TabsContent>
-
-          <TabsContent value="documents" className="p-6">
-            <EmptyState
-              icon={FileText}
-              title="No documents"
-              description="Attach invoices, warranties or certificates to this item."
-              action={{ label: "Upload Document", onClick: () => toast.info("Document upload will be available with the backend") }}
-            />
+            </div>
+            <div>
+              <h4 className="mb-3 text-sm font-semibold">Stock Out History ({outHistory.length})</h4>
+              <div className="overflow-x-auto rounded-lg border">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-muted/50 text-muted-foreground">
+                      {["Reference", "Quantity", "Department", "Date", "By"].map((h) => <th key={h} className="px-4 py-2.5 text-left text-xs font-medium">{h}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {outHistory.length === 0 && (
+                      <tr><td colSpan={5} className="text-muted-foreground px-4 py-8 text-center">No stock out records</td></tr>
+                    )}
+                    {outHistory.map((t) => (
+                      <tr key={t.id} className="border-t">
+                        <td className="px-4 py-2.5 font-mono text-xs">{t.reference}</td>
+                        <td className="text-primary px-4 py-2.5 font-medium tabular-nums">{t.quantity}</td>
+                        <td className="text-muted-foreground px-4 py-2.5 text-xs">{t.department}{t.toDepartment ? ` → ${t.toDepartment}` : ""}</td>
+                        <td className="text-muted-foreground px-4 py-2.5 text-xs">{formatDate(t.date)}</td>
+                        <td className="px-4 py-2.5 text-xs">{t.createdBy}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
       </Card>
@@ -313,18 +289,6 @@ export default function InventoryDetailPage({ params }: { params: Promise<{ id: 
       <InventoryForm open={editOpen} onOpenChange={setEditOpen} item={item} />
       <StockInDialog open={stockInOpen} onOpenChange={setStockInOpen} presetItem={item} />
       <StockOutDialog open={stockOutOpen} onOpenChange={setStockOutOpen} presetItem={item} />
-      <ConfirmDialog
-        open={archiveOpen}
-        onOpenChange={setArchiveOpen}
-        title="Archive this item?"
-        description={`${item.name} will be hidden from inventory lists. Its history will be preserved.`}
-        confirmLabel="Archive"
-        onConfirm={() => {
-          archiveItems([item.id]);
-          toast.success(`${item.name} archived`);
-          router.push("/inventory");
-        }}
-      />
     </div>
   );
 }

@@ -76,16 +76,44 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const blockedPaths = React.useMemo(() => {
     const blocked: string[] = [];
-    if (role === "super-admin")
-      blocked.push("/purchase-orders", "/suppliers", "/assets");
-    if (role === "department-manager" || role === "department-user")
+    // Scoped users (department login): dept inventory/stock/reports only.
+    // No tickets, no purchase orders, no suppliers, no admin areas.
+    if (role === "user" || role === "department-manager" || role === "department-user") {
       blocked.push(
+        "/tickets",
+        "/purchase-orders",
+        "/suppliers",
+        "/assets",
+        "/adjustments",
+        "/locations",
+        "/categories",
+        "/departments",
+        "/users",
+        "/technicians",
+        "/activity",
+        "/settings",
+        "/help",
+      );
+    }
+    if (role === "viewer") {
+      blocked.push(
+        "/inventory",
         "/stock-in",
         "/stock-out",
         "/purchase-orders",
         "/suppliers",
         "/assets",
+        "/adjustments",
+        "/locations",
+        "/tickets",
+        "/departments",
+        "/users",
+        "/technicians",
+        "/activity",
+        "/settings",
+        "/help",
       );
+    }
     return blocked;
   }, [role]);
 

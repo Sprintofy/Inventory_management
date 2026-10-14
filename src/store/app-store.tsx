@@ -51,6 +51,7 @@ import {
     demoAccounts,
     computeStatus,
     TECHNICIAN_DEMO_PASSWORD,
+    DEFAULT_USER_PASSWORD,
 } from "@/data/mock";
 import { uid } from "@/lib/utils";
 import { ticketStatusFromIssues } from "@/lib/ticket-utils";
@@ -79,27 +80,37 @@ export type Permission =
   | "technicians.manage";
 
 const rolePermissions: Record<Role, Permission[]> = {
+  // Super Admin = root user. Full access to everything.
   "super-admin": [
     "inventory.manage", "stock-in.create", "stock-out.create", "requests.create", "requests.approve",
-    "transfers.create", "transfers.approve", "tickets.manage",
+    "transfers.create", "transfers.approve", "po.create", "po.manage", "tickets.manage", "suppliers.manage", "assets.manage",
     "categories.manage", "locations.manage", "departments.manage", "users.manage", "reports.view",
     "activity.view", "settings.manage", "global.view", "technicians.manage",
   ],
+  // Legacy admin alias — same as super-admin for backwards compat.
   admin: [
     "inventory.manage", "stock-in.create", "stock-out.create", "requests.create", "requests.approve",
     "transfers.create", "transfers.approve", "po.create", "po.manage", "tickets.manage", "suppliers.manage", "assets.manage",
     "categories.manage", "locations.manage", "departments.manage", "users.manage", "reports.view",
     "activity.view", "settings.manage", "technicians.manage",
   ],
-  "department-manager": [
-    "inventory.manage", "requests.create", "requests.approve",
-    "transfers.create", "transfers.approve",
-    "categories.manage", "locations.manage", "reports.view",
+  // User = department-scoped entity. Sees ONLY its own department (+ sub-department).
+  // Can manage own-dept inventory / stock in-out, view dept reports.
+  // No tickets, no departments, users, suppliers, POs, settings, or global views.
+  user: [
+    "inventory.manage", "stock-in.create", "stock-out.create", "requests.create",
+    "transfers.create", "reports.view",
   ],
-  "department-user": ["inventory.manage", "requests.create", "transfers.create", "reports.view"],
+  // Legacy department roles map to the same scoped user permissions.
+  "department-manager": [
+    "inventory.manage", "stock-in.create", "stock-out.create", "requests.create",
+    "transfers.create", "reports.view",
+  ],
+  "department-user": ["inventory.manage", "stock-in.create", "stock-out.create", "requests.create", "transfers.create", "reports.view"],
   viewer: ["reports.view"],
-  // Technicians manage their own assignments and the technicians list/detail pages.
-  technician: ["technicians.manage"],
+  // Technicians are ONLY issue resolvers. No inventory / stock / admin access.
+  // They live in /technician/* and only touch their assigned tickets.
+  technician: [],
 };
 
 export interface Settings {
@@ -157,6 +168,7 @@ type Action =
   | { type: "STOCK_IN"; itemId: string; quantity: number; ref: string; supplier: string; note?: string }
   | { type: "STOCK_OUT"; itemId: string; quantity: number; ref: string; recipient: string; purpose: string; note?: string }
   | { type: "ADD_STOCK_IN_RECORD"; record: StockInRecord }
+  | { type: "ADD_STOCK_OUT_RECORD"; record: StockOutRecord }
   | { type: "UPDATE_STOCK_IN"; id: string; status: StockInRecord["status"] }
   | { type: "UPDATE_STOCK_OUT"; id: string; status: StockOutRecord["status"] }
   | { type: "ADD_TRANSFER"; transfer: Transfer }
@@ -266,7 +278,7 @@ function findSub(subs: SubDepartment[], id: string): SubDepartment | null {
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
     case "LOGIN":
-      return { ...state, user: action.user, department: action.user.role === "super-admin" ? "all" : action.user.department };
+      return { ...state, user: action.user, department: action.user.role === "super-admin" || action.user.role === "admin" ? "all" : action.user.department };
     case "LOGOUT":
       return { ...state, user: null };
     case "SET_DEPARTMENT":
@@ -323,6 +335,8 @@ function reducer(state: AppState, action: Action): AppState {
     }
     case "ADD_STOCK_IN_RECORD":
       return { ...state, stockIn: [action.record, ...state.stockIn] };
+    case "ADD_STOCK_OUT_RECORD":
+      return { ...state, stockOut: [action.record, ...state.stockOut] };
     case "UPDATE_STOCK_IN":
       return { ...state, stockIn: state.stockIn.map((r) => (r.id === action.id ? { ...r, status: action.status } : r)) };
     case "UPDATE_STOCK_OUT":
@@ -477,23 +491,59 @@ function reducer(state: AppState, action: Action): AppState {
   }
 }
 
-// Bumped to v3: the seeded tickets now carry technician assignments and the
-// technician portal resolves accounts by email, so cached demo state from an
-// older session is discarded and the new seed data is used.
-const STORAGE_KEY = "inventoryos-state-v3";
+// Bumped to v4: roles collapsed to super-admin / user / technician with
+// department-scoped users (department + sub-department) and per-user passwords.
+const STORAGE_KEY = "inventoryos-state-v4";
+
+/**
+ * Repair / migration for the "Stock Out shows completed & solved issues" rule.
+ *
+ * A faulty asset is booked IN to Stock In when its repair ticket is raised
+ * (`reportFaultyAsset`). The matching Stock Out entry is written when the Admin
+ * closes the ticket (`closeTicket`). Tickets that were already closed before
+ * that link existed never produced a Stock Out row, so they are backfilled here
+ * once on load. Tickets that already have a Stock Out row for their reference
+ * are skipped, so nothing is duplicated.
+ */
+function backfillClosedTicketStockOut(state: AppState): AppState {
+  const alreadyBooked = new Set(state.stockOut.map((r) => r.reference));
+  const records: StockOutRecord[] = [];
+
+  for (const t of state.tickets) {
+    if (t.status !== "closed" || !t.closedAt) continue;
+    if (alreadyBooked.has(t.id)) continue;
+    const purpose = t.resolution?.trim() || t.technicianRemark?.trim() || t.title;
+    for (const ta of t.assets) {
+      records.push({
+        id: uid("SOR"),
+        reference: t.id,
+        date: t.closedAt,
+        itemName: ta.name,
+        recipient: t.closedBy ?? "Technician",
+        department: t.department,
+        purpose,
+        quantity: 1,
+        status: "issued",
+      });
+    }
+  }
+
+  if (records.length === 0) return state;
+  return { ...state, stockOut: [...records.reverse(), ...state.stockOut] };
+}
 
 function loadInitialState(): AppState {
   if (typeof window === "undefined") return initialState;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return initialState;
+    if (!raw) return backfillClosedTicketStockOut(initialState);
     const parsed = JSON.parse(raw) as Partial<AppState>;
     if (!parsed || !Array.isArray(parsed.inventory) || !Array.isArray(parsed.departments) || !Array.isArray(parsed.users)) {
-      return initialState;
+      return backfillClosedTicketStockOut(initialState);
     }
-    return { ...initialState, ...parsed } as AppState;
+    return backfillClosedTicketStockOut({ ...initialState, ...parsed } as AppState);
   } catch {
-    return initialState;
+    return backfillClosedTicketStockOut(initialState);
   }
 }
 
@@ -626,28 +676,53 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const can = React.useCallback((p: Permission) => permissions.includes(p), [permissions]);
 
   const visibleDepartments = React.useMemo(() => {
-    if (role === "super-admin" || role === "admin" || role === "department-manager" || role === "department-user") {
+    // Super Admin (root) sees everything. Legacy admin too.
+    if (role === "super-admin" || role === "admin") {
       return state.departments.map((d) => d.name);
     }
+    // Scoped user: ONLY its own department. No "all".
+    if (role === "user" || role === "department-manager" || role === "department-user") {
+      if (state.user) return [state.user.department];
+      return [];
+    }
+    // Technician: no department scope in admin panel (portal only).
+    if (role === "technician") return [];
     if (state.user) return [state.user.department];
     return state.departments.map((d) => d.name);
   }, [role, state.user, state.departments]);
 
-  const departmentOptions = React.useMemo(() => ["all", ...visibleDepartments], [visibleDepartments]);
+  const departmentOptions = React.useMemo(() => {
+    // Scoped users get a single fixed option — no "all".
+    if (role === "user" || role === "department-manager" || role === "department-user" || role === "technician") {
+      return visibleDepartments;
+    }
+    return ["all", ...visibleDepartments];
+  }, [visibleDepartments, role]);
 
   const activeDepartment = React.useMemo(() => {
+    // Scoped user is pinned to its own department, cannot switch.
+    if (role === "user" || role === "department-manager" || role === "department-user") {
+      return visibleDepartments[0] ?? state.user?.department ?? "all";
+    }
+    if (role === "technician") return state.user?.department ?? "all";
     if (state.department !== "all" && visibleDepartments.includes(state.department)) return state.department;
     if (visibleDepartments.length === 1) return visibleDepartments[0];
-    if (role === "department-manager" || role === "department-user") return visibleDepartments[0] ?? "all";
     return "all";
-  }, [state.department, visibleDepartments, role]);
+  }, [state.department, visibleDepartments, role, state.user]);
 
   const allItems = React.useMemo(() => state.inventory.filter((i) => !i.archived), [state.inventory]);
 
   const departmentItems = React.useMemo(() => {
+    // Super-admin / admin see all (or the selected dept filter).
     if (activeDepartment === "all") return allItems;
+    const userSub = state.user?.subDepartment;
+    // Scoped user with a sub-department sees only that sub-department's items
+    // within its department; otherwise the whole department.
+    if (userSub && (role === "user" || role === "department-manager" || role === "department-user")) {
+      return allItems.filter((i) => i.department === activeDepartment && (i.subDepartment ?? "") === userSub);
+    }
     return allItems.filter((i) => i.department === activeDepartment);
-  }, [allItems, activeDepartment]);
+  }, [allItems, activeDepartment, state.user, role]);
 
   const log = React.useCallback(
     (action: string, module: string, item: string, department?: string) => {
@@ -658,23 +733,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 
   /**
-   * Dummy authentication for the demo app.
+   * Unified email + password authentication (same UI on every login page).
    *
-   * Technicians sign in to the Technician Portal with their OWN email address
-   * plus the shared demo password (`TECHNICIAN_DEMO_PASSWORD`). The resolved
-   * `User.id` is the technician's id, which is what every technician-facing
-   * screen uses to scope tickets/issues to that person. Technicians created by
-   * an Admin are resolved from live state too, so they can sign in as well.
-   *
-   * Staff accounts keep using the `demoAccounts` table.
+   * - Super Admin (root): `admin@example.com / password` — full access.
+   * - User (department-scoped): any entry in `state.users` (Super Admin creates
+   *   them with email + password + department + sub-department). Sees ONLY its
+   *   own department's data. Legacy department-manager / department-user seed
+   *   accounts keep working with the default password.
+   * - Technician (issue resolver only): any entry in `state.technicians` with
+   *   its own email + password (default TECHNICIAN_DEMO_PASSWORD). Scoped to
+   *   assigned tickets inside /technician/*.
    */
   const login = React.useCallback(
     (email: string, password: string) => {
       const normalized = email.trim().toLowerCase();
 
+      // 1) Technician — resolve from LIVE state so Super Admin-created
+      // technicians can sign in immediately.
       const technician = state.technicians.find((t) => t.email.trim().toLowerCase() === normalized);
       if (technician) {
-        if (password !== TECHNICIAN_DEMO_PASSWORD) return false;
+        const expected = technician.password ?? TECHNICIAN_DEMO_PASSWORD;
+        if (password !== expected) return false;
         if (technician.status !== "Active") {
           toast.error(`${technician.name} is deactivated. Contact your administrator.`);
           return false;
@@ -696,14 +775,53 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return true;
       }
 
+      // 2) Staff user — resolve from LIVE state (Super Admin-created users).
+      const liveUser = state.users.find((u) => u.email.trim().toLowerCase() === normalized);
+      if (liveUser) {
+        const expected = liveUser.password ?? DEFAULT_USER_PASSWORD;
+        // Back-compat: legacy demoAccounts passwords also accepted.
+        const demoMatch = demoAccounts.find((a) => a.email.toLowerCase() === normalized && a.password === password);
+        if (password !== expected && !demoMatch) return false;
+        if (liveUser.status !== "active") {
+          toast.error(`${liveUser.name} is deactivated. Contact your administrator.`);
+          return false;
+        }
+        // Normalise legacy department roles to the canonical "user" role.
+        // Super-admin stays super-admin.
+        const canonicalRole = liveUser.role === "super-admin" || liveUser.role === "admin"
+          ? liveUser.role
+          : ("user" as Role);
+        dispatch({ type: "LOGIN", user: { ...liveUser, role: liveUser.role === "super-admin" ? liveUser.role : canonicalRole } });
+        return true;
+      }
+
+      // 3) Fallback to demoAccounts table (first-run seeds).
       const account = demoAccounts.find((a) => a.email.toLowerCase() === normalized && a.password === password && a.role !== "technician");
       if (!account) return false;
-      const user = seedUsers.find((u) => u.email.toLowerCase() === normalized);
-      if (!user) return false;
-      dispatch({ type: "LOGIN", user });
+      const seedUser = seedUsers.find((u) => u.email.toLowerCase() === normalized);
+      if (seedUser) {
+        const canonicalRole = seedUser.role === "super-admin" || seedUser.role === "admin" ? seedUser.role : ("user" as Role);
+        dispatch({ type: "LOGIN", user: { ...seedUser, role: seedUser.role === "super-admin" ? seedUser.role : canonicalRole } });
+        return true;
+      }
+      // Demo account with no seed user row (e.g. col.trg) — synthesize a scoped user.
+      dispatch({
+        type: "LOGIN",
+        user: {
+          id: uid("USR"),
+          name: account.name,
+          email: account.email,
+          employeeId: uid("EMP"),
+          department: account.department ?? "ADM BR",
+          role: account.role === "super-admin" ? "super-admin" : ("user" as Role),
+          status: "active",
+          lastActive: new Date().toISOString(),
+          color: "#4f46e5",
+        },
+      });
       return true;
     },
-    [state.technicians]
+    [state.technicians, state.users]
   );
 
 const logout = React.useCallback(() => dispatch({ type: "LOGOUT" }), []);
@@ -993,7 +1111,28 @@ const logout = React.useCallback(() => dispatch({ type: "LOGOUT" }), []);
             toLocation: asset.location,
             performedBy: state.user?.name ?? "Admin",
             date: now,
-            remarks: `Repaired and returned \u2014 ticket ${id} closed. ${resolution}`.trim(),
+            remarks: `Repaired and returned — ticket ${id} closed. ${resolution}`.trim(),
+          },
+        });
+      }
+
+      // Mirror of `reportFaultyAsset`: a faulty asset is booked IN to Stock In
+      // when the repair ticket is raised, so the moment the Admin closes the
+      // ticket the repaired item is booked OUT again. Without this the Stock Out
+      // page never shows anything that was actually resolved.
+      for (const ta of t.assets) {
+        dispatch({
+          type: "ADD_STOCK_OUT_RECORD",
+          record: {
+            id: uid("SOR"),
+            reference: id,
+            date: now,
+            itemName: ta.name,
+            recipient: state.technicians.find((tech) => tech.id === t.technicianId)?.name ?? "Technician",
+            department: t.department,
+            purpose: resolution.trim() || "Repaired and returned",
+            quantity: 1,
+            status: "issued",
           },
         });
       }

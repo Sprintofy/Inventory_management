@@ -57,9 +57,11 @@ function NavLink({
 const roleLabels: Record<string, string> = {
   "super-admin": "Super Admin",
   admin: "Admin",
-  "department-manager": "Department",
-  "department-user": "Department User",
+  user: "User",
+  "department-manager": "User",
+  "department-user": "User",
   viewer: "Viewer",
+  technician: "Technician",
 };
 
 function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {

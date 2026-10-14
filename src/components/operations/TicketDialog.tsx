@@ -30,29 +30,42 @@ const schema = z.object({
 type SV = z.output<typeof schema>;
 
 export function TicketDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
-  const { state, addTicket, subDepartmentsFor } = useApp();
+  const { state, addTicket, subDepartmentsFor, activeDepartment, user } = useApp();
+  const isScopedUser = user && user.role !== "super-admin" && (user.role === "user" || user.role === "department-manager" || user.role === "department-user");
   const form = useForm<SV>({
     resolver: zodResolver(schema) as unknown as Resolver<SV>,
-    defaultValues: { title: "", description: "", category: "", department: "", subDepartment: "", priority: "medium" },
+    defaultValues: { title: "", description: "", category: "General", department: "", subDepartment: "", priority: "medium" },
   });
   const [issues, setIssues] = React.useState<string[]>([""]);
   const [issuesError, setIssuesError] = React.useState<string | null>(null);
+  const [productIds, setProductIds] = React.useState<string[]>([]);
 
   const selectedDepartment = form.watch("department");
-  const subOptions = selectedDepartment ? subDepartmentsFor(selectedDepartment) : [];
+  const effectiveDept = isScopedUser ? activeDepartment : selectedDepartment;
+  const subOptions = effectiveDept && effectiveDept !== "all" ? subDepartmentsFor(effectiveDept) : [];
 
   React.useEffect(() => {
     if (open) {
-      form.reset({ title: "", description: "", category: "", department: "", subDepartment: "", priority: "medium", technicianId: "" });
+      form.reset({ title: "", description: "", category: "General", department: isScopedUser ? activeDepartment : "", subDepartment: user?.subDepartment ?? "", priority: "medium", technicianId: "" });
       setIssues([""]);
       setIssuesError(null);
+      setProductIds([]);
     }
-  }, [open, form]);
+  }, [open, form, isScopedUser, activeDepartment, user?.subDepartment]);
 
   const updateIssue = (i: number, value: string) => {
     setIssues((prev) => prev.map((v, idx) => (idx === i ? value : v)));
     if (issuesError) setIssuesError(null);
   };
+
+  const toggleProduct = (id: string) => {
+    setProductIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const productOptions = React.useMemo(() => {
+    const scope = isScopedUser ? activeDepartment : (selectedDepartment || "all");
+    return state.inventory.filter((i) => !i.archived && (scope === "all" || i.department === scope)).slice(0, 100);
+  }, [state.inventory, isScopedUser, activeDepartment, selectedDepartment]);
 
   const onSubmit = (values: SV) => {
     const trimmed = issues.map((t) => t.trim()).filter((t) => t.length > 0);
@@ -60,14 +73,16 @@ export function TicketDialog({ open, onOpenChange }: { open: boolean; onOpenChan
       setIssuesError("Add at least one issue");
       return;
     }
+    const dept = isScopedUser ? activeDepartment : values.department;
     const now = new Date().toISOString();
     const ticketIssues: TicketIssue[] = trimmed.map((text) => ({ id: uid("ISS"), title: text, priority: values.priority as RequestPriority, status: "open", createdAt: now }));
+    const productSuffix = productIds.length > 0 ? ` (${productIds.length} product${productIds.length === 1 ? "" : "s"})` : "";
     addTicket({
-      title: values.title,
-      description: values.description,
-      category: values.category,
-      department: values.department,
-      subDepartment: values.subDepartment || undefined,
+      title: `${values.title}${productSuffix}`,
+      description: `${values.description}${productIds.length > 0 ? `\n\nProducts: ${productIds.map((id) => state.inventory.find((i) => i.id === id)?.name ?? id).join(", ")}` : ""}`,
+      category: values.category || "General",
+      department: dept,
+      subDepartment: (isScopedUser ? (user?.subDepartment || values.subDepartment) : values.subDepartment) || undefined,
       priority: values.priority as RequestPriority,
       issues: ticketIssues,
       assets: [],
@@ -122,6 +137,21 @@ export function TicketDialog({ open, onOpenChange }: { open: boolean; onOpenChan
                 <Plus className="size-3.5" /> Add Issue
               </Button>
             </FormItem>
+            <FormItem>
+              <FormLabel>Products (multiple select)</FormLabel>
+              <div className="max-h-36 space-y-1 overflow-y-auto rounded-md border p-2">
+                {productOptions.length === 0 && <p className="text-muted-foreground text-xs">No products in scope.</p>}
+                {productOptions.map((p) => (
+                  <label key={p.id} className="flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-xs hover:bg-accent">
+                    <input type="checkbox" checked={productIds.includes(p.id)} onChange={() => toggleProduct(p.id)} className="size-3.5 accent-primary" />
+                    <span className="flex-1 truncate font-medium">{p.name}</span>
+                    <span className="text-muted-foreground font-mono text-[10px]">{p.sku}</span>
+                  </label>
+                ))}
+              </div>
+              {productIds.length > 0 && <p className="text-muted-foreground text-[11px]">{productIds.length} product{productIds.length === 1 ? "" : "s"} selected</p>}
+            </FormItem>
+            {!isScopedUser && (
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="category" render={({ field }) => (
                 <FormItem>
@@ -156,13 +186,17 @@ export function TicketDialog({ open, onOpenChange }: { open: boolean; onOpenChan
                 </FormItem>
               )} />
             </div>
-            {subOptions.length > 0 && (
+            )}
+            {isScopedUser && (
+              <p className="bg-muted rounded-md px-3 py-2 text-xs">Department: <span className="font-medium">{activeDepartment}{user?.subDepartment ? ` / ${user.subDepartment}` : ""}</span> (auto)</p>
+            )}
+            {subOptions.length > 0 && !isScopedUser && (
               <FormField control={form.control} name="subDepartment" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Sub-department <span className="text-muted-foreground font-normal">(routed destination)</span></FormLabel>
                   <FormControl>
                     <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger className="w-full"><SelectValue placeholder={`Route to ${selectedDepartment} sub-department`} /></SelectTrigger>
+                      <SelectTrigger className="w-full"><SelectValue placeholder={`Route to ${effectiveDept} sub-department`} /></SelectTrigger>
                       <SelectContent>
                         {subOptions.map((s) => (
                           <SelectItem key={s.id} value={s.name}>{s.name} ({s.code})</SelectItem>

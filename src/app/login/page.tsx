@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Boxes, Eye, EyeOff, KeyRound, Lock, Mail, ShieldCheck, UserRound, Wrench } from "lucide-react";
+import { Boxes, Eye, EyeOff, KeyRound, Lock, Mail, ShieldCheck, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,15 +21,13 @@ const loginSchema = z.object({
 type LoginValues = z.infer<typeof loginSchema>;
 
 const demoList = [
-  { label: "Super Admin", email: demoAccounts[0].email, password: demoAccounts[0].password, icon: ShieldCheck, color: "bg-danger/10 text-danger" },
-  { label: "Department", email: demoAccounts[1].email, password: demoAccounts[1].password, icon: UserRound, color: "bg-warning/15 text-warning" },
-  { label: "Department User", email: demoAccounts[2].email, password: demoAccounts[2].password, icon: UserRound, color: "bg-primary/10 text-primary" },
+  { label: "Super Admin", email: "admin@example.com", password: "password", icon: ShieldCheck, color: "bg-danger/10 text-danger" },
   { label: "Technician", email: "technician@gmail.com", password: "123456", icon: Wrench, color: "bg-warning/15 text-warning" },
 ];
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useApp();
+  const { login, state } = useApp();
   const [showPassword, setShowPassword] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -41,9 +39,26 @@ export default function LoginPage() {
   const onSubmit = (values: LoginValues) => {
     setError(null);
     if (login(values.email, values.password)) {
-      const account = demoAccounts.find((a) => a.email === values.email && a.password === values.password);
-      const isDeptRole = account?.role === "department-manager" || account?.role === "department-user";
-      router.push(isDeptRole ? "/departments" : "/dashboard");
+      // Resolve role from live state (not demo table) so Super Admin-created
+      // users/technicians route correctly.
+      const normalized = values.email.trim().toLowerCase();
+      const tech = state.technicians.find((t) => t.email.trim().toLowerCase() === normalized);
+      if (tech) {
+        router.push("/technician/dashboard");
+        return;
+      }
+      const u = state.users.find((x) => x.email.trim().toLowerCase() === normalized);
+      const role = u?.role ?? demoAccounts.find((a) => a.email.toLowerCase() === normalized)?.role;
+      if (role === "technician") {
+        router.push("/technician/dashboard");
+        return;
+      }
+      if (role === "super-admin" || role === "admin") {
+        router.push("/dashboard");
+        return;
+      }
+      // Scoped user lands on its own department data.
+      router.push("/dashboard");
     } else {
       setError("Invalid credentials. Use one of the demo accounts below.");
     }

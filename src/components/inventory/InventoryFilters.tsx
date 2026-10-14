@@ -16,7 +16,6 @@ export interface InventoryFiltersState {
   department: string;
   category: string;
   location: string;
-  status: string;
   supplier: string;
   dateFrom: string;
   dateTo: string;
@@ -26,7 +25,6 @@ export const emptyFilters: InventoryFiltersState = {
   department: "all",
   category: "all",
   location: "all",
-  status: "all",
   supplier: "all",
   dateFrom: "",
   dateTo: "",
@@ -40,7 +38,7 @@ export function InventoryFilters({
   onChange: (f: InventoryFiltersState) => void;
 }) {
   const { state, visibleDepartments } = useApp();
-  const activeCount = Object.entries(filters).filter(([k, v]) => k !== "status" || v !== "all").filter(([, v]) => v !== "all" && v !== "").length;
+  const activeCount = Object.entries(filters).filter(([, v]) => v !== "all" && v !== "").length;
 
   const set = (patch: Partial<InventoryFiltersState>) => onChange({ ...filters, ...patch });
 
@@ -95,16 +93,6 @@ export function InventoryFilters({
                 <SelectContent>
                   <SelectItem value="all">All</SelectItem>
                   {state.locations.map((l) => <SelectItem key={l.id} value={l.name}>{l.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Stock Status</Label>
-              <Select value={filters.status} onValueChange={(v) => set({ status: v })}>
-                <SelectTrigger size="sm" className="w-full"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  {(["in-stock", "low-stock", "out-of-stock", "overstock"] as StockStatus[]).map((s) => <SelectItem key={s} value={s}>{s.replace("-", " ")}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

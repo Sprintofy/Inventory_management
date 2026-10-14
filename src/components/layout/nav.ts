@@ -4,19 +4,15 @@ import {
   Package,
   PackagePlus,
   PackageMinus,
-  SlidersHorizontal,
   Ticket,
   ShoppingCart,
   Truck,
-  Boxes,
   FolderTree,
-  MapPin,
   Building2,
   Users,
   BarChart3,
   ScrollText,
   Settings,
-  LifeBuoy,
   User,
 } from "lucide-react";
 import type { Role } from "@/types";
@@ -34,30 +30,34 @@ export interface NavGroup {
   items: NavItem[];
 }
 
-const ALL: Role[] = ["super-admin", "admin", "department-manager", "department-user", "viewer"];
-const MANAGER: Role[] = ["super-admin", "admin", "department-manager"];
+const ALL: Role[] = ["super-admin", "admin", "user", "department-manager", "department-user", "viewer"];
+const MANAGER: Role[] = ["super-admin", "admin"];
 const ADMIN: Role[] = ["super-admin", "admin"];
-const OP_STAFF: Role[] = ["super-admin", "admin", "department-manager"];
-const ADMIN_ONLY: Role[] = ["admin"];
-const DEPT_ROLES: Role[] = ["super-admin", "admin", "department-manager", "department-user"];
+const OP_STAFF: Role[] = ["super-admin", "admin"];
+const ADMIN_ONLY: Role[] = ["super-admin", "admin"];
+const DEPT_ROLES: Role[] = ["super-admin", "admin"];
+// Department-scoped user: dashboard + own-dept inventory / stock / reports only.
+// Tickets, Purchase Orders, Suppliers removed for department login.
+const USER_SCOPED: Role[] = ["super-admin", "admin", "user", "department-manager", "department-user"];
 
 export const navGroups: NavGroup[] = [
   {
     label: "Overview",
-    items: [{ title: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ALL, keywords: ["home", "overview", "main"] }],
+    items: [{ title: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: USER_SCOPED, keywords: ["home", "overview", "main"] }],
   },
   {
     label: "Inventory",
     items: [
-      { title: "Inventory", href: "/inventory", icon: Package, roles: ALL, keywords: ["stock", "items", "sku", "products"] },
-      { title: "Stock In", href: "/stock-in", icon: PackagePlus, roles: ADMIN, keywords: ["stock", "inbound", "receive", "receipts", "goods"] },
-      { title: "Stock Out", href: "/stock-out", icon: PackageMinus, roles: ADMIN, keywords: ["stock", "outbound", "issue", "issued", "goods"] },
-      { title: "Adjustments", href: "/adjustments", icon: SlidersHorizontal, roles: MANAGER, keywords: ["adjust", "correction", "write-off"] },
+      // Inventory shows counts for All (super-admin) or own dept (user).
+      { title: "Inventory", href: "/inventory", icon: Package, roles: USER_SCOPED, keywords: ["stock", "items", "sku", "products"] },
+      { title: "Stock In", href: "/stock-in", icon: PackagePlus, roles: USER_SCOPED, keywords: ["stock", "inbound", "receive", "receipts", "goods"] },
+      { title: "Stock Out", href: "/stock-out", icon: PackageMinus, roles: USER_SCOPED, keywords: ["stock", "outbound", "issue", "issued", "goods"] },
     ],
   },
   {
     label: "Operations",
     items: [
+      // Tickets visible to super-admin only — removed for department login.
       { title: "Tickets", href: "/tickets", icon: Ticket, roles: ADMIN, keywords: ["issue", "support", "complaint", "service"] },
       { title: "Purchase Orders", href: "/purchase-orders", icon: ShoppingCart, roles: ADMIN_ONLY, keywords: ["po", "order", "orders", "procurement", "buy"] },
       { title: "Suppliers", href: "/suppliers", icon: Truck, roles: ADMIN_ONLY, keywords: ["vendor", "vendors", "supplier"] },
@@ -66,9 +66,7 @@ export const navGroups: NavGroup[] = [
   {
     label: "Assets",
     items: [
-      { title: "Assets", href: "/assets", icon: Boxes, roles: ["admin", "viewer"], keywords: ["equipment", "hardware", "device"] },
       { title: "Categories", href: "/categories", icon: FolderTree, roles: OP_STAFF, keywords: ["category", "type", "classification"] },
-      { title: "Locations", href: "/locations", icon: MapPin, roles: OP_STAFF, keywords: ["location", "site", "warehouse", "store", "shelf"] },
     ],
   },
   {
@@ -81,7 +79,7 @@ export const navGroups: NavGroup[] = [
   },
   {
     label: "Analytics",
-    items: [{ title: "Reports", href: "/reports", icon: BarChart3, roles: ALL, keywords: ["report", "analytics", "insights"] }],
+    items: [{ title: "Reports", href: "/reports", icon: BarChart3, roles: USER_SCOPED, keywords: ["report", "analytics", "insights"] }],
   },
   {
     label: "System",
@@ -92,7 +90,8 @@ export const navGroups: NavGroup[] = [
   },
 ];
 
-export const bottomNav: NavItem[] = [{ title: "Help", href: "/help", icon: LifeBuoy, roles: ALL }];
+// Help tab removed (Mar 11/12). Technicians use /technician/login portal.
+export const bottomNav: NavItem[] = [];
 
 export function navForRole(role: Role): NavGroup[] {
   return navGroups

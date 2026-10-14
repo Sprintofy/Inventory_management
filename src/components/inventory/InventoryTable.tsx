@@ -16,7 +16,6 @@ import {
   Pencil,
   PackageMinus,
   PackagePlus,
-  Archive,
   Building2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -69,7 +68,7 @@ function defaultColumns(): ColumnKey[] {
 }
 
 export function InventoryTable({ items, loading, search, onEdit, onStockIn, onStockOut }: InventoryTableProps) {
-  const { state, archiveItems, assignDepartment, changeLocation, can } = useApp();
+  const { state, assignDepartment, changeLocation, can } = useApp();
   const router = useRouter();
   const [columns, setColumns] = React.useState<ColumnKey[]>(defaultColumns());
   const [sortKey, setSortKey] = React.useState<SortKey>("name");
@@ -77,7 +76,7 @@ export function InventoryTable({ items, loading, search, onEdit, onStockIn, onSt
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(10);
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
-  const [bulkDialog, setBulkDialog] = React.useState<null | "department" | "location" | "archive">(null);
+  const [bulkDialog, setBulkDialog] = React.useState<null | "department" | "location">(null);
   const [bulkValue, setBulkValue] = React.useState("");
 
   React.useEffect(() => {
@@ -163,10 +162,6 @@ export function InventoryTable({ items, loading, search, onEdit, onStockIn, onSt
       changeLocation([...selected], bulkValue);
       toast.success(`Moved ${selected.size} items to ${bulkValue}`);
     }
-    if (bulkDialog === "archive") {
-      archiveItems([...selected]);
-      toast.success(`Archived ${selected.size} items`);
-    }
     setBulkDialog(null);
     setBulkValue("");
     setSelected(new Set());
@@ -183,7 +178,6 @@ export function InventoryTable({ items, loading, search, onEdit, onStockIn, onSt
             <>
               <Button size="sm" variant="outline" onClick={() => setBulkDialog("department")}><Building2 className="size-3.5" /> Assign Department</Button>
               <Button size="sm" variant="outline" onClick={() => setBulkDialog("location")}><MapPin className="size-3.5" /> Change Location</Button>
-              <Button size="sm" variant="outline" className="text-danger" onClick={() => setBulkDialog("archive")}><Archive className="size-3.5" /> Archive</Button>
             </>
           )}
           <Button size="sm" variant="ghost" className="ml-auto" onClick={() => setSelected(new Set())}>Clear</Button>
@@ -330,13 +324,6 @@ export function InventoryTable({ items, loading, search, onEdit, onStockIn, onSt
                               <DropdownMenuSeparator />
                               <DropdownMenuItem onClick={() => onStockIn(item)}><PackagePlus className="size-3.5" /> Stock In</DropdownMenuItem>
                               <DropdownMenuItem onClick={() => onStockOut(item)}><PackageMinus className="size-3.5" /> Stock Out</DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="text-destructive focus:text-destructive"
-                                onClick={() => { archiveItems([item.id]); toast.success(`${item.name} archived`); }}
-                              >
-                                <Archive className="size-3.5" /> Archive
-                              </DropdownMenuItem>
                             </>
                           )}
                         </DropdownMenuContent>
@@ -360,15 +347,12 @@ export function InventoryTable({ items, loading, search, onEdit, onStockIn, onSt
             <DialogTitle>
               {bulkDialog === "department" && "Assign Department"}
               {bulkDialog === "location" && "Change Location"}
-              {bulkDialog === "archive" && "Archive Items"}
             </DialogTitle>
             <DialogDescription>
-              {bulkDialog === "archive"
-                ? `Archive ${selected.size} selected item${selected.size !== 1 ? "s" : ""}? Archived items are hidden from inventory.`
-                : `Apply to ${selected.size} selected item${selected.size !== 1 ? "s" : ""}.`}
+              {`Apply to ${selected.size} selected item${selected.size !== 1 ? "s" : ""}.`}
             </DialogDescription>
           </DialogHeader>
-          {bulkDialog !== "archive" && (
+          {(
             <div className="space-y-2">
               <Label>{bulkDialog === "department" ? "Department" : "Location"}</Label>
               <Select value={bulkValue} onValueChange={setBulkValue}>
@@ -384,11 +368,10 @@ export function InventoryTable({ items, loading, search, onEdit, onStockIn, onSt
           <DialogFooter>
             <Button variant="outline" onClick={() => setBulkDialog(null)}>Cancel</Button>
             <Button
-              className={bulkDialog === "archive" ? "bg-danger hover:bg-danger/90 text-white" : undefined}
-              disabled={bulkDialog !== "archive" && !bulkValue}
+              disabled={!bulkValue}
               onClick={runBulkAction}
             >
-              {bulkDialog === "archive" ? <><Archive className="size-4" /> Archive</> : <><Check className="size-4" /> Apply</>}
+              {<><Check className="size-4" /> Apply</>}
             </Button>
           </DialogFooter>
         </DialogContent>

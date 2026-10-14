@@ -12,6 +12,9 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SearchInput } from "@/components/ui/SearchInput";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { TicketDialog } from "@/components/operations/TicketDialog";
 import { CloseTicketDialog } from "@/components/operations/CloseTicketDialog";
 import { useApp } from "@/store/app-store";
@@ -34,24 +37,38 @@ type StatusFilter = "all" | TicketStatus;
 const statusTabs: StatusFilter[] = ["all", "open", "in-progress", "partially-resolved", "resolved", "closed"];
 
 export default function TicketsPage() {
-  const { state, activeDepartment, can, updateTicket } = useApp();
+  const { state, activeDepartment, can, updateTicket, user, role } = useApp();
   const router = useRouter();
   const loading = useFakeLoading();
   const [statusFilter, setStatusFilter] = React.useState<StatusFilter>("all");
+  const [priorityFilter, setPriorityFilter] = React.useState("all");
+  const [dateFrom, setDateFrom] = React.useState("");
+  const [dateTo, setDateTo] = React.useState("");
+  const [search, setSearch] = React.useState("");
   const [page, setPage] = React.useState(1);
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [closeTicket, setCloseTicket] = React.useState<TicketRecord | null>(null);
   const pageSize = 10;
 
-  const admin = can("tickets.manage");
+  const isDeptUser = role === "user" || role === "department-manager" || role === "department-user";
+  // Generate Ticket removed for department login — super-admin only.
+  const canGenerate = role === "super-admin" || role === "admin";
+  const admin = canGenerate;
+  const scopeLabel = activeDepartment === "all" ? "All Departments" : `${activeDepartment}${user?.subDepartment ? ` / ${user.subDepartment}` : ""}`;
 
   const tickets = React.useMemo(() => {
+    const term = search.trim().toLowerCase();
     return state.tickets.filter((t) => {
       if (statusFilter !== "all" && t.status !== statusFilter) return false;
+      if (priorityFilter !== "all" && t.priority !== priorityFilter) return false;
       if (activeDepartment !== "all" && t.department !== activeDepartment) return false;
+      if (user?.subDepartment && t.subDepartment && t.subDepartment !== user.subDepartment) return false;
+      if (term && !(t.title.toLowerCase().includes(term) || t.id.toLowerCase().includes(term) || t.description.toLowerCase().includes(term))) return false;
+      if (dateFrom && new Date(t.createdAt) < new Date(dateFrom)) return false;
+      if (dateTo && new Date(t.createdAt) > new Date(dateTo + "T23:59:59")) return false;
       return true;
     });
-  }, [state.tickets, statusFilter, activeDepartment]);
+  }, [state.tickets, statusFilter, priorityFilter, activeDepartment, search, user?.subDepartment, dateFrom, dateTo]);
 
   const paged = tickets.slice((page - 1) * pageSize, page * pageSize);
 
@@ -60,28 +77,50 @@ export default function TicketsPage() {
     toast.success(`Exported ${tickets.length} tickets to Excel`);
   };
 
+  const doImport = () => toast.success("Import: choose a CSV to bulk-import tickets (demo)");
+
   return (
     <div className="space-y-5">
       <PageHeader
         title="Tickets"
-        description="One ticket can carry many assets, and each asset can have many independent issues."
+        description={`Support tickets · ${scopeLabel} · ${tickets.length} total`}
         breadcrumb={[{ label: "Tickets" }]}
         actions={
           <>
-            <Button variant="outline" onClick={exportExcel}><FileDown className="size-4" /> Export to Excel</Button>
+            <Button variant="outline" onClick={doImport}><FileDown className="size-4" /> Import</Button>
+            <Button variant="outline" onClick={exportExcel}><FileDown className="size-4" /> Export</Button>
+            <Button variant="outline" onClick={exportExcel}><FileDown className="size-4" /> Export Excel</Button>
             {admin && <Button onClick={() => setDialogOpen(true)}><Plus className="size-4" /> Generate Ticket</Button>}
           </>
         }
       />
 
-      <div className="flex justify-end">
-        <Tabs value={statusFilter} onValueChange={(v) => { setStatusFilter(v as StatusFilter); setPage(1); }}>
-          <TabsList>
-            {statusTabs.map((s) => (
-              <TabsTrigger key={s} value={s} className="capitalize">{s.replace("-", " ")}</TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <SearchInput value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} onClear={() => setSearch("")} placeholder="Search tickets by title, ID…" className="md:max-w-sm" />
+          <p className="text-muted-foreground text-xs tabular-nums">{tickets.length} ticket{tickets.length !== 1 ? "s" : ""} · {scopeLabel}</p>
+        </div>
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={priorityFilter} onValueChange={(v) => { setPriorityFilter(v); setPage(1); }}>
+              <SelectTrigger className="h-8 w-[140px] text-xs"><SelectValue placeholder="Priority" /></SelectTrigger>
+              <SelectContent><SelectItem value="all">All Priority</SelectItem><SelectItem value="low">Low</SelectItem><SelectItem value="medium">Medium</SelectItem><SelectItem value="high">High</SelectItem><SelectItem value="critical">Critical</SelectItem></SelectContent>
+            </Select>
+            <Input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1); }} className="h-8 w-auto text-xs" aria-label="From date" />
+            <span className="text-muted-foreground text-xs">to</span>
+            <Input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }} className="h-8 w-auto text-xs" aria-label="To date" />
+            {(priorityFilter !== "all" || dateFrom || dateTo || search || statusFilter !== "all") && (
+              <Button variant="ghost" size="sm" className="text-muted-foreground h-8 text-xs" onClick={() => { setSearch(""); setPriorityFilter("all"); setDateFrom(""); setDateTo(""); setStatusFilter("all"); setPage(1); }}>Clear all</Button>
+            )}
+          </div>
+          <Tabs value={statusFilter} onValueChange={(v) => { setStatusFilter(v as StatusFilter); setPage(1); }}>
+            <TabsList>
+              {statusTabs.map((s) => (
+                <TabsTrigger key={s} value={s} className="capitalize">{s.replace("-", " ")}</TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </div>
       </div>
 
       <div className="rounded-xl border bg-card shadow-sm">

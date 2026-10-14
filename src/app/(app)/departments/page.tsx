@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, type Resolver } from "react-hook-form";
 import { z } from "zod";
-import { Building2, Layers, MoreHorizontal, Pencil, Plus, Trash2, Users as UsersIcon } from "lucide-react";
+import { Building2, FileDown, Layers, MoreHorizontal, Pencil, Plus, Trash2, Users as UsersIcon } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,7 +21,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useApp } from "@/store/app-store";
 import { useFakeLoading } from "@/hooks/use-fake-loading";
-import { formatNumber, uid } from "@/lib/utils";
+import { formatNumber, uid, downloadCSV } from "@/lib/utils";
 import { SubDepartmentDialog } from "@/components/departments/SubDepartmentDialog";
 import type { Department, SubDepartment } from "@/types";
 
@@ -80,9 +80,17 @@ export default function DepartmentsPage() {
     <div className="space-y-5">
       <PageHeader
         title="Departments"
-        description="Manage departments, their managers and inventory ownership."
+        description={`Manage departments · ${departments.length} total with inventory counts`}
         breadcrumb={[{ label: "Departments" }]}
-        actions={can("departments.manage") ? <Button onClick={() => { setEditing(null); setDialogOpen(true); }}><Plus className="size-4" /> Add Department</Button> : undefined}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => {
+              downloadCSV(`departments-${new Date().toISOString().slice(0, 10)}.csv`, departments.map((d) => ({ Name: d.name, Code: d.code, Manager: d.manager, SubDepartments: d.subDepartments.length, Items: state.inventory.filter((i) => i.department === d.name && !i.archived).length })));
+              toast.success(`Exported ${departments.length} departments`);
+            }}><FileDown className="size-4" /> Export</Button>
+            {can("departments.manage") ? <Button onClick={() => { setEditing(null); setDialogOpen(true); }}><Plus className="size-4" /> Add Department</Button> : undefined}
+          </div>
+        }
       />
 
       {loading ? (

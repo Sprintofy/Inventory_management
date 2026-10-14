@@ -7,24 +7,20 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SearchInput } from "@/components/ui/SearchInput";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InventoryFilters, emptyFilters, type InventoryFiltersState } from "@/components/inventory/InventoryFilters";
 import { InventoryTable } from "@/components/inventory/InventoryTable";
 import { InventoryForm } from "@/components/inventory/InventoryForm";
 import { InventoryImportDialog } from "@/components/inventory/InventoryImportDialog";
 import { StockInDialog, StockOutDialog } from "@/components/inventory/StockDialogs";
-import { DailyStockView } from "@/components/inventory/DailyStockView";
-import { MovementHistory } from "@/components/inventory/MovementHistory";
 import { useApp } from "@/store/app-store";
 import { useFakeLoadingOn } from "@/hooks/use-fake-loading";
 import { downloadCSV, formatDate } from "@/lib/toast-utils";
-import { exportMovementsExcel, exportDailyStockExcel, exportInventoryExcel } from "@/lib/excel";
+import { exportInventoryExcel } from "@/lib/excel";
 import type { InventoryItem } from "@/types";
 
 export default function InventoryPage() {
-  const { departmentItems, can, state } = useApp();
+  const { departmentItems, can, state, activeDepartment, user } = useApp();
   const searchParams = useSearchParams();
-  const [tab, setTab] = React.useState("stock");
   const [search, setSearch] = React.useState(searchParams.get("q") ?? "");
   const [filters, setFilters] = React.useState<InventoryFiltersState>(emptyFilters);
   const [formOpen, setFormOpen] = React.useState(false);
@@ -52,7 +48,6 @@ export default function InventoryPage() {
       if (filters.department !== "all" && i.department !== filters.department) return false;
       if (filters.category !== "all" && i.category !== filters.category) return false;
       if (filters.location !== "all" && i.location !== filters.location) return false;
-      if (filters.status !== "all" && i.status !== filters.status) return false;
       if (filters.supplier !== "all" && i.supplier !== filters.supplier) return false;
       if (filters.dateFrom && new Date(i.lastUpdated) < new Date(filters.dateFrom)) return false;
       if (filters.dateTo && new Date(i.lastUpdated) > new Date(filters.dateTo + "T23:59:59")) return false;
@@ -94,7 +89,7 @@ export default function InventoryPage() {
     <div className="space-y-5">
       <PageHeader
         title="Inventory"
-        description="Current stock, daily stock in/out and complete movement history for every asset."
+        description={activeDepartment === "all" ? "All departments stock." : `${activeDepartment}${user?.subDepartment ? ` / ${user.subDepartment}` : ""} stock only.`}
         breadcrumb={[{ label: "Inventory" }]}
         actions={
           <>
@@ -112,14 +107,15 @@ export default function InventoryPage() {
         }
       />
 
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
-          <TabsTrigger value="stock">Current Stock</TabsTrigger>
-          <TabsTrigger value="daily">Daily Stock In / Out</TabsTrigger>
-          <TabsTrigger value="movements">Movement History</TabsTrigger>
-        </TabsList>
+      {/* Count header — All vs Dept (Mar 4). No Current/Daily/Movement tabs. */}
+      <div className="bg-card flex flex-wrap items-center gap-2 rounded-xl border px-4 py-3 shadow-sm">
+        <p className="text-sm">
+          <span className="text-2xl font-semibold tabular-nums">{filtered.length}</span>
+          <span className="text-muted-foreground ml-2">item{filtered.length !== 1 ? "s" : ""} {activeDepartment === "all" ? "· All Departments" : `· ${activeDepartment}${user?.subDepartment ? ` / ${user.subDepartment}` : ""}`}</span>
+        </p>
+      </div>
 
-        <TabsContent value="stock" className="space-y-5">
+      <div className="space-y-5">
           <div className="flex flex-col gap-3 md:flex-row md:items-center">
             <SearchInput
               value={search}
@@ -146,26 +142,7 @@ export default function InventoryPage() {
             onStockIn={openStockIn}
             onStockOut={openStockOut}
           />
-        </TabsContent>
-
-        <TabsContent value="daily" className="space-y-4">
-          <div className="flex items-center justify-end">
-            <Button variant="outline" size="sm" onClick={() => { exportDailyStockExcel(state.movements); toast.success("Daily stock exported to Excel"); }}>
-              <FileDown className="size-4" /> Export Daily Stock
-            </Button>
-          </div>
-          <DailyStockView movements={state.movements} />
-        </TabsContent>
-
-        <TabsContent value="movements" className="space-y-4">
-          <div className="flex items-center justify-end">
-            <Button variant="outline" size="sm" onClick={() => { exportMovementsExcel(state.movements); toast.success("Movement history exported to Excel"); }}>
-              <FileDown className="size-4" /> Export Movements
-            </Button>
-          </div>
-          <MovementHistory movements={state.movements} />
-        </TabsContent>
-      </Tabs>
+      </div>
 
       <InventoryForm open={formOpen} onOpenChange={setFormOpen} item={editing} />
       <InventoryImportDialog open={importOpen} onOpenChange={setImportOpen} />

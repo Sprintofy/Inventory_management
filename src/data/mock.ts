@@ -4344,6 +4344,13 @@ export const notifications: NotificationItem[] = [
  */
 export const TECHNICIAN_DEMO_PASSWORD = "123456";
 
+/**
+ * Default password for staff / department users.
+ * `User.password` overrides this when set (Users page sets a per-user password).
+ * Every login page uses email + password with the SAME UI.
+ */
+export const DEFAULT_USER_PASSWORD = "password";
+
 export const demoAccounts: DemoAccount[] = [
   {
     name: "Super Admin",
@@ -4353,24 +4360,31 @@ export const demoAccounts: DemoAccount[] = [
     department: "ADM BR",
   },
   {
+    name: "Department User",
+    email: "user@example.com",
+    password: "password",
+    role: "user",
+    department: "STATION UNIT",
+  },
+  {
     name: "Col Training",
     email: "col.trg@nda.in",
     password: "password",
-    role: "department-manager",
+    role: "user",
     department: "TRG BRANCH",
   },
   {
     name: "Col Adm",
     email: "col.adm@nda.in",
     password: "password",
-    role: "department-manager",
+    role: "user",
     department: "ADM BR",
   },
   {
     name: "Head of Edn",
     email: "prin.edn@nda.in",
     password: "password",
-    role: "department-user",
+    role: "user",
     department: "EDN BR",
   },
   {

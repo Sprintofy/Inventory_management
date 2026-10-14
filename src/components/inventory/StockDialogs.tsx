@@ -1,141 +1,149 @@
 "use client";
 
 import * as React from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, type Resolver } from "react-hook-form";
-import { z } from "zod";
-import { PackageMinus, PackagePlus } from "lucide-react";
+import { PackageMinus, PackagePlus, Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useApp } from "@/store/app-store";
 import type { InventoryItem } from "@/types";
 import { formatNumber } from "@/lib/utils";
 
-const stockInSchema = z.object({
-  itemId: z.string().min(1, "Select an item"),
-  quantity: z.coerce.number().int().min(1, "Quantity must be at least 1"),
-  supplier: z.string().min(1, "Select a supplier"),
-  note: z.string().optional(),
-});
+interface StockLine {
+  itemId: string;
+  quantity: number;
+}
 
-const stockOutSchema = z.object({
-  itemId: z.string().min(1, "Select an item"),
-  quantity: z.coerce.number().int().min(1, "Quantity must be at least 1"),
-  recipient: z.string().min(2, "Recipient is required"),
-  purpose: z.string().min(2, "Purpose is required"),
-  note: z.string().optional(),
-});
-
+/**
+ * Multi-item Stock In (Mar 6) — no Supplier tab.
+ * Department is derived from the item / logged-in user scope.
+ */
 export function StockInDialog({ open, onOpenChange, presetItem }: { open: boolean; onOpenChange: (o: boolean) => void; presetItem?: InventoryItem | null }) {
   const { state, visibleDepartments, stockIn } = useApp();
-  type SV = z.output<typeof stockInSchema>;
-  const form = useForm<SV>({
-    resolver: zodResolver(stockInSchema) as unknown as Resolver<SV>,
-    defaultValues: { itemId: "", quantity: 1, supplier: "", note: "" },
-  });
+  const [lines, setLines] = React.useState<StockLine[]>([{ itemId: "", quantity: 1 }]);
+  const [note, setNote] = React.useState("");
 
   React.useEffect(() => {
     if (open) {
-      form.reset({ itemId: presetItem?.id ?? "", quantity: presetItem ? Math.max(1, Math.round(presetItem.reorderLevel / 2)) : 1, supplier: presetItem?.supplier ?? "", note: "" });
+      setLines(presetItem ? [{ itemId: presetItem.id, quantity: 1 }] : [{ itemId: "", quantity: 1 }]);
+      setNote("");
     }
-  }, [open, presetItem, form]);
+  }, [open, presetItem]);
 
-  const selectedItem = state.inventory.find((i) => i.id === form.watch("itemId"));
-  const quantity = form.watch("quantity") || 0;
+  const options = React.useMemo(
+    () => state.inventory.filter((i) => !i.archived && (visibleDepartments.length === 0 || visibleDepartments.includes(i.department))),
+    [state.inventory, visibleDepartments]
+  );
 
-  const onSubmit = (values: z.infer<typeof stockInSchema>) => {
-    stockIn(values.itemId, values.quantity, values.supplier, values.note);
+  const updateLine = (idx: number, patch: Partial<StockLine>) => {
+    setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
+  };
+
+  const valid = lines.length > 0 && lines.every((l) => l.itemId && l.quantity >= 1);
+
+  const onSubmit = () => {
+    if (!valid) {
+      toast.error("Select an item and quantity for every row");
+      return;
+    }
+    for (const l of lines) {
+      const item = state.inventory.find((i) => i.id === l.itemId);
+      stockIn(l.itemId, l.quantity, item?.supplier ?? "Internal", note || undefined);
+    }
     onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><PackagePlus className="text-success size-5" /> Record Stock In</DialogTitle>
-          <DialogDescription>Receive inventory into stock. Quantity will be added to the item.</DialogDescription>
+          <DialogDescription>Add one or more items. Quantity is added to each item&apos;s stock.</DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField control={form.control} name="itemId" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Item</FormLabel>
-                <FormControl>
-                  <Select value={field.value} onValueChange={field.onChange}>
+        <div className="space-y-3">
+          {lines.map((l, idx) => {
+            const sel = state.inventory.find((i) => i.id === l.itemId);
+            return (
+              <div key={idx} className="flex items-end gap-2 rounded-lg border p-3">
+                <div className="flex-1 space-y-1.5">
+                  <Label className="text-xs">Item {idx + 1}</Label>
+                  <Select value={l.itemId} onValueChange={(v) => updateLine(idx, { itemId: v })}>
                     <SelectTrigger className="w-full"><SelectValue placeholder="Select item" /></SelectTrigger>
                     <SelectContent>
-                      {state.inventory.filter((i) => !i.archived && visibleDepartments.includes(i.department)).map((i) => (
-                        <SelectItem key={i.id} value={i.id}>{i.name} ({i.sku})</SelectItem>
+                      {options.map((i) => (
+                        <SelectItem key={i.id} value={i.id}>{i.name} ({i.sku}) — {formatNumber(i.quantity)} in stock</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-            <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="quantity" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Quantity</FormLabel>
-                  <FormControl><Input type="number" min={1} {...field} /></FormControl>
-                  <FormDescription>{selectedItem ? `Current stock: ${formatNumber(selectedItem.quantity)} → ${formatNumber(selectedItem.quantity + quantity)}` : ""}</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="supplier" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Supplier</FormLabel>
-                  <FormControl>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger className="w-full"><SelectValue placeholder="Select" /></SelectTrigger>
-                      <SelectContent>
-                        {state.suppliers.map((s) => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-            </div>
-            <FormField control={form.control} name="note" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Note (optional)</FormLabel>
-                <FormControl><Input placeholder="e.g. Purchase order reference" {...field} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button type="submit" className="bg-success hover:bg-success/90 text-white">Record Stock In</Button>
-            </DialogFooter>
-          </form>
-        </Form>
+                  {sel && <p className="text-muted-foreground text-[11px]">Current: {formatNumber(sel.quantity)} → {formatNumber(sel.quantity + (l.quantity || 0))}</p>}
+                </div>
+                <div className="w-24 space-y-1.5">
+                  <Label className="text-xs">Qty</Label>
+                  <Input type="number" min={1} value={l.quantity} onChange={(e) => updateLine(idx, { quantity: Math.max(1, Number(e.target.value) || 1) })} />
+                </div>
+                {lines.length > 1 && (
+                  <Button type="button" variant="ghost" size="icon-sm" onClick={() => setLines((prev) => prev.filter((_, i) => i !== idx))} aria-label="Remove row">
+                    <Trash2 className="size-4 text-destructive" />
+                  </Button>
+                )}
+              </div>
+            );
+          })}
+          <Button type="button" variant="outline" size="sm" onClick={() => setLines((prev) => [...prev, { itemId: "", quantity: 1 }])}>
+            <Plus className="size-3.5" /> Add another item
+          </Button>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Note (optional)</Label>
+            <Input placeholder="e.g. Purchase order reference" value={note} onChange={(e) => setNote(e.target.value)} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button type="button" disabled={!valid} onClick={onSubmit} className="bg-success hover:bg-success/90 text-white">Record Stock In ({lines.length})</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
 
+/**
+ * Stock Out — Recipient / Employee removed (Mar 7).
+ * Issues to the item's own department with a purpose only.
+ */
 export function StockOutDialog({ open, onOpenChange, presetItem }: { open: boolean; onOpenChange: (o: boolean) => void; presetItem?: InventoryItem | null }) {
-  const { state, visibleDepartments, stockOut } = useApp();
-  type SV = z.output<typeof stockOutSchema>;
-  const form = useForm<SV>({
-    resolver: zodResolver(stockOutSchema) as unknown as Resolver<SV>,
-    defaultValues: { itemId: "", quantity: 1, recipient: "", purpose: "", note: "" },
-  });
+  const { state, visibleDepartments, stockOut, user } = useApp();
+  const [itemId, setItemId] = React.useState("");
+  const [quantity, setQuantity] = React.useState(1);
+  const [purpose, setPurpose] = React.useState("");
+  const [note, setNote] = React.useState("");
 
   React.useEffect(() => {
-    if (open) form.reset({ itemId: presetItem?.id ?? "", quantity: presetItem ? Math.min(1, presetItem.quantity) : 1, recipient: "", purpose: "", note: "" });
-  }, [open, presetItem, form]);
+    if (open) {
+      setItemId(presetItem?.id ?? "");
+      setQuantity(1);
+      setPurpose("");
+      setNote("");
+    }
+  }, [open, presetItem]);
 
-  const selectedItem = state.inventory.find((i) => i.id === form.watch("itemId"));
-  const quantity = form.watch("quantity") || 0;
+  const selectedItem = state.inventory.find((i) => i.id === itemId);
   const overAvailable = selectedItem && quantity > selectedItem.quantity;
+  const options = state.inventory.filter((i) => !i.archived && (visibleDepartments.length === 0 || visibleDepartments.includes(i.department)) && i.quantity > 0);
 
-  const onSubmit = (values: z.infer<typeof stockOutSchema>) => {
-    stockOut(values.itemId, values.quantity, values.recipient, values.purpose, values.note);
+  const onSubmit = () => {
+    if (!itemId || quantity < 1 || purpose.trim().length < 2) {
+      toast.error("Select an item, quantity and purpose");
+      return;
+    }
+    if (overAvailable) {
+      toast.error(`Only ${selectedItem?.quantity} available`);
+      return;
+    }
+    // Recipient removed — issue is recorded against the user's department scope.
+    stockOut(itemId, quantity, user?.name ?? "Department", purpose.trim(), note || undefined);
     onOpenChange(false);
   };
 
@@ -144,67 +152,44 @@ export function StockOutDialog({ open, onOpenChange, presetItem }: { open: boole
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><PackageMinus className="text-primary size-5" /> Issue Stock</DialogTitle>
-          <DialogDescription>Issue inventory to a recipient. Stock quantity will be reduced.</DialogDescription>
+          <DialogDescription>Issue inventory from your department. Stock quantity will be reduced.</DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField control={form.control} name="itemId" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Item</FormLabel>
-                <FormControl>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger className="w-full"><SelectValue placeholder="Select item" /></SelectTrigger>
-                    <SelectContent>
-                      {state.inventory.filter((i) => !i.archived && visibleDepartments.includes(i.department) && i.quantity > 0).map((i) => (
-                        <SelectItem key={i.id} value={i.id}>{i.name} ({i.sku}) — {i.quantity} left</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-            <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="quantity" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Quantity</FormLabel>
-                  <FormControl><Input type="number" min={1} max={selectedItem?.quantity ?? 1} {...field} /></FormControl>
-                  {selectedItem && (
-                    <FormDescription className={overAvailable ? "text-destructive font-medium" : undefined}>
-                      {overAvailable ? `Only ${selectedItem.quantity} available` : `Available: ${formatNumber(selectedItem.quantity)}`}
-                    </FormDescription>
-                  )}
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="recipient" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Recipient / Employee</FormLabel>
-                  <FormControl><Input placeholder="e.g. Divya Menon" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Item</Label>
+            <Select value={itemId} onValueChange={setItemId}>
+              <SelectTrigger className="w-full"><SelectValue placeholder="Select item" /></SelectTrigger>
+              <SelectContent>
+                {options.map((i) => (
+                  <SelectItem key={i.id} value={i.id}>{i.name} ({i.sku}) — {i.quantity} left</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Quantity</Label>
+              <Input type="number" min={1} max={selectedItem?.quantity ?? 1} value={quantity} onChange={(e) => setQuantity(Math.max(1, Number(e.target.value) || 1))} />
+              {selectedItem && (
+                <p className={overAvailable ? "text-destructive text-[11px] font-medium" : "text-muted-foreground text-[11px]"}>
+                  {overAvailable ? `Only ${selectedItem.quantity} available` : `Available: ${formatNumber(selectedItem.quantity)}`}
+                </p>
+              )}
             </div>
-            <FormField control={form.control} name="purpose" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Purpose</FormLabel>
-                <FormControl><Input placeholder="e.g. Project deployment" {...field} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-            <FormField control={form.control} name="note" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Note (optional)</FormLabel>
-                <FormControl><Input placeholder="Additional remarks" {...field} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button type="submit" disabled={overAvailable}>Issue Stock</Button>
-            </DialogFooter>
-          </form>
-        </Form>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Purpose</Label>
+              <Input placeholder="e.g. Project deployment" value={purpose} onChange={(e) => setPurpose(e.target.value)} />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Note (optional)</Label>
+            <Input placeholder="Additional remarks" value={note} onChange={(e) => setNote(e.target.value)} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button type="button" disabled={!!overAvailable || !itemId || purpose.trim().length < 2} onClick={onSubmit}>Issue Stock</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

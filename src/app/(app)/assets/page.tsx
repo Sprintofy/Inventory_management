@@ -4,7 +4,7 @@ import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, type Resolver } from "react-hook-form";
 import { z } from "zod";
-import { Boxes, MoreHorizontal, Plus } from "lucide-react";
+import { Boxes, MoreHorizontal, Plus, Wrench } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useApp } from "@/store/app-store";
 import { useFakeLoadingOn } from "@/hooks/use-fake-loading";
+import { ReportFaultyAssetDialog } from "@/components/operations/ReportFaultyAssetDialog";
 import { formatCompact, formatDate, uid } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import type { Asset, AssetStatus } from "@/types";
@@ -46,6 +47,8 @@ export default function AssetsPage() {
   const [page, setPage] = React.useState(1);
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Asset | null>(null);
+  const [faultyOpen, setFaultyOpen] = React.useState(false);
+  const [faultyAssetId, setFaultyAssetId] = React.useState<string | undefined>(undefined);
   const loading = useFakeLoadingOn(search);
   const pageSize = 10;
 
@@ -231,6 +234,8 @@ export default function AssetsPage() {
           </Form>
         </DialogContent>
       </Dialog>
+
+      <ReportFaultyAssetDialog open={faultyOpen} onOpenChange={setFaultyOpen} presetAssetId={faultyAssetId} />
     </div>
   );
 }

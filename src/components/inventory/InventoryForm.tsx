@@ -23,25 +23,14 @@ const formSchema = z.object({
   category: z.string().min(1, "Select a category"),
   subcategory: z.string().optional(),
   description: z.string().optional(),
+  purchaseDate: z.string().optional(),
+  serialNumber: z.string().optional(),
   quantity: z.coerce.number().min(0, "Quantity cannot be negative"),
   unit: z.string().min(1, "Unit is required"),
-  minStock: z.coerce.number().min(0),
-  reorderLevel: z.coerce.number().min(0),
-  maxStock: z.coerce.number().min(0),
   location: z.string().min(1, "Select a location"),
   department: z.string().min(1, "Select a department"),
   subDepartment: z.string().optional(),
-  warehouse: z.string().optional(),
-  storageLocation: z.string().optional(),
-  unitCost: z.coerce.number().min(0, "Enter a valid cost"),
-  supplier: z.string().min(1, "Select a supplier"),
-  purchaseDate: z.string().optional(),
-  serialNumber: z.string().optional(),
-  assetNumber: z.string().optional(),
-  batchNumber: z.string().optional(),
-  condition: z.string().optional(),
-  warranty: z.string().optional(),
-  notes: z.string().optional(),
+  supplier: z.string().optional(),
 });
 
 type FormValues = z.output<typeof formSchema>;
@@ -49,17 +38,11 @@ type FormValues = z.output<typeof formSchema>;
 const steps = [
   { id: "basic", label: "Basic Info" },
   { id: "inventory", label: "Inventory" },
-  { id: "financial", label: "Financial" },
-  { id: "identification", label: "Identification" },
-  { id: "additional", label: "Additional" },
 ];
 
 const stepFields: Record<string, (keyof FormValues)[]> = {
-  basic: ["name", "sku", "category", "subcategory", "description"],
-  inventory: ["quantity", "unit", "minStock", "reorderLevel", "maxStock", "location", "department", "subDepartment", "warehouse", "storageLocation"],
-  financial: ["unitCost", "supplier", "purchaseDate"],
-  identification: ["serialNumber", "assetNumber", "batchNumber"],
-  additional: ["condition", "warranty", "notes"],
+  basic: ["name", "sku", "category", "subcategory", "description", "purchaseDate", "serialNumber"],
+  inventory: ["quantity", "unit", "location", "department", "subDepartment", "supplier"],
 };
 
 interface InventoryFormProps {
@@ -80,25 +63,14 @@ export function InventoryForm({ open, onOpenChange, item }: InventoryFormProps) 
       category: item?.category ?? "",
       subcategory: item?.subcategory ?? "",
       description: item?.description ?? "",
+      purchaseDate: "",
+      serialNumber: item?.serialNumber ?? "",
       quantity: item?.quantity ?? 0,
       unit: item?.unit ?? "unit",
-      minStock: item?.minStock ?? 5,
-      reorderLevel: item?.reorderLevel ?? 10,
-      maxStock: item?.maxStock ?? 100,
       location: item?.location ?? "",
       department: item?.department ?? "",
       subDepartment: item?.subDepartment ?? "",
-      warehouse: "",
-      storageLocation: "",
-      unitCost: item?.unitCost ?? 0,
       supplier: item?.supplier ?? "",
-      purchaseDate: "",
-      serialNumber: item?.serialNumber ?? "",
-      assetNumber: item?.assetNumber ?? "",
-      batchNumber: item?.batchNumber ?? "",
-      condition: item?.condition ?? "New",
-      warranty: item?.warranty ?? "",
-      notes: item?.notes ?? "",
     },
   });
 
@@ -133,11 +105,14 @@ export function InventoryForm({ open, onOpenChange, item }: InventoryFormProps) 
   const prev = () => setStep((s) => Math.max(s - 1, 0));
 
   const onSubmit = (values: FormValues) => {
-    const status = computeStatus(values.quantity, values.reorderLevel, values.maxStock);
+    const prevMin = item?.minStock ?? 5;
+    const prevReorder = item?.reorderLevel ?? 10;
+    const prevMax = item?.maxStock ?? 100;
+    const status = computeStatus(values.quantity, prevReorder, prevMax);
     const now = new Date().toISOString();
     const subDepartment = values.subDepartment || undefined;
     if (item) {
-      updateItem({ ...item, ...values, subDepartment, status, lastUpdated: now });
+      updateItem({ ...item, ...values, assetNumber: item.assetNumber, batchNumber: item.batchNumber, condition: item.condition, warranty: item.warranty, notes: values.purchaseDate ? `Purchase: ${values.purchaseDate}` : item.notes, minStock: prevMin, reorderLevel: prevReorder, maxStock: prevMax, unitCost: item.unitCost, subDepartment, status, lastUpdated: now });
       log("updated inventory", "Inventory", values.name, values.department);
       toast.success("Inventory item updated successfully");
     } else {
@@ -153,20 +128,16 @@ export function InventoryForm({ open, onOpenChange, item }: InventoryFormProps) 
         location: values.location,
         quantity: values.quantity,
         unit: values.unit,
-        minStock: values.minStock,
-        reorderLevel: values.reorderLevel,
-        maxStock: values.maxStock,
-        unitCost: values.unitCost,
+        minStock: prevMin,
+        reorderLevel: prevReorder,
+        maxStock: prevMax,
+        unitCost: 0,
         supplier: values.supplier,
         serialNumber: values.serialNumber,
-        assetNumber: values.assetNumber,
-        batchNumber: values.batchNumber,
-        condition: values.condition,
-        warranty: values.warranty,
-        notes: values.notes,
         status,
         lastUpdated: now,
         createdAt: now,
+        notes: values.purchaseDate ? `Purchase: ${values.purchaseDate}` : undefined,
       });
       log("added inventory", "Inventory", values.name, values.department);
       toast.success("Inventory item added successfully");
@@ -242,6 +213,20 @@ export function InventoryForm({ open, onOpenChange, item }: InventoryFormProps) 
                     <FormMessage />
                   </FormItem>
                 )} />
+                <FormField control={form.control} name="purchaseDate" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Purchase Date</FormLabel>
+                    <FormControl><Input type="date" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="serialNumber" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Serial Number</FormLabel>
+                    <FormControl><Input placeholder="e.g. SN-2026-001" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
                 <FormField control={form.control} name="description" render={({ field }) => (
                   <FormItem className="sm:col-span-2">
                     <FormLabel>Description</FormLabel>
@@ -272,27 +257,6 @@ export function InventoryForm({ open, onOpenChange, item }: InventoryFormProps) 
                         </SelectContent>
                       </Select>
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="minStock" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Minimum Stock</FormLabel>
-                    <FormControl><Input type="number" min={0} {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="reorderLevel" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Reorder Level</FormLabel>
-                    <FormControl><Input type="number" min={0} {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="maxStock" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Maximum Stock</FormLabel>
-                    <FormControl><Input type="number" min={0} {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
@@ -339,109 +303,17 @@ export function InventoryForm({ open, onOpenChange, item }: InventoryFormProps) 
                     <FormMessage />
                   </FormItem>
                 )} />
-                <FormField control={form.control} name="warehouse" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Warehouse</FormLabel>
-                    <FormControl><Input placeholder="e.g. Central Warehouse" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="storageLocation" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Storage Location</FormLabel>
-                    <FormControl><Input placeholder="e.g. Aisle 3, Rack B" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              </div>
-            )}
-
-            {step === 2 && (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField control={form.control} name="unitCost" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Unit Cost (₹)</FormLabel>
-                    <FormControl><Input type="number" min={0} step={0.01} {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
                 <FormField control={form.control} name="supplier" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Supplier</FormLabel>
+                    <FormLabel>Supplier (optional)</FormLabel>
                     <FormControl>
-                      <Select value={field.value} onValueChange={field.onChange}>
+                      <Select value={field.value ?? ""} onValueChange={field.onChange}>
                         <SelectTrigger className="w-full"><SelectValue placeholder="Select supplier" /></SelectTrigger>
                         <SelectContent>
                           {state.suppliers.map((s) => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="purchaseDate" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Purchase Date</FormLabel>
-                    <FormControl><Input type="date" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              </div>
-            )}
-
-            {step === 3 && (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField control={form.control} name="serialNumber" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Serial Number</FormLabel>
-                    <FormControl><Input placeholder="Optional" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="assetNumber" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Asset Number</FormLabel>
-                    <FormControl><Input placeholder="Optional" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="batchNumber" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Batch Number</FormLabel>
-                    <FormControl><Input placeholder="Optional" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              </div>
-            )}
-
-            {step === 4 && (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField control={form.control} name="condition" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Condition</FormLabel>
-                    <FormControl>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {["New", "Good", "Fair", "Poor", "Refurbished"].map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="warranty" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Warranty</FormLabel>
-                    <FormControl><Input placeholder="e.g. 12 months" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="notes" render={({ field }) => (
-                  <FormItem className="sm:col-span-2">
-                    <FormLabel>Notes</FormLabel>
-                    <FormControl><Textarea rows={2} placeholder="Additional remarks" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />

@@ -163,9 +163,11 @@ import {
 const roleLabels: Record<string, string> = {
   "super-admin": "Super Admin",
   admin: "Admin",
-  "department-manager": "Department",
-  "department-user": "Department User",
+  user: "User",
+  "department-manager": "User",
+  "department-user": "User",
   viewer: "Viewer",
+  technician: "Technician",
 };
 
 const pageTitles: Array<{ match: RegExp; title: string; crumb: string }> = [
@@ -242,22 +244,6 @@ export function Header() {
         <GlobalSearch />
         <NotificationsPopover />
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-muted-foreground hidden sm:inline-flex"
-              asChild
-            >
-              <a href="/help" aria-label="Help">
-                <HelpCircle className="size-4.5" />
-              </a>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Help Center</TooltipContent>
-        </Tooltip>
-
         {user && <DepartmentSelector className="hidden w-[180px] md:flex" />}
 
         {/* ── User Profile Dropdown ── */}
@@ -332,7 +318,8 @@ export function Header() {
 
               <DropdownMenuSeparator className="my-0" />
 
-              {/* Menu Actions */}
+              {/* Menu Actions — Settings only for super-admin */}
+              {(role === "super-admin" || role === "admin") && (
               <div className="p-1.5">
                 <DropdownMenuItem
                   asChild
@@ -344,16 +331,8 @@ export function Header() {
                   </a>
                 </DropdownMenuItem>
 
-                <DropdownMenuItem
-                  asChild
-                  className="cursor-pointer gap-2.5 rounded-md px-2.5 py-2"
-                >
-                  <a href="/help">
-                    <HelpCircle className="text-muted-foreground size-4" />
-                    <span>Help Center</span>
-                  </a>
-                </DropdownMenuItem>
               </div>
+              )}
 
               <DropdownMenuSeparator className="my-0" />
 
