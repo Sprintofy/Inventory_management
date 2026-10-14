@@ -24,6 +24,7 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select";
+import { useRouter } from "next/navigation";
 import { useApp } from "@/store/app-store";
 import type { InventoryItem } from "@/types";
 import { cn } from "@/lib/utils";
@@ -47,6 +48,7 @@ const allColumns = [
 
 export function InventoryTable({ onEdit }: InventoryTableProps) {
   const { state } = useApp();
+  const router = useRouter();
 
   const [page, setPage] = React.useState(0);
   const [itemsPerPage, setItemsPerPage] = React.useState(10);
@@ -123,7 +125,11 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
 
           <TableBody>
             {paginatedItems.map((item) => (
-              <TableRow key={item.id} className="hover:bg-muted">
+              <TableRow
+                key={item.id}
+                className={cn("hover:bg-muted", "cursor-pointer")}
+                onClick={() => router.push(`/inventory/${item.id}`)}
+              >
                 {allColumns.map((col) => {
                   if (col.key === "actions") {
                     return (
@@ -132,7 +138,10 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
                           <Button
                             variant="outline"
                             size="icon"
-                            onClick={() => onEdit(item)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onEdit(item);
+                            }}
                           >
                             <Pencil className="size-4" />
                           </Button>
