@@ -7,42 +7,72 @@ import { z } from "zod";
 import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn, uid } from "@/lib/utils";
 import { useApp } from "@/store/app-store";
-import type { InventoryItem, SubDepartment } from "@/types";
-import { computeStatus } from "@/data/mock";
+import type { InventoryItem } from "@/types";
 
 const formSchema = z.object({
-  name: z.string().min(2, "Item name is required"),
-  sku: z.string().min(2, "SKU is required"),
+  deviceName: z.string().min(2, "Device name is required"),
+  brand: z.string().min(2, "Brand is required"),
+  modelNumber: z.string().min(2, "Model number is required"),
   category: z.string().min(1, "Select a category"),
-  subcategory: z.string().optional(),
   description: z.string().optional(),
-  purchaseDate: z.string().optional(),
-  serialNumber: z.string().optional(),
+  specifications: z.string().optional(),
+  warrantyPeriod: z.string().optional(),
+  sku: z.string().min(2, "SKU is required"),
+  supplier: z.string().optional(),
   quantity: z.coerce.number().min(0, "Quantity cannot be negative"),
   unit: z.string().min(1, "Unit is required"),
-  location: z.string().min(1, "Select a location"),
-  department: z.string().min(1, "Select a department"),
+  department: z.string().min(1, "Department is required"),
   subDepartment: z.string().optional(),
-  supplier: z.string().optional(),
 });
 
 type FormValues = z.output<typeof formSchema>;
 
 const steps = [
   { id: "basic", label: "Basic Info" },
+  { id: "details", label: "Details" },
   { id: "inventory", label: "Inventory" },
 ];
 
 const stepFields: Record<string, (keyof FormValues)[]> = {
-  basic: ["name", "sku", "category", "subcategory", "description", "purchaseDate", "serialNumber"],
-  inventory: ["quantity", "unit", "location", "department", "subDepartment", "supplier"],
+  basic: [
+    "deviceName",
+    "brand",
+    "modelNumber",
+    "category",
+    "sku",
+    "supplier",
+    "department",
+    "subDepartment",
+  ],
+  details: ["description", "specifications", "warrantyPeriod"],
+  inventory: ["quantity", "unit"],
 };
 
 interface InventoryFormProps {
@@ -51,26 +81,30 @@ interface InventoryFormProps {
   item?: InventoryItem | null;
 }
 
-export function InventoryForm({ open, onOpenChange, item }: InventoryFormProps) {
+export function InventoryForm({
+  open,
+  onOpenChange,
+  item,
+}: InventoryFormProps) {
   const { state, addItem, updateItem, log } = useApp();
   const [step, setStep] = React.useState(0);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema) as unknown as Resolver<FormValues>,
     defaultValues: {
-      name: item?.name ?? "",
-      sku: item?.sku ?? "",
+      deviceName: item?.deviceName ?? "",
+      brand: item?.brand ?? "",
+      modelNumber: item?.modelNumber ?? "",
       category: item?.category ?? "",
-      subcategory: item?.subcategory ?? "",
       description: item?.description ?? "",
-      purchaseDate: "",
-      serialNumber: item?.serialNumber ?? "",
+      specifications: item?.specifications ?? "",
+      warrantyPeriod: item?.warrantyPeriod ?? "",
+      sku: item?.sku ?? "",
+      supplier: item?.supplier ?? "",
       quantity: item?.quantity ?? 0,
       unit: item?.unit ?? "unit",
-      location: item?.location ?? "",
       department: item?.department ?? "",
       subDepartment: item?.subDepartment ?? "",
-      supplier: item?.supplier ?? "",
     },
   });
 
@@ -80,17 +114,7 @@ export function InventoryForm({ open, onOpenChange, item }: InventoryFormProps) 
       if (!item) form.reset();
     }
   }, [open, item, form]);
-
-  const deptName = form.watch("department");
-  const subOptions = React.useMemo(() => {
-    if (!deptName) return [] as SubDepartment[];
-    const dept = state.departments.find((d) => d.name === deptName);
-    if (!dept) return [] as SubDepartment[];
-    const out: SubDepartment[] = [];
-    const walk = (subs: SubDepartment[]) => subs.forEach((s) => { out.push(s); walk(s.children); });
-    walk(dept.subDepartments);
-    return out;
-  }, [deptName, state.departments]);
+  // eslint-disable-line react-hooks/set-state-in-effect
 
   const validateStep = async (i: number) => {
     const fields = stepFields[steps[i].id];
@@ -99,49 +123,41 @@ export function InventoryForm({ open, onOpenChange, item }: InventoryFormProps) 
   };
 
   const next = async () => {
-    if (await validateStep(step)) setStep((s) => Math.min(s + 1, steps.length - 1));
+    if (await validateStep(step))
+      setStep((s) => Math.min(s + 1, steps.length - 1));
   };
 
   const prev = () => setStep((s) => Math.max(s - 1, 0));
 
   const onSubmit = (values: FormValues) => {
-    const prevMin = item?.minStock ?? 5;
-    const prevReorder = item?.reorderLevel ?? 10;
-    const prevMax = item?.maxStock ?? 100;
-    const status = computeStatus(values.quantity, prevReorder, prevMax);
     const now = new Date().toISOString();
-    const subDepartment = values.subDepartment || undefined;
+
+    const status =
+      item?.status ?? (values.quantity <= 0 ? "out-of-stock" : "in-stock");
+
     if (item) {
-      updateItem({ ...item, ...values, assetNumber: item.assetNumber, batchNumber: item.batchNumber, condition: item.condition, warranty: item.warranty, notes: values.purchaseDate ? `Purchase: ${values.purchaseDate}` : item.notes, minStock: prevMin, reorderLevel: prevReorder, maxStock: prevMax, unitCost: item.unitCost, subDepartment, status, lastUpdated: now });
-      log("updated inventory", "Inventory", values.name, values.department);
+      updateItem({
+        ...item,
+        ...values,
+        status,
+        lastUpdated: now,
+      });
+
+      log("updated inventory", "Inventory", values.deviceName, "");
       toast.success("Inventory item updated successfully");
     } else {
       addItem({
+        ...values,
         id: uid("INV"),
-        name: values.name,
-        sku: values.sku,
-        category: values.category,
-        subcategory: values.subcategory,
-        description: values.description,
-        department: values.department,
-        subDepartment,
-        location: values.location,
-        quantity: values.quantity,
-        unit: values.unit,
-        minStock: prevMin,
-        reorderLevel: prevReorder,
-        maxStock: prevMax,
-        unitCost: 0,
-        supplier: values.supplier,
-        serialNumber: values.serialNumber,
         status,
         lastUpdated: now,
         createdAt: now,
-        notes: values.purchaseDate ? `Purchase: ${values.purchaseDate}` : undefined,
       });
-      log("added inventory", "Inventory", values.name, values.department);
+
+      log("added inventory", "Inventory", values.deviceName, "");
       toast.success("Inventory item added successfully");
     }
+
     onOpenChange(false);
   };
 
@@ -151,7 +167,9 @@ export function InventoryForm({ open, onOpenChange, item }: InventoryFormProps) 
         <DialogHeader>
           <DialogTitle>{item ? "Edit Item" : "Add Inventory Item"}</DialogTitle>
           <DialogDescription>
-            {item ? "Update the details of this inventory item." : "Create a new item in your inventory. All fields marked are required."}
+            {item
+              ? "Update the details of this inventory item."
+              : "Create a new item in your inventory. All fields marked are required."}
           </DialogDescription>
         </DialogHeader>
 
@@ -163,13 +181,19 @@ export function InventoryForm({ open, onOpenChange, item }: InventoryFormProps) 
                 onClick={() => i < step && setStep(i)}
                 className={cn(
                   "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
-                  i === step ? "bg-primary text-primary-foreground" : i < step ? "bg-primary/10 text-primary cursor-pointer" : "bg-muted text-muted-foreground"
+                  i === step
+                    ? "bg-primary text-primary-foreground"
+                    : i < step
+                      ? "bg-primary/10 text-primary cursor-pointer"
+                      : "bg-muted text-muted-foreground",
                 )}
               >
                 {i < step ? <Check className="size-3" /> : <span>{i + 1}</span>}
                 <span className="hidden sm:inline">{s.label}</span>
               </button>
-              {i < steps.length - 1 && <span className="bg-border h-px flex-1" />}
+              {i < steps.length - 1 && (
+                <span className="bg-border h-px flex-1" />
+              )}
             </React.Fragment>
           ))}
         </div>
@@ -178,145 +202,226 @@ export function InventoryForm({ open, onOpenChange, item }: InventoryFormProps) 
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
             {step === 0 && (
               <div className="grid gap-4 sm:grid-cols-2">
-                <FormField control={form.control} name="name" render={({ field }) => (
-                  <FormItem className="sm:col-span-2">
-                    <FormLabel>Item Name</FormLabel>
-                    <FormControl><Input placeholder="e.g. MacBook Pro 14&quot;" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="sku" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>SKU</FormLabel>
-                    <FormControl><Input placeholder="e.g. IT-DEV-001" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="category" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Category</FormLabel>
-                    <FormControl>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger className="w-full"><SelectValue placeholder="Select category" /></SelectTrigger>
-                        <SelectContent>
-                          {state.categories.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="subcategory" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Subcategory</FormLabel>
-                    <FormControl><Input placeholder="e.g. Laptops" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="purchaseDate" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Purchase Date</FormLabel>
-                    <FormControl><Input type="date" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="serialNumber" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Serial Number</FormLabel>
-                    <FormControl><Input placeholder="e.g. SN-2026-001" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="description" render={({ field }) => (
-                  <FormItem className="sm:col-span-2">
-                    <FormLabel>Description</FormLabel>
-                    <FormControl><Textarea rows={2} placeholder="Short description of the item" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+                <FormField
+                  control={form.control}
+                  name="deviceName"
+                  render={({ field }) => (
+                    <FormItem className="sm:col-span-2">
+                      <FormLabel>Device Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder='e.g. MacBook Pro 14"' {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="brand"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Brand</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. Apple" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="modelNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Model Number</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g. MacBook Pro 14 M3"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category</FormLabel>
+                      <FormControl>
+                        <Select
+                          value={field.value}
+                          onValueChange={field.onChange}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {state.categories.map((c) => (
+                              <SelectItem key={c.id} value={c.name}>
+                                {c.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="sku"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>SKU</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. IT-DEV-001" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="supplier"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Supplier (optional)</FormLabel>
+                      <FormControl>
+                        <Select
+                          value={field.value ?? ""}
+                          onValueChange={field.onChange}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select supplier" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {state.suppliers.map((s) => (
+                              <SelectItem key={s.id} value={s.name}>
+                                {s.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
             )}
 
             {step === 1 && (
               <div className="grid gap-4 sm:grid-cols-2">
-                <FormField control={form.control} name="quantity" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Quantity</FormLabel>
-                    <FormControl><Input type="number" min={0} {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="unit" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Unit</FormLabel>
-                    <FormControl>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {["unit", "box", "pack", "set", "pair", "roll", "drum", "ream", "coil", "kit", "can", "sheet"].map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="location" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Location</FormLabel>
-                    <FormControl>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger className="w-full"><SelectValue placeholder="Select location" /></SelectTrigger>
-                        <SelectContent>
-                          {state.locations.map((l) => <SelectItem key={l.id} value={l.name}>{l.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="department" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Department</FormLabel>
-                    <FormControl>
-                      <Select value={field.value} onValueChange={(v) => { field.onChange(v); form.setValue("subDepartment", ""); }}>
-                        <SelectTrigger className="w-full"><SelectValue placeholder="Select department" /></SelectTrigger>
-                        <SelectContent>
-                          {state.departments.map((d) => <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="subDepartment" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Sub-department</FormLabel>
-                    <FormControl>
-                      <Select value={field.value ?? ""} onValueChange={field.onChange}>
-                        <SelectTrigger className="w-full"><SelectValue placeholder="Optional" /></SelectTrigger>
-                        <SelectContent>
-                          {subOptions.length === 0 && <SelectItem value="__none" disabled>No sub-departments</SelectItem>}
-                          {subOptions.map((s) => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="supplier" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Supplier (optional)</FormLabel>
-                    <FormControl>
-                      <Select value={field.value ?? ""} onValueChange={field.onChange}>
-                        <SelectTrigger className="w-full"><SelectValue placeholder="Select supplier" /></SelectTrigger>
-                        <SelectContent>
-                          {state.suppliers.map((s) => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem className="sm:col-span-2">
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={2}
+                          placeholder="Short description of the item"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="specifications"
+                  render={({ field }) => (
+                    <FormItem className="sm:col-span-2">
+                      <FormLabel>Specifications</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          rows={3}
+                          placeholder="Technical specifications"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="warrantyPeriod"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Warranty Period</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
+
+            {step === 2 && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="quantity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Quantity</FormLabel>
+                      <FormControl>
+                        <Input type="number" min={0} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="unit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Unit</FormLabel>
+                      <FormControl>
+                        <Select
+                          value={field.value}
+                          onValueChange={field.onChange}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select unit" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {[
+                              "unit",
+                              "box",
+                              "pack",
+                              "set",
+                              "pair",
+                              "roll",
+                              "drum",
+                              "ream",
+                              "coil",
+                              "kit",
+                              "can",
+                              "sheet",
+                            ].map((u) => (
+                              <SelectItem key={u} value={u}>
+                                {u}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
             )}
 
@@ -331,7 +436,9 @@ export function InventoryForm({ open, onOpenChange, item }: InventoryFormProps) 
                   Next <ChevronRight className="size-4" />
                 </Button>
               ) : (
-                <Button type="submit">{item ? "Update Item" : "Save Item"}</Button>
+                <Button type="submit">
+                  {item ? "Update Item" : "Save Item"}
+                </Button>
               )}
             </DialogFooter>
           </form>

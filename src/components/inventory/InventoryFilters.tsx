@@ -15,7 +15,6 @@ import type { StockStatus } from "@/types";
 export interface InventoryFiltersState {
   department: string;
   category: string;
-  location: string;
   supplier: string;
   dateFrom: string;
   dateTo: string;
@@ -24,7 +23,6 @@ export interface InventoryFiltersState {
 export const emptyFilters: InventoryFiltersState = {
   department: "all",
   category: "all",
-  location: "all",
   supplier: "all",
   dateFrom: "",
   dateTo: "",
@@ -86,16 +84,6 @@ export function InventoryFilters({
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Location</Label>
-              <Select value={filters.location} onValueChange={(v) => set({ location: v })}>
-                <SelectTrigger size="sm" className="w-full"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  {state.locations.map((l) => <SelectItem key={l.id} value={l.name}>{l.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
             <div className="space-y-1.5 col-span-2">
               <Label className="text-xs">Supplier</Label>
               <Select value={filters.supplier} onValueChange={(v) => set({ supplier: v })}>
@@ -115,6 +103,170 @@ export function InventoryFilters({
             <div className="grid grid-cols-2 gap-3">
               <Input type="date" size={4} value={filters.dateFrom} onChange={(e) => set({ dateFrom: e.target.value })} className="h-8 text-xs" />
               <Input type="date" size={4} value={filters.dateTo} onChange={(e) => set({ dateTo: e.target.value })} className="h-8 text-xs" />
+            </div>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+// Stock In Filters
+export interface StockInFiltersState {
+  supplier: string;
+  status: string;
+  dateFrom: string;
+  dateTo: string;
+}
+
+export const emptyStockInFilters: StockInFiltersState = {
+  supplier: "all",
+  status: "all",
+  dateFrom: "",
+  dateTo: "",
+};
+
+export function StockInFilters({
+  filters,
+  onChange,
+  suppliers,
+}: {
+  filters: StockInFiltersState;
+  onChange: (f: StockInFiltersState) => void;
+  suppliers: string[];
+}) {
+  const activeCount = Object.entries(filters).filter(([, v]) => v !== "all" && v !== "").length;
+
+  const set = (patch: Partial<StockInFiltersState>) => onChange({ ...filters, ...patch });
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="relative">
+          <SlidersHorizontal className="size-4" />
+          Filters
+          {activeCount > 0 && (
+            <Badge className="bg-primary text-primary-foreground absolute -top-2 -right-2 size-4 rounded-full p-0 text-[10px]">
+              {activeCount}
+            </Badge>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[320px] p-0" align="start">
+        <div className="flex items-center justify-between border-b px-4 py-3">
+          <p className="text-sm font-semibold">Filters</p>
+          {activeCount > 0 && (
+            <Button variant="ghost" size="sm" className="text-muted-foreground h-7 text-xs" onClick={() => onChange(emptyStockInFilters)}>
+              <FilterX className="size-3.5" /> Clear all
+            </Button>
+          )}
+        </div>
+        <div className="max-h-[60vh] space-y-4 overflow-y-auto p-4">
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Supplier</Label>
+              <Select value={filters.supplier} onValueChange={(v) => set({ supplier: v })}>
+                <SelectTrigger size="sm" className="w-full"><SelectValue placeholder="All Suppliers" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Suppliers</SelectItem>
+                  {suppliers.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Status</Label>
+              <Select value={filters.status} onValueChange={(v) => set({ status: v })}>
+                <SelectTrigger size="sm" className="w-full"><SelectValue placeholder="All Status" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="received">Received</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Separator />
+            <Label className="flex items-center gap-1.5 text-xs">
+              <CalendarRange className="size-3.5" /> Date between
+            </Label>
+            <div className="grid grid-cols-2 gap-3">
+              <Input type="date" value={filters.dateFrom} onChange={(e) => set({ dateFrom: e.target.value })} className="h-8 text-xs" aria-label="From date" />
+              <Input type="date" value={filters.dateTo} onChange={(e) => set({ dateTo: e.target.value })} className="h-8 text-xs" aria-label="To date" />
+            </div>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+// Stock Out Filters
+export interface StockOutFiltersState {
+  status: string;
+  dateFrom: string;
+  dateTo: string;
+}
+
+export const emptyStockOutFilters: StockOutFiltersState = {
+  status: "all",
+  dateFrom: "",
+  dateTo: "",
+};
+
+export function StockOutFilters({
+  filters,
+  onChange,
+}: {
+  filters: StockOutFiltersState;
+  onChange: (f: StockOutFiltersState) => void;
+}) {
+  const activeCount = Object.entries(filters).filter(([, v]) => v !== "all" && v !== "").length;
+
+  const set = (patch: Partial<StockOutFiltersState>) => onChange({ ...filters, ...patch });
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="relative">
+          <SlidersHorizontal className="size-4" />
+          Filters
+          {activeCount > 0 && (
+            <Badge className="bg-primary text-primary-foreground absolute -top-2 -right-2 size-4 rounded-full p-0 text-[10px]">
+              {activeCount}
+            </Badge>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[320px] p-0" align="start">
+        <div className="flex items-center justify-between border-b px-4 py-3">
+          <p className="text-sm font-semibold">Filters</p>
+          {activeCount > 0 && (
+            <Button variant="ghost" size="sm" className="text-muted-foreground h-7 text-xs" onClick={() => onChange(emptyStockOutFilters)}>
+              <FilterX className="size-3.5" /> Clear all
+            </Button>
+          )}
+        </div>
+        <div className="max-h-[60vh] space-y-4 overflow-y-auto p-4">
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Status</Label>
+              <Select value={filters.status} onValueChange={(v) => set({ status: v })}>
+                <SelectTrigger size="sm" className="w-full"><SelectValue placeholder="All Status" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="issued">Issued</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Separator />
+            <Label className="flex items-center gap-1.5 text-xs">
+              <CalendarRange className="size-3.5" /> Date between
+            </Label>
+            <div className="grid grid-cols-2 gap-3">
+              <Input type="date" value={filters.dateFrom} onChange={(e) => set({ dateFrom: e.target.value })} className="h-8 text-xs" aria-label="From date" />
+              <Input type="date" value={filters.dateTo} onChange={(e) => set({ dateTo: e.target.value })} className="h-8 text-xs" aria-label="To date" />
             </div>
           </div>
         </div>

@@ -18,5 +18,6 @@ export function useFakeLoadingOn(dep: unknown, delay = 350) {
     const t = setTimeout(() => setLoading(false), delay);
     return () => clearTimeout(t);
   }, [dep, delay]);
+  // eslint-disable-line react-hooks/set-state-in-effect
   return loading;
 }

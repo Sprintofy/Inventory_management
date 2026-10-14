@@ -56,7 +56,7 @@ export default function InventoryDetailPage({ params }: { params: Promise<{ id: 
         <EmptyState
           icon={Package}
           title="Item not found"
-          description="This inventory item doesn't exist or was archived."
+          description="This inventory item doesn't exist."
           action={{ label: "Back to Inventory", href: "/inventory" }}
         />
       </div>
@@ -85,7 +85,7 @@ export default function InventoryDetailPage({ params }: { params: Promise<{ id: 
           </Button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{item.name}</h1>
+              <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{item.deviceName}</h1>
               <StatusBadge status={item.status} />
             </div>
             <p className="text-muted-foreground mt-0.5 font-mono text-xs">{item.sku}</p>
@@ -115,33 +115,31 @@ export default function InventoryDetailPage({ params }: { params: Promise<{ id: 
         <Card className="py-4">
           <CardContent className="px-5">
             <div className="flex items-center justify-between">
-              <p className="text-muted-foreground text-xs font-medium">Reorder Level</p>
-              <Layers className="text-warning size-4" />
+              <p className="text-muted-foreground text-xs font-medium">Status</p>
+              <StatusBadge status={item.status} />
             </div>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">{formatNumber(item.reorderLevel)}</p>
-            <p className="text-muted-foreground text-xs">Min: {item.minStock} · Max: {item.maxStock}</p>
           </CardContent>
         </Card>
         <Card className="py-4">
           <CardContent className="px-5">
             <div className="flex items-center justify-between">
-              <p className="text-muted-foreground text-xs font-medium">Unit Cost</p>
-              <TrendingUp className="text-success size-4" />
+              <p className="text-muted-foreground text-xs font-medium">Last Updated</p>
+              <CalendarDays className="text-success size-4" />
             </div>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">{formatCurrency(item.unitCost)}</p>
-            <p className="text-muted-foreground text-xs">per {item.unit}</p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">{formatDate(item.lastUpdated)}</p>
+            <p className="text-muted-foreground text-xs">Created: {formatDate(item.createdAt)}</p>
           </CardContent>
         </Card>
         <Card className="py-4">
-          <CardContent className="px-5">
-            <div className="flex items-center justify-between">
-              <p className="text-muted-foreground text-xs font-medium">Location</p>
-              <MapPin className="text-sky-500 size-4" />
-            </div>
-            <p className="mt-2 text-lg font-semibold">{item.location}</p>
-            <p className="text-muted-foreground text-xs">{item.department}</p>
-          </CardContent>
-        </Card>
+  <CardContent className="px-5">
+    <div className="flex items-center justify-between">
+      <p className="text-muted-foreground text-xs font-medium">Brand</p>
+      <Tag className="text-sky-500 size-4" />
+    </div>
+    <p className="mt-2 text-lg font-semibold">{item.brand}</p>
+    <p className="text-muted-foreground text-xs">{item.modelNumber}</p>
+  </CardContent>
+</Card>
       </div>
 
       <Card className="py-0">
@@ -164,18 +162,17 @@ export default function InventoryDetailPage({ params }: { params: Promise<{ id: 
               <div className="lg:col-span-2">
                 <h3 className="text-sm font-semibold">Item Information</h3>
                 <dl className="mt-4 grid gap-x-8 gap-y-4 sm:grid-cols-2">
-                  {[
+{[
+                    { k: "Brand", v: item.brand, icon: Tag },
+                    { k: "Model Number", v: item.modelNumber, icon: Package },
                     { k: "Category", v: item.category, icon: Tag },
-                    { k: "Subcategory", v: item.subcategory ?? "—" },
+                    { k: "Sub Department", v: item.subDepartment ?? "—" },
                     { k: "Department", v: item.department, icon: Building2 },
                     { k: "Supplier", v: item.supplier ?? "—" },
                     { k: "Unit", v: item.unit },
-                    { k: "Condition", v: item.condition ?? "—" },
-                    { k: "Warranty", v: item.warranty ?? "—" },
+                    { k: "Specifications", v: item.specifications ?? "—" },
+                    { k: "Warranty Period", v: item.warrantyPeriod ?? "—" },
                     { k: "Created", v: formatDate(item.createdAt), icon: CalendarDays },
-                    { k: "Serial Number", v: item.serialNumber ?? "—" },
-                    { k: "Asset Number", v: item.assetNumber ?? "—" },
-                    { k: "Batch Number", v: item.batchNumber ?? "—" },
                     { k: "Last Updated", v: formatDate(item.lastUpdated) },
                   ].map((row) => (
                     <div key={row.k} className="flex items-center justify-between gap-4 border-b pb-2">
@@ -183,7 +180,7 @@ export default function InventoryDetailPage({ params }: { params: Promise<{ id: 
                       <dd className="text-right text-sm font-medium">{row.v}</dd>
                     </div>
                   ))}
-                </dl>
+</dl>
                 {item.description && (
                   <div className="mt-5">
                     <h4 className="text-sm font-semibold">Description</h4>
@@ -203,22 +200,8 @@ export default function InventoryDetailPage({ params }: { params: Promise<{ id: 
                   <div>
                     <div className="mb-1.5 flex justify-between text-xs">
                       <span className="text-muted-foreground">Current</span>
-                      <span className="font-medium tabular-nums">{item.quantity} / {item.maxStock}</span>
+                      <span className="font-medium tabular-nums">{item.quantity}</span>
                     </div>
-                    <div className="bg-muted h-2.5 overflow-hidden rounded-full">
-                      <div
-                        className={
-                          item.status === "out-of-stock" ? "bg-danger h-full rounded-full" :
-                          item.status === "low-stock" ? "bg-warning h-full rounded-full" :
-                          "bg-success h-full rounded-full"
-                        }
-                        style={{ width: `${Math.min(100, (item.quantity / Math.max(1, item.maxStock)) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                  <div className="bg-muted/60 flex items-center justify-between rounded-lg px-4 py-3 text-sm">
-                    <span className="text-muted-foreground">Reorder point</span>
-                    <span className="font-medium tabular-nums">{item.reorderLevel}</span>
                   </div>
                   <div className="bg-muted/60 flex items-center justify-between rounded-lg px-4 py-3 text-sm">
                     <span className="text-muted-foreground">Status</span>

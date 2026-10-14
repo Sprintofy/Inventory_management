@@ -33,13 +33,11 @@ export function MovementHistory({
 }) {
   const [search, setSearch] = React.useState("");
   const [type, setType] = React.useState<string>("all");
-  const [location, setLocation] = React.useState<string>("all");
   const [itemType, setItemType] = React.useState<string>("all");
   const [ticket, setTicket] = React.useState<string>("all");
   const [date, setDate] = React.useState("");
   const [page, setPage] = React.useState(1);
 
-  const locations = React.useMemo(() => Array.from(new Set(movements.flatMap((m) => [m.fromLocation, m.toLocation]))).sort(), [movements]);
   const itemTypes = React.useMemo(() => Array.from(new Set(movements.map((m) => m.itemType))).sort(), [movements]);
   const tickets = React.useMemo(() => Array.from(new Set(movements.map((m) => m.ticketId))).sort(), [movements]);
 
@@ -55,13 +53,12 @@ export function MovementHistory({
         m.performedBy.toLowerCase().includes(term)
       )) return false;
       if (type !== "all" && m.movementType !== type) return false;
-      if (location !== "all" && m.fromLocation !== location && m.toLocation !== location) return false;
       if (itemType !== "all" && m.itemType !== itemType) return false;
       if (ticket !== "all" && m.ticketId !== ticket) return false;
       if (date && new Date(m.date).toISOString().slice(0, 10) !== date) return false;
       return true;
     });
-  }, [movements, search, type, location, itemType, ticket, date]);
+  }, [movements, search, type, itemType, ticket, date]);
 
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
 
@@ -77,13 +74,6 @@ export function MovementHistory({
               {(["check-in", "check-out", "transfer"] as const).map((t) => (
                 <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>
               ))}
-            </SelectContent>
-          </Select>
-          <Select value={location} onValueChange={(v) => { setLocation(v); setPage(1); }}>
-            <SelectTrigger><SelectValue placeholder="Location" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All locations</SelectItem>
-              {locations.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={itemType} onValueChange={(v) => { setItemType(v); setPage(1); }}>

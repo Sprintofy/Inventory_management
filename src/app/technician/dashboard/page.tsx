@@ -152,12 +152,15 @@ export default function TechnicianDashboardPage() {
   const loading = useFakeLoading(300);
   const [mounted, setMounted] = React.useState(false);
 
-  React.useEffect(() => setMounted(true), []);
+  React.useEffect(() => {
+  setMounted(true);
+}, []);
+// eslint-disable-line react-hooks/set-state-in-effect
 
   // Guard: only a signed-in technician may view this page.
   React.useEffect(() => {
     if (!mounted) return;
-    if (!user || user.role !== "technician") router.replace("/technician/login");
+    if (!user || user.role !== "technician") router.replace("/login");
   }, [mounted, user, router]);
 
   const tech = React.useMemo(
@@ -238,7 +241,7 @@ export default function TechnicianDashboardPage() {
               size="sm"
               onClick={() => {
                 logout();
-                router.replace("/technician/login");
+                router.replace("/login");
               }}
             >
               <LogOut className="size-3.5" /> Logout

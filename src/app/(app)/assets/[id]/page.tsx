@@ -3,7 +3,7 @@
 import * as React from "react";
 import { use, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Boxes, CalendarDays, MapPin, Pencil, User } from "lucide-react";
+import { ArrowLeft, Boxes, CalendarDays, Package, Pencil, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -71,7 +71,6 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
               {[
                 ["Category", asset.category],
                 ["Department", asset.department],
-                ["Location", asset.location],
                 ["Condition", asset.condition],
                 ["Status", asset.status],
                 ["Purchase Date", formatDate(asset.purchaseDate)],
@@ -103,7 +102,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                   </div>
                 </div>
               ) : (
-                <p className="text-muted-foreground text-sm">Not assigned — available in {asset.location}.</p>
+                <p className="text-muted-foreground text-sm">Not assigned — available.</p>
               )}
             </CardContent>
           </Card>
@@ -118,7 +117,7 @@ export default function AssetDetailPage({ params }: { params: Promise<{ id: stri
                 <div className="space-y-3">
                   {history.map((t) => (
                     <div key={t.id} className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground flex items-center gap-2"><MapPin className="size-3.5" />{t.type}</span>
+                      <span className="text-muted-foreground flex items-center gap-2"><Package className="size-3.5" />{t.type}</span>
                       <span className="text-xs">{formatDate(t.date)}</span>
                     </div>
                   ))}

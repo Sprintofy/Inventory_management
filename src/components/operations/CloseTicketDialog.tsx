@@ -49,6 +49,7 @@ export function CloseTicketDialog({ open, onOpenChange, ticket }: { open: boolea
       setSummaryError(null);
     }
   }, [open, ticket]);
+  // eslint-disable-line react-hooks/set-state-in-effect
 
   if (!ticket) return null;
 

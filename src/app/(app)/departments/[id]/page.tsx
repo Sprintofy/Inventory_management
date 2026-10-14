@@ -23,7 +23,7 @@ export default function DepartmentDetailPage({ params }: { params: Promise<{ id:
   const dept = state.departments.find((d) => d.id === id);
 
   const items = useMemo(
-    () => state.inventory.filter((i) => i.department === dept?.name && !i.archived),
+    () => state.inventory.filter((i) => i.department === dept?.name),
     [state.inventory, dept]
   );
   const openTickets = state.tickets.filter((t) => t.department === dept?.name && t.status !== "closed");
@@ -63,7 +63,7 @@ export default function DepartmentDetailPage({ params }: { params: Promise<{ id:
         {can("reports.view") && (
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => {
-              downloadCSV(`${dept.name}-export-${new Date().toISOString().slice(0, 10)}.csv`, items.map((i) => ({ Name: i.name, SKU: i.sku, Quantity: i.quantity, Location: i.location })));
+              downloadCSV(`${dept.name}-export-${new Date().toISOString().slice(0, 10)}.csv`, items.map((i) => ({ Name: i.deviceName, SKU: i.sku, Quantity: i.quantity })));
               toast.success(`Exported ${items.length} items`);
             }}><FileDown className="size-4" /> Export</Button>
             <Button variant="outline" onClick={() => router.push(`/reports?dept=${encodeURIComponent(dept.name)}`)}>
@@ -147,12 +147,11 @@ export default function DepartmentDetailPage({ params }: { params: Promise<{ id:
                         <Package className="text-muted-foreground size-4" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium">{i.name}</p>
+                        <p className="text-sm font-medium">{i.deviceName}</p>
                         <p className="text-muted-foreground text-xs">{i.sku}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
-                      <span className="text-muted-foreground text-xs">{i.location}</span>
                       <span className="text-sm font-semibold tabular-nums">{i.quantity}</span>
                     </div>
                   </div>

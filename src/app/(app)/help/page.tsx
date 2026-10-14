@@ -14,9 +14,9 @@ const sections = [
     icon: Boxes,
     title: "Managing Inventory",
     items: [
-      "Add items from the Inventory page using the Add Item wizard (name, category, department, location, quantities).",
+      "Add items from the Inventory page using the Add Item wizard (name, category, department, quantities).",
       "Adjust stock levels with Stock In, Stock Out and Adjustments - changes are logged automatically.",
-      "Use bulk actions to assign departments, change locations, export to CSV, or archive obsolete items.",
+      "Use bulk actions to assign departments, export to CSV, or archive obsolete items.",
       "Search instantly with the global search (Ctrl/Cmd+K) - results jump to item details or filter the inventory list.",
     ],
   },

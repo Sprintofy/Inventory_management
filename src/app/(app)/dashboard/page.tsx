@@ -128,11 +128,13 @@ export default function DashboardPage() {
 
   const health = React.useMemo(() => {
     const source = activeDepartment === "all" ? allItems : items;
+    const healthy = source.filter((i) => i.status === "in-stock" || i.status === "overstock").length;
+    const lowStock = source.filter((i) => i.status === "low-stock").length;
+    const outOfStock = source.filter((i) => i.status === "out-of-stock").length;
     return [
-      { label: "Healthy", value: source.filter((i) => i.status === "in-stock").length, color: "#10b981" },
-      { label: "Low Stock", value: source.filter((i) => i.status === "low-stock").length, color: "#f59e0b" },
-      { label: "Critical", value: source.filter((i) => i.status === "low-stock" && i.quantity <= i.minStock).length, color: "#f97316" },
-      { label: "Out of Stock", value: source.filter((i) => i.status === "out-of-stock").length, color: "#ef4444" },
+      { label: "Healthy", value: healthy, color: "#10b981" },
+      { label: "Low Stock", value: lowStock, color: "#f59e0b" },
+      { label: "Out of Stock", value: outOfStock, color: "#ef4444" },
     ];
   }, [activeDepartment, items, allItems]);
 

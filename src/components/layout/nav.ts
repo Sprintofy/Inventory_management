@@ -5,8 +5,6 @@ import {
   PackagePlus,
   PackageMinus,
   Ticket,
-  ShoppingCart,
-  Truck,
   FolderTree,
   Building2,
   Users,
@@ -36,9 +34,9 @@ const ADMIN: Role[] = ["super-admin", "admin"];
 const OP_STAFF: Role[] = ["super-admin", "admin"];
 const ADMIN_ONLY: Role[] = ["super-admin", "admin"];
 const DEPT_ROLES: Role[] = ["super-admin", "admin"];
-// Department-scoped user: dashboard + own-dept inventory / stock / reports only.
+// Department-scoped user: dashboard + own dept inventory / stock / reports only.
 // Tickets, Purchase Orders, Suppliers removed for department login.
-const USER_SCOPED: Role[] = ["super-admin", "admin", "user", "department-manager", "department-user"];
+const USER_SCOPED: Role[] = ["super-admin", "admin", "user", "department-manager", "department-user", "viewer"];
 
 export const navGroups: NavGroup[] = [
   {
@@ -57,10 +55,8 @@ export const navGroups: NavGroup[] = [
   {
     label: "Operations",
     items: [
-      // Tickets visible to super-admin only — removed for department login.
+      // Tickets visible to admin only — removed for department login.
       { title: "Tickets", href: "/tickets", icon: Ticket, roles: ADMIN, keywords: ["issue", "support", "complaint", "service"] },
-      { title: "Purchase Orders", href: "/purchase-orders", icon: ShoppingCart, roles: ADMIN_ONLY, keywords: ["po", "order", "orders", "procurement", "buy"] },
-      { title: "Suppliers", href: "/suppliers", icon: Truck, roles: ADMIN_ONLY, keywords: ["vendor", "vendors", "supplier"] },
     ],
   },
   {

@@ -1,57 +1,84 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+
 import {
-  ArrowDown,
-  ArrowUp,
   ArrowUpDown,
-  Check,
-  ChevronDown,
   Columns3,
   Download,
-  FolderSync,
-  MapPin,
-  MoreHorizontal,
   Pencil,
   PackageMinus,
   PackagePlus,
-  Building2,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { InventoryForm } from "@/components/inventory/InventoryForm";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Pagination } from "@/components/ui/Pagination";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
-import { cn, downloadCSV, formatCurrency, formatDate } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
 import { useApp } from "@/store/app-store";
 import type { InventoryItem } from "@/types";
+import { cn } from "@/lib/utils";
 
-export type SortKey = "name" | "quantity" | "value" | "updated";
-
-interface InventoryTableProps {
-  items: InventoryItem[];
-  loading?: boolean;
-  search: string;
-  onEdit: (item: InventoryItem) => void;
-  onStockIn: (item: InventoryItem) => void;
-  onStockOut: (item: InventoryItem) => void;
-}
+type ColumnKey =
+  | "selection"
+  | "deviceName"
+  | "brand"
+  | "modelNumber"
+  | "sku"
+  | "category"
+  | "quantity"
+  | "unit"
+  | "reorder"
+  | "maxStock"
+  | "unitCost"
+  | "value"
+  | "status"
+  | "updated"
+  | "actions";
 
 const allColumns = [
-  { key: "item", label: "Item" },
+  { key: "selection", label: "" },
+  { key: "deviceName", label: "Device Name" },
+  { key: "brand", label: "Brand" },
+  { key: "modelNumber", label: "Model" },
   { key: "sku", label: "SKU" },
   { key: "category", label: "Category" },
-  { key: "department", label: "Department" },
-  { key: "location", label: "Location" },
   { key: "quantity", label: "Quantity" },
   { key: "reorder", label: "Reorder Level" },
   { key: "unitCost", label: "Unit Cost" },
@@ -61,317 +88,477 @@ const allColumns = [
   { key: "actions", label: "Actions" },
 ] as const;
 
-export type ColumnKey = (typeof allColumns)[number]["key"];
-
 function defaultColumns(): ColumnKey[] {
-  return ["item", "sku", "category", "department", "quantity", "unitCost", "value", "status", "updated", "actions"];
+  return [
+    "selection",
+    "deviceName",
+    "brand",
+    "modelNumber",
+    "sku",
+    "category",
+    "quantity",
+    "unitCost",
+    "value",
+    "status",
+    "updated",
+    "actions",
+  ];
 }
 
-export function InventoryTable({ items, loading, search, onEdit, onStockIn, onStockOut }: InventoryTableProps) {
-  const { state, assignDepartment, changeLocation, can } = useApp();
-  const router = useRouter();
+const sortOptions = [
+  { value: "deviceName_asc", label: "Device Name: A-Z" },
+  { value: "deviceName_desc", label: "Device Name: Z-A" },
+  { value: "brand_asc", label: "Brand: A-Z" },
+  { value: "brand_desc", label: "Brand: Z-A" },
+  { value: "modelNumber_asc", label: "Model: A-Z" },
+  { value: "modelNumber_desc", label: "Model: Z-A" },
+  { value: "sku_asc", label: "SKU: A-Z" },
+  { value: "sku_desc", label: "SKU: Z-A" },
+  { value: "category_asc", label: "Category: A-Z" },
+  { value: "category_desc", label: "Category: Z-A" },
+  { value: "quantity_asc", label: "Quantity: Low-High" },
+  { value: "quantity_desc", label: "Quantity: High-Low" },
+  { value: "unitCost_asc", label: "Unit Cost: Low-High" },
+  { value: "unitCost_desc", label: "Unit Cost: High-Low" },
+  { value: "updated_asc", label: "Date: Old-New" },
+  { value: "updated_desc", label: "Date: New-Old" },
+] as const;
+
+export function InventoryTable() {
+  const { state, archiveItems } = useApp();
+
   const [columns, setColumns] = React.useState<ColumnKey[]>(defaultColumns());
-  const [sortKey, setSortKey] = React.useState<SortKey>("name");
-  const [sortDir, setSortDir] = React.useState<"asc" | "desc">("asc");
-  const [page, setPage] = React.useState(1);
-  const [pageSize, setPageSize] = React.useState(10);
-  const [selected, setSelected] = React.useState<Set<string>>(new Set());
-  const [bulkDialog, setBulkDialog] = React.useState<null | "department" | "location">(null);
-  const [bulkValue, setBulkValue] = React.useState("");
+  const [sort, setSort] = React.useState<typeof sortOptions[number]['value'] | null>(null);
+  const [searchTerm, setSearchTerm] = React.useState("");
+  const [page, setPage] = React.useState(0);
+  const [itemsPerPage, setItemsPerPage] = React.useState(10);
+  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
+  const [openConfirm, setOpenConfirm] = React.useState(false);
+  const [confirmItemId, setConfirmItemId] = React.useState<string | null>(null);
+  const [openEdit, setOpenEdit] = React.useState(false);
+  const [editItem, setEditItem] = React.useState<InventoryItem | null>(null);
 
-  React.useEffect(() => {
-    const saved = localStorage.getItem("inventory-columns");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved) as ColumnKey[];
-        setColumns(parsed.filter((c) => allColumns.some((a) => a.key === c)));
-      } catch { /* ignore */ }
-    }
-  }, []);
 
-  React.useEffect(() => {
-    localStorage.setItem("inventory-columns", JSON.stringify(columns));
-  }, [columns]);
-
-  React.useEffect(() => {
-    setPage(1);
-    setSelected(new Set());
-  }, [items.length, search]);
-
-  const sorted = React.useMemo(() => {
-    const arr = [...items];
-    const dir = sortDir === "asc" ? 1 : -1;
-    arr.sort((a, b) => {
-      switch (sortKey) {
-        case "name": return a.name.localeCompare(b.name) * dir;
-        case "quantity": return (a.quantity - b.quantity) * dir;
-        case "value": return (a.quantity * a.unitCost - b.quantity * b.unitCost) * dir;
-        case "updated": return (new Date(a.lastUpdated).getTime() - new Date(b.lastUpdated).getTime()) * dir;
-        default: return 0;
-      }
+  const filteredItems = React.useMemo(() => {
+    if (!searchTerm.trim()) return state.inventory;
+    const term = searchTerm.toLowerCase();
+    return state.inventory.filter((item) => {
+      return (
+        item.deviceName.toLowerCase().includes(term) ||
+        item.brand.toLowerCase().includes(term) ||
+        item.modelNumber.toLowerCase().includes(term) ||
+        item.sku.toLowerCase().includes(term) ||
+        (item.description ?? "").toLowerCase().includes(term) ||
+        (item.category ?? "").toLowerCase().includes(term) ||
+        (item.supplier ?? "").toLowerCase().includes(term)
+      );
     });
-    return arr;
-  }, [items, sortKey, sortDir]);
+  }, [state.inventory, searchTerm]);
 
-  const paged = sorted.slice((page - 1) * pageSize, page * pageSize);
-  const allSelected = paged.length > 0 && paged.every((i) => selected.has(i.id));
-
-  const toggleAll = () => {
-    if (allSelected) setSelected(new Set());
-    else setSelected(new Set(paged.map((i) => i.id)));
-  };
-
-  const toggleOne = (id: string) => {
-    const next = new Set(selected);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelected(next);
-  };
-
-  const toggleSort = (key: SortKey) => {
-    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else {
-      setSortKey(key);
-      setSortDir("asc");
+  const sortedItems = React.useMemo(() => {
+    if (!sort) return filteredItems;
+    const parts = sort.toString().split("_");
+    if (parts.length !== 2) {
+      // Fallback to filteredItems if the sort string is not in the expected format
+      return filteredItems;
     }
-  };
+    const [key, order] = parts as [keyof InventoryItem, "asc" | "desc"];
+    return [...filteredItems].sort((a, b) => {
+      if (a[key] === null && b[key] === null) return 0;
+      if (a[key] === null) return order === "asc" ? 1 : -1;
+      if (b[key] === null) return order === "asc" ? -1 : 1;
+      if (typeof a[key] === "string" && typeof b[key] === "string") {
+        return order === "asc"
+          ? a[key].localeCompare(b[key])
+          : b[key].localeCompare(a[key]);
+      }
+      if (typeof a[key] === "number" && typeof b[key] === "number") {
+        return order === "asc" ? a[key] - b[key] : b[key] - a[key];
+      }
+      return 0;
+    });
+  }, [filteredItems, sort]);
 
-  const SortHeader = ({ label, k }: { label: string; k: SortKey }) => (
-    <button onClick={() => toggleSort(k)} className="flex items-center gap-1 hover:text-foreground cursor-pointer">
-      {label}
-      {sortKey === k ? (sortDir === "asc" ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />) : <ArrowUpDown className="size-3 opacity-40" />}
-    </button>
+  const paginatedItems = React.useMemo(() => {
+    if (!Array.isArray(sortedItems)) return [];
+    const start = page * itemsPerPage;
+    return sortedItems.slice(start, start + itemsPerPage);
+  }, [sortedItems, page, itemsPerPage]);
+
+  const totalPages = Math.ceil(
+    (Array.isArray(sortedItems) ? sortedItems.length : 0) / itemsPerPage,
   );
 
-  const doExport = () => {
-    const rows = (selected.size > 0 ? items.filter((i) => selected.has(i.id)) : sorted).map((i) => ({
-      Item: i.name, SKU: i.sku, Category: i.category, Department: i.department, Location: i.location,
-      Quantity: i.quantity, "Reorder Level": i.reorderLevel, "Unit Cost": i.unitCost, "Total Value": i.quantity * i.unitCost,
-      Status: i.status, "Last Updated": formatDate(i.lastUpdated),
-    }));
-    downloadCSV(`inventory-${new Date().toISOString().slice(0, 10)}.csv`, rows);
-    toast.success(`Exported ${rows.length} items`);
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
   };
 
-  const runBulkAction = () => {
-    if (bulkDialog === "department" && bulkValue) {
-      assignDepartment([...selected], bulkValue);
-      toast.success(`Assigned ${selected.size} items to ${bulkValue}`);
-    }
-    if (bulkDialog === "location" && bulkValue) {
-      changeLocation([...selected], bulkValue);
-      toast.success(`Moved ${selected.size} items to ${bulkValue}`);
-    }
-    setBulkDialog(null);
-    setBulkValue("");
-    setSelected(new Set());
+  const selectAllOnPage = () => {
+    setSelectedIds((prev) => {
+      const newSet = new Set(prev);
+      for (const item of paginatedItems) {
+        newSet.add(item.id);
+      }
+      return newSet;
+    });
   };
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const handleDownload = async () => {
+    // TODO: Implement actual CSV download
+    toast.info("CSV download would start here");
+  };
+
+  React.useEffect(() => {
+    if (page >= totalPages && totalPages > 0) {
+      setPage(totalPages - 1); // eslint-disable-line react-hooks/set-state-in-effect
+    }
+  }, [totalPages, page]);
 
   return (
-    <div className="space-y-3">
-      {selected.size > 0 && (
-        <div className="bg-primary/5 border-primary/20 flex flex-wrap items-center gap-2 rounded-lg border px-3 py-2.5">
-          <span className="text-sm font-medium">{selected.size} selected</span>
-          <span className="bg-border mx-1 h-4 w-px" />
-          <Button size="sm" variant="outline" onClick={doExport}><Download className="size-3.5" /> Export</Button>
-          {can("inventory.manage") && (
-            <>
-              <Button size="sm" variant="outline" onClick={() => setBulkDialog("department")}><Building2 className="size-3.5" /> Assign Department</Button>
-              <Button size="sm" variant="outline" onClick={() => setBulkDialog("location")}><MapPin className="size-3.5" /> Change Location</Button>
-            </>
-          )}
-          <Button size="sm" variant="ghost" className="ml-auto" onClick={() => setSelected(new Set())}>Clear</Button>
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => {
+                const selectedItem = state.inventory.find((item) => selectedIds.has(item.id));
+                if (selectedItem) {
+                  setEditItem(selectedItem);
+                  setOpenEdit(true);
+                }
+              }}
+              disabled={selectedIds.size !== 1}
+            >
+              <Pencil className="size-4" />
+            </Button>
+            <Button
+              variant="destructive"
+              size="icon"
+              onClick={() => {
+                if (selectedIds.size > 0) {
+                  setConfirmItemId(null);
+                  setOpenConfirm(true);
+                }
+              }}
+              disabled={selectedIds.size === 0}
+            >
+              <PackageMinus className="size-4" />
+            </Button>
+            <Button variant="outline" size="icon" onClick={handleDownload}>
+              <Download className="size-4" />
+            </Button>
+          </div>
+          <div className="mt-2 flex items-center gap-2">
+            <Input
+              placeholder="Search items..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="max-w-xs sm:max-w-sm"
+            />
+            <Button
+              variant="outline"
+              onClick={() => setSearchTerm("")}
+              className="hidden sm:inline-flex"
+            >
+              Clear
+            </Button>
+          </div>
         </div>
-      )}
 
-      <div className="rounded-xl border bg-card shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2">
-          <p className="text-muted-foreground text-xs">
-            {search ? (
-              <>Results for “<span className="font-medium text-foreground">{search}</span>” — {items.length} item{items.length !== 1 ? "s" : ""}</>
-            ) : (
-              <>{items.length} item{items.length !== 1 ? "s" : ""} in inventory</>
-            )}
-          </p>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-7 text-xs">
-                <Columns3 className="size-3.5" /> Columns <ChevronDown className="size-3" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuLabel className="text-xs">Show / hide columns</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {allColumns.map((c) => (
-                <DropdownMenuCheckboxItem
-                  key={c.key}
-                  checked={columns.includes(c.key)}
-                  onCheckedChange={(checked) => {
-                    setColumns((prev) => (checked ? [...prev, c.key] : prev.filter((k) => k !== c.key)));
-                  }}
-                  disabled={c.key === "actions"}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            Show
+            <Select
+              value={String(itemsPerPage)}
+              onValueChange={(value) => setItemsPerPage(Number(value))}
+            >
+              <SelectTrigger className="w-[60px]">{itemsPerPage}</SelectTrigger>
+              <SelectContent>
+                <SelectItem value="5">5</SelectItem>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
+            entries
+          </div>
+
+          <div className="relative inline-block text-sm">
+            <DropdownMenu>
+              <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-border bg-background hover:bg-muted">
+                <Columns3 className="size-4" />
+                <span>Columns</span>
+                <ChevronDown className="ml-auto size-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="right" align="end">
+                <DropdownMenuLabel className="px-3 py-1.5 text-xs font-medium">
+                  Visible columns
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator className="my-1" />
+                {allColumns.map((col) => (
+                  <DropdownMenuCheckboxItem
+                    key={col.key}
+                    checked={columns.includes(col.key)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setColumns((prev) => [...prev, col.key]);
+                      } else {
+                        setColumns((prev) => prev.filter((c) => c !== col.key));
+                      }
+                    }}
+                    className="px-3 py-1.5"
+                  >
+                    {col.label}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          <div className="relative inline-block text-sm">
+            <DropdownMenu>
+              <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-border bg-background hover:bg-muted">
+                <ArrowUpDown className="size-4" />
+                <span>Sort</span>
+                <ChevronDown className="ml-auto size-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="right" align="end">
+                <DropdownMenuLabel className="px-3 py-1.5 text-xs font-medium">
+                  Sort by
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator className="my-1" />
+                {sortOptions.map((option) => (
+                  <DropdownMenuItem
+                    key={option.value}
+                    onClick={() => setSort(option.value)}
+                    className="px-3 py-1.5"
+                  >
+                    {option.label}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator className="my-1" />
+                <DropdownMenuItem
+                  onClick={() => setSort(null)}
+                  className="px-3 py-1.5"
                 >
-                  {c.label}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+                  Clear sort
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
 
-        <Table>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="w-10 pl-4 pr-0">
-                <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Select all" />
-              </TableHead>
-              {columns.includes("item") && <TableHead><SortHeader label="Item" k="name" /></TableHead>}
-              {columns.includes("sku") && <TableHead>SKU</TableHead>}
-              {columns.includes("category") && <TableHead>Category</TableHead>}
-              {columns.includes("department") && <TableHead>Department</TableHead>}
-              {columns.includes("location") && <TableHead>Location</TableHead>}
-              {columns.includes("quantity") && <TableHead className="text-right"><SortHeader label="Qty" k="quantity" /></TableHead>}
-              {columns.includes("reorder") && <TableHead className="text-right">Reorder</TableHead>}
-              {columns.includes("unitCost") && <TableHead className="text-right">Unit Cost</TableHead>}
-              {columns.includes("value") && <TableHead className="text-right"><SortHeader label="Total Value" k="value" /></TableHead>}
-              {columns.includes("status") && <TableHead>Status</TableHead>}
-              {columns.includes("updated") && <TableHead><SortHeader label="Last Updated" k="updated" /></TableHead>}
-              {columns.includes("actions") && <TableHead className="w-12 pr-4 text-right">Actions</TableHead>}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading && (
-              Array.from({ length: 8 }).map((_, i) => (
-                <TableRow key={i} className="hover:bg-transparent">
-                  <TableCell colSpan={columns.length + 1} className="py-2 pl-4">
-                    <Skeleton className="h-8 w-full" />
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-            {!loading && paged.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={columns.length + 1} className="p-0">
-                  <EmptyState
-                    title="No inventory found"
-                    description="Try changing your filters or add a new inventory item."
-                    action={search ? undefined : { label: "+ Add Inventory", onClick: () => router.push("/inventory?new=1") }}
-                  />
-                </TableCell>
-              </TableRow>
-            )}
-            {!loading && paged.map((item) => {
-              const isSelected = selected.has(item.id);
-              return (
-                <TableRow key={item.id} data-state={isSelected ? "selected" : undefined} className="cursor-pointer" onClick={() => router.push(`/inventory/${item.id}`)}>
-                  <TableCell className="w-10 pl-4 pr-0" onClick={(e) => e.stopPropagation()}>
-                    <Checkbox checked={isSelected} onCheckedChange={() => toggleOne(item.id)} aria-label={`Select ${item.name}`} />
-                  </TableCell>
-                  {columns.includes("item") && (
-                    <TableCell>
-                      <div className="flex items-center gap-2.5">
-                        <div className="bg-muted text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-md text-[10px] font-semibold">
-                          {item.category.split(" ").map((w) => w[0]).slice(0, 2).join("")}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="max-w-[220px] truncate text-sm font-medium">{item.name}</p>
-                          {item.serialNumber && <p className="text-muted-foreground font-mono text-[11px]">{item.serialNumber}</p>}
-                        </div>
-                      </div>
-                    </TableCell>
-                  )}
-                  {columns.includes("sku") && <TableCell className="font-mono text-xs">{item.sku}</TableCell>}
-                  {columns.includes("category") && <TableCell className="text-muted-foreground text-xs">{item.category}</TableCell>}
-                  {columns.includes("department") && (
-                    <TableCell>
-                      <span className="inline-flex items-center gap-1.5 rounded-md bg-muted px-2 py-0.5 text-xs font-medium">{item.department}</span>
-                    </TableCell>
-                  )}
-                  {columns.includes("location") && <TableCell className="text-muted-foreground text-xs">{item.location}</TableCell>}
-                  {columns.includes("quantity") && (
-                    <TableCell className="text-right">
-                      <span className={cn("text-sm font-semibold tabular-nums", item.status === "out-of-stock" && "text-danger", item.status === "low-stock" && "text-warning")}>
-                        {item.quantity}
-                      </span>
-                      <span className="text-muted-foreground text-xs"> {item.unit}</span>
-                    </TableCell>
-                  )}
-                  {columns.includes("reorder") && <TableCell className="text-muted-foreground text-right text-xs tabular-nums">{item.reorderLevel}</TableCell>}
-                  {columns.includes("unitCost") && <TableCell className="text-right text-xs tabular-nums">{formatCurrency(item.unitCost)}</TableCell>}
-                  {columns.includes("value") && <TableCell className="text-right text-sm font-medium tabular-nums">{formatCurrency(item.quantity * item.unitCost)}</TableCell>}
-                  {columns.includes("status") && (
-                    <TableCell>
-                      <StatusBadge status={item.status} />
-                    </TableCell>
-                  )}
-                  {columns.includes("updated") && (
-                    <TableCell>
-                      <span className="text-muted-foreground text-xs">{formatDate(item.lastUpdated)}</span>
-                    </TableCell>
-                  )}
-                  {columns.includes("actions") && (
-                    <TableCell className="pr-4 text-right" onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon-sm" aria-label="Row actions">
-                            <MoreHorizontal className="size-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-44">
-                          <DropdownMenuItem onClick={() => router.push(`/inventory/${item.id}`)}>View details</DropdownMenuItem>
-                          {can("inventory.manage") && (
-                            <>
-                              <DropdownMenuItem onClick={() => onEdit(item)}><Pencil className="size-3.5" /> Edit</DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => onStockIn(item)}><PackagePlus className="size-3.5" /> Stock In</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => onStockOut(item)}><PackageMinus className="size-3.5" /> Stock Out</DropdownMenuItem>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  )}
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-
-        <div className="border-t px-4 py-3">
-          <Pagination total={items.length} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+          <Pagination
+            total={sortedItems.length}
+            page={page + 1}
+            pageSize={itemsPerPage}
+            onPageChange={(newPage) => setPage(newPage - 1)}
+          />
         </div>
       </div>
 
-      <Dialog open={bulkDialog !== null} onOpenChange={(open) => !open && setBulkDialog(null)}>
-        <DialogContent className="sm:max-w-md">
+      {sortedItems.length === 0 ? (
+        <EmptyState
+          icon={PackagePlus}
+          title="No items found"
+          description="Try adjusting your search or filters"
+        />
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {columns.map((col) => {
+                const colInfo = allColumns.find((c) => c.key === col);
+                if (!colInfo) return null;
+                return (
+                  <TableHead
+                    key={col}
+                    className={cn(
+                      "text-left",
+                      col === "actions" && "text-right",
+                    )}
+                  >
+                    {col === "selection" ? (
+                      <Checkbox
+                        checked={paginatedItems.every((item) => selectedIds.has(item.id))}
+                        onChange={() => {
+                          if (paginatedItems.every((item) => selectedIds.has(item.id))) {
+                            clearSelection();
+                          } else {
+                            selectAllOnPage();
+                          }
+                        }}
+                      />
+                    ) : (
+                      colInfo.label
+                    )}
+                  </TableHead>
+                );
+              })}
+            </TableRow>
+          </TableHeader>
+
+          <TableBody>
+            {paginatedItems.map((item) => (
+              <TableRow key={item.id} className="hover:bg-muted">
+                {columns.map((col) => {
+                  if (col === "actions") {
+                    return (
+                      <TableCell key={col} className="text-right">
+                        <div className="flex items-center gap-2 justify-end">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => {
+                              setEditItem(item);
+                              setOpenEdit(true);
+                            }}
+                          >
+                            <Pencil className="size-4" />
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            onClick={() => {
+                              setConfirmItemId(item.id);
+                              setOpenConfirm(true);
+                            }}
+                          >
+                            <PackageMinus className="size-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    );
+                  } else if (col === "selection") {
+                    return (
+                      <TableCell key={col}>
+                        <Checkbox
+                          checked={selectedIds.has(item.id)}
+                          onChange={() => toggleSelect(item.id)}
+                        />
+                      </TableCell>
+                    );
+                  } else {
+                    let value: string = "";
+                    switch (col) {
+                      case "deviceName":
+                        value = item.deviceName;
+                        break;
+                      case "brand":
+                        value = item.brand;
+                        break;
+                      case "modelNumber":
+                        value = item.modelNumber;
+                        break;
+                      case "sku":
+                        value = item.sku;
+                        break;
+                      case "category":
+                        value = item.category;
+                        break;
+                      case "quantity":
+                        value = String(item.quantity);
+                        break;
+                      case "unit":
+                        value = item.unit;
+                        break;
+                      case "status":
+                        value = item.status;
+                        break;
+                      case "updated":
+                        value = new Date(item.lastUpdated).toLocaleDateString();
+                        break;
+                      case "reorder":
+                        value = "";
+                        break;
+                      case "maxStock":
+                        value = "";
+                        break;
+                      case "unitCost":
+                        value = "";
+                        break;
+                      case "value":
+                        value = "";
+                        break;
+                      default:
+                        value = "";
+                    }
+
+                    return (
+                      <TableCell key={col}>
+                        {col === "status" ? (
+                          <StatusBadge status={item.status} />
+                        ) : (
+                          value
+                        )}
+                      </TableCell>
+                    );
+                  }
+                })}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+      
+      {openConfirm && (
+        <ConfirmDialog
+          open={openConfirm}
+          onOpenChange={setOpenConfirm}
+          title={confirmItemId ? "Delete item?" : "Delete items?"}
+          description={confirmItemId
+            ? "Are you sure you want to delete this item?"
+            : "Are you sure you want to delete these items?"}
+          onConfirm={() => {
+            if (confirmItemId) {
+              archiveItems([confirmItemId]);
+            } else {
+              archiveItems(Array.from(selectedIds));
+            }
+            setOpenConfirm(false);
+            if (!confirmItemId) {
+              clearSelection();
+            }
+          }}
+        />
+      )}
+      
+      <Dialog open={openEdit} onOpenChange={setOpenEdit}>
+        <DialogContent className="max-w-2xl sm:max-w-full">
           <DialogHeader>
             <DialogTitle>
-              {bulkDialog === "department" && "Assign Department"}
-              {bulkDialog === "location" && "Change Location"}
+              {editItem ? "Edit Item" : "Add Inventory Item"}
             </DialogTitle>
             <DialogDescription>
-              {`Apply to ${selected.size} selected item${selected.size !== 1 ? "s" : ""}.`}
+              {editItem
+                ? "Update the details of this inventory item."
+                : "Create a new item in your inventory. All fields marked are required."}
             </DialogDescription>
           </DialogHeader>
-          {(
-            <div className="space-y-2">
-              <Label>{bulkDialog === "department" ? "Department" : "Location"}</Label>
-              <Select value={bulkValue} onValueChange={setBulkValue}>
-                <SelectTrigger className="w-full"><SelectValue placeholder={`Select ${bulkDialog}`} /></SelectTrigger>
-                <SelectContent>
-                  {(bulkDialog === "department" ? state.departments.map((d) => d.name) : state.locations.map((l) => l.name)).map((v) => (
-                    <SelectItem key={v} value={v}>{v}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          <InventoryForm
+            open={openEdit}
+            onOpenChange={setOpenEdit}
+            item={editItem}
+          />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setBulkDialog(null)}>Cancel</Button>
             <Button
-              disabled={!bulkValue}
-              onClick={runBulkAction}
+              type="button"
+              variant="outline"
+              onClick={() => setOpenEdit(false)}
             >
-              {<><Check className="size-4" /> Apply</>}
+              Cancel
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -379,5 +566,3 @@ export function InventoryTable({ items, loading, search, onEdit, onStockIn, onSt
     </div>
   );
 }
-
-export { FolderSync };

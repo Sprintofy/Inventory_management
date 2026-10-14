@@ -73,6 +73,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     setMounted(true);
   }, []);
+  // eslint-disable-line react-hooks/set-state-in-effect
 
   const blockedPaths = React.useMemo(() => {
     const blocked: string[] = [];

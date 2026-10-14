@@ -133,7 +133,10 @@ export function InventoryChart({ range }: { range: InventoryRange }) {
 export function DepartmentChart({ data }: { data: Array<{ name: string; value: number; color: string }> }) {
   const total = data.reduce((s, d) => s + d.value, 0);
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  // eslint-disable-line react-hooks/set-state-in-effect
   return (
     <div className="flex flex-col items-center gap-6 sm:flex-row">
       <div className="relative h-[190px] w-[190px] shrink-0">

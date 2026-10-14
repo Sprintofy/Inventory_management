@@ -81,7 +81,7 @@ export default function LocationsPage() {
           {locations.map((l) => {
             const meta = typeMeta[l.type];
             const Icon = meta.icon;
-            const itemCount = state.inventory.filter((i) => i.location === l.name && !i.archived).length;
+            const itemCount = 0; // Location field removed
             return (
               <Card key={l.id} className="group relative py-5 transition-shadow hover:shadow-md">
                 <CardContent className="px-5">

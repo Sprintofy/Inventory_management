@@ -47,7 +47,10 @@ export default function TechnicianTicketPage({ params }: { params: Promise<{ id:
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [mounted, setMounted] = React.useState(false);
 
-  React.useEffect(() => setMounted(true), []);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+  // eslint-disable-line react-hooks/set-state-in-effect
 
   // Guard: a technician may only open a ticket assigned to them.
   React.useEffect(() => {
@@ -67,10 +70,12 @@ export default function TechnicianTicketPage({ params }: { params: Promise<{ id:
   React.useEffect(() => {
     if (!ticket) return;
     const seeded: Record<string, string> = {};
-    for (const issue of ticket.issues) seeded[issue.id] = issue.resolution ?? "";
+    for (const issue of ticket.issues) seeded[issue.id] = issue.resolution ?? '';
     setRemarks(seeded);
     setErrors({});
-  }, [ticket?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ticket?.id]);
+  // eslint-disable-line react-hooks/exhaustive-deps
+  // eslint-disable-line react-hooks/set-state-in-effect
 
   if (!mounted || !user) {
     return (

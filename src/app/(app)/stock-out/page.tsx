@@ -12,13 +12,12 @@ import { Pagination } from "@/components/ui/Pagination";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SearchInput } from "@/components/ui/SearchInput";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { StockOutDialog } from "@/components/inventory/StockDialogs";
 import { useApp } from "@/store/app-store";
 import { useFakeLoading } from "@/hooks/use-fake-loading";
 import { downloadCSV, formatDate } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
+import { StockOutFilters, emptyStockOutFilters, type StockOutFiltersState } from "@/components/inventory/InventoryFilters";
 
 export default function StockOutPage() {
   const { state, activeDepartment, user } = useApp();
@@ -26,9 +25,7 @@ export default function StockOutPage() {
   const loading = useFakeLoading();
   const [page, setPage] = React.useState(1);
   const [search, setSearch] = React.useState("");
-  const [statusFilter, setStatusFilter] = React.useState("all");
-  const [dateFrom, setDateFrom] = React.useState("");
-  const [dateTo, setDateTo] = React.useState("");
+  const [filters, setFilters] = React.useState<StockOutFiltersState>(emptyStockOutFilters);
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const pageSize = 10;
 
@@ -39,12 +36,12 @@ export default function StockOutPage() {
     return state.stockOut.filter((r) => {
       if (activeDepartment !== "all" && r.department !== activeDepartment) return false;
       if (term && !(r.itemName.toLowerCase().includes(term) || r.reference.toLowerCase().includes(term) || r.purpose.toLowerCase().includes(term))) return false;
-      if (statusFilter !== "all" && r.status !== statusFilter) return false;
-      if (dateFrom && new Date(r.date) < new Date(dateFrom)) return false;
-      if (dateTo && new Date(r.date) > new Date(dateTo + "T23:59:59")) return false;
+      if (filters.status !== "all" && r.status !== filters.status) return false;
+      if (filters.dateFrom && new Date(r.date) < new Date(filters.dateFrom)) return false;
+      if (filters.dateTo && new Date(r.date) > new Date(filters.dateTo + "T23:59:59")) return false;
       return true;
     });
-  }, [state.stockOut, activeDepartment, search, statusFilter, dateFrom, dateTo]);
+  }, [state.stockOut, activeDepartment, search, filters]);
 
   const paged = records.slice((page - 1) * pageSize, page * pageSize);
 
@@ -75,15 +72,9 @@ export default function StockOutPage() {
             <p className="text-muted-foreground text-sm tabular-nums">{records.length} issue record{records.length !== 1 ? "s" : ""} · {scopeLabel}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
-              <SelectTrigger className="h-8 w-[140px] text-xs"><SelectValue placeholder="Status" /></SelectTrigger>
-              <SelectContent><SelectItem value="all">All Status</SelectItem><SelectItem value="issued">Issued</SelectItem><SelectItem value="pending">Pending</SelectItem><SelectItem value="cancelled">Cancelled</SelectItem></SelectContent>
-            </Select>
-            <Input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1); }} className="h-8 w-auto text-xs" aria-label="From date" />
-            <span className="text-muted-foreground text-xs">to</span>
-            <Input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }} className="h-8 w-auto text-xs" aria-label="To date" />
-            {(statusFilter !== "all" || dateFrom || dateTo || search) && (
-              <Button variant="ghost" size="sm" className="text-muted-foreground h-8 text-xs" onClick={() => { setSearch(""); setStatusFilter("all"); setDateFrom(""); setDateTo(""); setPage(1); }}>Clear all</Button>
+            <StockOutFilters filters={filters} onChange={setFilters} />
+            {(search || Object.values(filters).some((v) => v !== "all" && v !== "")) && (
+              <Button variant="ghost" size="sm" className="text-muted-foreground h-8 text-xs" onClick={() => { setSearch(""); setFilters(emptyStockOutFilters); setPage(1); }}>Clear all</Button>
             )}
           </div>
         </CardContent>
@@ -113,7 +104,7 @@ export default function StockOutPage() {
             )}
             {!loading && paged.map((r) => (
               <TableRow key={r.id} className="cursor-pointer" onClick={() => {
-                const item = state.inventory.find((i) => i.name === r.itemName);
+                const item = state.inventory.find((i) => i.deviceName === r.itemName);
                 if (item) router.push(`/inventory/${item.id}`);
               }}>
                 <TableCell className="font-mono text-xs font-medium">{r.reference}</TableCell>

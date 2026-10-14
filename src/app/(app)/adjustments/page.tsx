@@ -67,7 +67,7 @@ export default function AdjustmentsPage() {
     if (!item) return;
     const delta = values.direction === "positive" ? values.quantity : -values.quantity;
     adjustStock(values.itemId, delta, values.note);
-    log(`adjusted stock (${values.direction})`, "Adjustments", item.name, item.department);
+    log(`adjusted stock (${values.direction})`, "Adjustments", item.deviceName, item.department);
     setDialogOpen(false);
   };
 
@@ -133,8 +133,8 @@ export default function AdjustmentsPage() {
                     <Select value={field.value} onValueChange={field.onChange}>
                       <SelectTrigger className="w-full"><SelectValue placeholder="Select item" /></SelectTrigger>
                       <SelectContent>
-                        {state.inventory.filter((i) => !i.archived).map((i) => (
-                          <SelectItem key={i.id} value={i.id}>{i.name} ({i.sku})</SelectItem>
+                        {state.inventory.map((i) => (
+                          <SelectItem key={i.id} value={i.id}>{i.deviceName} ({i.sku})</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

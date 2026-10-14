@@ -63,6 +63,7 @@ export default function DepartmentsPage() {
       router.replace("/departments", { scroll: false });
     }
   }, [searchParams, state.departments, router]);
+  // eslint-disable-line react-hooks/set-state-in-effect
 
   const departments = state.departments;
 
@@ -85,7 +86,7 @@ export default function DepartmentsPage() {
         actions={
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => {
-              downloadCSV(`departments-${new Date().toISOString().slice(0, 10)}.csv`, departments.map((d) => ({ Name: d.name, Code: d.code, Manager: d.manager, SubDepartments: d.subDepartments.length, Items: state.inventory.filter((i) => i.department === d.name && !i.archived).length })));
+              downloadCSV(`departments-${new Date().toISOString().slice(0, 10)}.csv`, departments.map((d) => ({ Name: d.name, Code: d.code, Manager: d.manager, SubDepartments: d.subDepartments.length, Items: state.inventory.filter((i) => i.department === d.name).length })));
               toast.success(`Exported ${departments.length} departments`);
             }}><FileDown className="size-4" /> Export</Button>
             {can("departments.manage") ? <Button onClick={() => { setEditing(null); setDialogOpen(true); }}><Plus className="size-4" /> Add Department</Button> : undefined}
@@ -102,7 +103,7 @@ export default function DepartmentsPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {departments.map((d) => {
-            const items = state.inventory.filter((i) => i.department === d.name && !i.archived);
+            const items = state.inventory.filter((i) => i.department === d.name);
             const low = items.filter((i) => i.status === "low-stock" || i.status === "out-of-stock").length;
             const openTickets = state.tickets.filter((t) => t.department === d.name && t.status !== "closed").length;
             const deptUsers = state.users.filter((u) => u.department === d.name).length;

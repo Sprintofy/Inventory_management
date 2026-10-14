@@ -119,31 +119,24 @@ export interface Department {
 
 export interface InventoryItem {
   id: string;
-  name: string;
-  sku: string;
+  deviceName: string;
+  brand: string;
+  modelNumber: string;
   category: string;
-  subcategory?: string;
   description?: string;
-  department: string;
-  subDepartment?: string;
-  location: string;
+  specifications?: string;
+  warrantyPeriod?: string;
+  serialNumber?: string;
+  notes?: string;
+  sku: string;
+  supplier?: string;
   quantity: number;
   unit: string;
-  minStock: number;
-  reorderLevel: number;
-  maxStock: number;
-  unitCost: number;
-  supplier?: string;
-  serialNumber?: string;
-  assetNumber?: string;
-  batchNumber?: string;
-  condition?: string;
-  warranty?: string;
-  notes?: string;
-  status: StockStatus;
+  status: string;
   lastUpdated: string;
   createdAt: string;
-  archived?: boolean;
+  department: string;
+  subDepartment?: string;
 }
 
 export interface User {

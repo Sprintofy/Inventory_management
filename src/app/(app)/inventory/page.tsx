@@ -39,15 +39,13 @@ export default function InventoryPage() {
     const term = search.trim().toLowerCase();
     return departmentItems.filter((i) => {
       if (term && !(
-        i.name.toLowerCase().includes(term) ||
+        i.deviceName.toLowerCase().includes(term) ||
         i.sku.toLowerCase().includes(term) ||
         (i.serialNumber ?? "").toLowerCase().includes(term) ||
-        i.category.toLowerCase().includes(term) ||
-        i.location.toLowerCase().includes(term)
+        i.category.toLowerCase().includes(term)
       )) return false;
       if (filters.department !== "all" && i.department !== filters.department) return false;
       if (filters.category !== "all" && i.category !== filters.category) return false;
-      if (filters.location !== "all" && i.location !== filters.location) return false;
       if (filters.supplier !== "all" && i.supplier !== filters.supplier) return false;
       if (filters.dateFrom && new Date(i.lastUpdated) < new Date(filters.dateFrom)) return false;
       if (filters.dateTo && new Date(i.lastUpdated) > new Date(filters.dateTo + "T23:59:59")) return false;
@@ -57,9 +55,25 @@ export default function InventoryPage() {
 
   const exportAll = () => {
     const rows = filtered.map((i) => ({
-      Item: i.name, SKU: i.sku, Category: i.category, Department: i.department, Location: i.location,
-      Quantity: i.quantity, "Reorder Level": i.reorderLevel, "Unit Cost": i.unitCost, "Total Value": i.quantity * i.unitCost,
-      Status: i.status, "Last Updated": formatDate(i.lastUpdated),
+      ID: i.id,
+      "Device Name": i.deviceName,
+      Brand: i.brand,
+      "Model Number": i.modelNumber,
+      Category: i.category,
+      "Serial Number": i.serialNumber ?? "",
+      Notes: i.notes ?? "",
+      Description: i.description ?? "",
+      Specifications: i.specifications ?? "",
+      "Warranty Period": i.warrantyPeriod ?? "",
+      SKU: i.sku,
+      Supplier: i.supplier ?? "",
+      Quantity: i.quantity,
+      Unit: i.unit,
+      Status: i.status,
+      "Last Updated": formatDate(i.lastUpdated),
+      "Created At": formatDate(i.createdAt),
+      Department: i.department,
+      "Sub Department": i.subDepartment ?? "",
     }));
     downloadCSV(`inventory-export-${new Date().toISOString().slice(0, 10)}.csv`, rows);
     toast.success(`Exported ${rows.length} items to CSV`);
@@ -121,7 +135,7 @@ export default function InventoryPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onClear={() => setSearch("")}
-              placeholder="Search by item name, SKU, serial number, category…"
+              placeholder="Search by device name, SKU, serial number, category…"
               className="md:max-w-sm"
             />
             <div className="flex items-center gap-2">
@@ -135,9 +149,7 @@ export default function InventoryPage() {
           </div>
 
           <InventoryTable
-            items={filtered}
             loading={loading}
-            search={search}
             onEdit={openEdit}
             onStockIn={openStockIn}
             onStockOut={openStockOut}

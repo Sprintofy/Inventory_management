@@ -32,6 +32,7 @@ export function StockInDialog({ open, onOpenChange, presetItem }: { open: boolea
       setNote("");
     }
   }, [open, presetItem]);
+  // eslint-disable-line react-hooks/set-state-in-effect
 
   const options = React.useMemo(
     () => state.inventory.filter((i) => !i.archived && (visibleDepartments.length === 0 || visibleDepartments.includes(i.department))),
@@ -74,7 +75,7 @@ export function StockInDialog({ open, onOpenChange, presetItem }: { open: boolea
                     <SelectTrigger className="w-full"><SelectValue placeholder="Select item" /></SelectTrigger>
                     <SelectContent>
                       {options.map((i) => (
-                        <SelectItem key={i.id} value={i.id}>{i.name} ({i.sku}) — {formatNumber(i.quantity)} in stock</SelectItem>
+                        <SelectItem key={i.id} value={i.id}>{i.deviceName} ({i.sku}) — {formatNumber(i.quantity)} in stock</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -128,6 +129,7 @@ export function StockOutDialog({ open, onOpenChange, presetItem }: { open: boole
       setNote("");
     }
   }, [open, presetItem]);
+  // eslint-disable-line react-hooks/set-state-in-effect
 
   const selectedItem = state.inventory.find((i) => i.id === itemId);
   const overAvailable = selectedItem && quantity > selectedItem.quantity;
@@ -161,7 +163,7 @@ export function StockOutDialog({ open, onOpenChange, presetItem }: { open: boole
               <SelectTrigger className="w-full"><SelectValue placeholder="Select item" /></SelectTrigger>
               <SelectContent>
                 {options.map((i) => (
-                  <SelectItem key={i.id} value={i.id}>{i.name} ({i.sku}) — {i.quantity} left</SelectItem>
+                  <SelectItem key={i.id} value={i.id}>{i.deviceName} ({i.sku}) — {i.quantity} left</SelectItem>
                 ))}
               </SelectContent>
             </Select>

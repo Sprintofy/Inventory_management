@@ -76,7 +76,7 @@ export default function CategoriesPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {categories.map((c) => {
-            const itemCount = state.inventory.filter((i) => i.category === c.name && !i.archived).length;
+            const itemCount = state.inventory.filter((i) => i.category === c.name).length;
             return (
               <Card key={c.id} className="group relative py-5 transition-shadow hover:shadow-md">
                 <CardContent className="px-5">

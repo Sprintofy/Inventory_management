@@ -60,7 +60,6 @@ export function TicketAssetInfo({ ticketAsset, currentTicketId }: { ticketAsset:
               <Field label="Category" value={asset.category} />
               <Field label="Assigned To" value={asset.assignedTo ?? "Unassigned"} />
               <Field label="Department" value={asset.department} />
-              <Field label="Location" value={asset.location} />
               <Field label="Purchase Date" value={formatDate(asset.purchaseDate)} />
             </div>
           </div>

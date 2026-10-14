@@ -205,7 +205,7 @@ export function ReportFaultyAssetDialog({
                   </div>
                   <p className="text-muted-foreground font-mono">{selected.assetId} · SN {selected.serialNumber}</p>
                   <p className="text-muted-foreground">
-                    {selected.category} · {selected.department} · {selected.location}
+                    {selected.category} · {selected.department}
                   </p>
                 </div>
               )}

@@ -2,18 +2,41 @@
 
 import * as React from "react";
 import * as XLSX from "xlsx";
-import { AlertTriangle, CheckCircle2, Download, FileSpreadsheet, Upload } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Download,
+  FileSpreadsheet,
+  Upload,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useApp } from "@/store/app-store";
 import { uid } from "@/lib/utils";
-import { computeStatus } from "@/data/mock";
 import { exportInventoryTemplate } from "@/lib/excel";
 import type { InventoryItem } from "@/types";
 
-type ParsedItem = Omit<InventoryItem, "id" | "status" | "lastUpdated" | "createdAt" | "quantity" | "minStock" | "reorderLevel" | "maxStock" | "unitCost"> & {
+type ParsedItem = Omit<
+  InventoryItem,
+  | "id"
+  | "status"
+  | "lastUpdated"
+  | "createdAt"
+  | "quantity"
+  | "minStock"
+  | "reorderLevel"
+  | "maxStock"
+  | "unitCost"
+> & {
   quantity: number;
   minStock: number;
   reorderLevel: number;
@@ -29,9 +52,9 @@ interface ParsedRow {
 }
 
 const HEADER_FIELDS: Record<string, string> = {
-  itemname: "name",
-  name: "name",
-  item: "name",
+  itemname: "deviceName",
+  name: "deviceName",
+  item: "deviceName",
   sku: "sku",
   code: "sku",
   category: "category",
@@ -40,7 +63,6 @@ const HEADER_FIELDS: Record<string, string> = {
   itemdescription: "description",
   department: "department",
   subdepartment: "subDepartment",
-  location: "location",
   quantity: "quantity",
   qty: "quantity",
   qtyonhand: "quantity",
@@ -68,11 +90,10 @@ const HEADER_FIELDS: Record<string, string> = {
 };
 
 const REQUIRED_FIELDS: { field: string; label: string }[] = [
-  { field: "name", label: "Item Name" },
+  { field: "deviceName", label: "Device Name" },
   { field: "sku", label: "SKU" },
   { field: "category", label: "Category" },
   { field: "department", label: "Department" },
-  { field: "location", label: "Location" },
   { field: "unit", label: "Unit" },
   { field: "supplier", label: "Supplier" },
 ];
@@ -95,7 +116,13 @@ function pick(raw: Record<string, unknown>, aliases: string[]): unknown {
   return "";
 }
 
-export function InventoryImportDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+export function InventoryImportDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+}) {
   const { addItem, log, state } = useApp();
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = React.useState<string | null>(null);
@@ -116,7 +143,9 @@ export function InventoryImportDialog({ open, onOpenChange }: { open: boolean; o
 
   const parseFile = async (file: File) => {
     if (!/\.(xlsx|xls|csv)$/i.test(file.name)) {
-      toast.error("Unsupported file type. Please upload an .xlsx, .xls or .csv file.");
+      toast.error(
+        "Unsupported file type. Please upload an .xlsx, .xls or .csv file.",
+      );
       return;
     }
     try {
@@ -127,7 +156,9 @@ export function InventoryImportDialog({ open, onOpenChange }: { open: boolean; o
         toast.error("No sheets found in the selected file.");
         return;
       }
-      const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
+      const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, {
+        defval: "",
+      });
       if (raw.length === 0) {
         toast.error("The selected file has no data rows.");
         return;
@@ -135,25 +166,34 @@ export function InventoryImportDialog({ open, onOpenChange }: { open: boolean; o
 
       const headerKeys = Object.keys(raw[0]).map(normalizeKey);
       const requiredPresent = REQUIRED_FIELDS.map((f) => f.field).filter((f) =>
-        Object.entries(HEADER_FIELDS).some(([hk, field]) => field === f && headerKeys.includes(hk))
+        Object.entries(HEADER_FIELDS).some(
+          ([hk, field]) => field === f && headerKeys.includes(hk),
+        ),
       );
-      const missing = REQUIRED_FIELDS.filter((f) => !requiredPresent.includes(f.field));
+      const missing = REQUIRED_FIELDS.filter(
+        (f) => !requiredPresent.includes(f.field),
+      );
       if (missing.length > 0) {
-        toast.error(`File is missing required columns: ${missing.map((m) => m.label).join(", ")}`);
+        toast.error(
+          `File is missing required columns: ${missing.map((m) => m.label).join(", ")}`,
+        );
         return;
       }
 
-      const parsed: ParsedRow[] = raw.map((r, idx) => {
+      const parsed: any[] = raw.map((r, idx) => {
         const rowNum = idx + 2;
         const get = (field: string) => {
-          const aliases = Object.keys(HEADER_FIELDS).filter((hk) => HEADER_FIELDS[hk] === field);
+          const aliases = Object.keys(HEADER_FIELDS).filter(
+            (hk) => HEADER_FIELDS[hk] === field,
+          );
           return rawAlias(headerKeys, r, aliases);
         };
         const errors: string[] = [];
         for (const req of REQUIRED_FIELDS) {
           const v = get(req.field);
           const clean = String(v ?? "").trim();
-          if (clean === "" || v === null || v === undefined) errors.push(`${req.label} is required`);
+          if (clean === "" || v === null || v === undefined)
+            errors.push(`${req.label} is required`);
         }
 
         const quantity = toNumber(get("quantity"));
@@ -165,12 +205,18 @@ export function InventoryImportDialog({ open, onOpenChange }: { open: boolean; o
         else if (quantity < 0) errors.push("Quantity cannot be negative");
         if (unitCost === null) errors.push("Unit Cost must be a number");
         else if (unitCost < 0) errors.push("Unit Cost cannot be negative");
-        if (minStock !== null && minStock < 0) errors.push("Min Stock cannot be negative");
-        if (reorderLevel !== null && reorderLevel < 0) errors.push("Reorder Level cannot be negative");
-        if (maxStock !== null && maxStock < 0) errors.push("Max Stock cannot be negative");
+        if (minStock !== null && minStock < 0)
+          errors.push("Min Stock cannot be negative");
+        if (reorderLevel !== null && reorderLevel < 0)
+          errors.push("Reorder Level cannot be negative");
+        if (maxStock !== null && maxStock < 0)
+          errors.push("Max Stock cannot be negative");
 
         const sku = String(get("sku") ?? "").trim();
-        if (!errors.includes("SKU is required") && state.inventory.some((i) => i.sku.toLowerCase() === sku.toLowerCase())) {
+        if (
+          !errors.includes("SKU is required") &&
+          state.inventory.some((i) => i.sku.toLowerCase() === sku.toLowerCase())
+        ) {
           errors.push(`SKU "${sku}" already exists in inventory`);
         }
 
@@ -178,14 +224,15 @@ export function InventoryImportDialog({ open, onOpenChange }: { open: boolean; o
           row: rowNum,
           errors,
           item: {
-            name: String(get("name") ?? "").trim(),
+            deviceName: String(get("name") ?? "").trim(),
             sku,
             category: String(get("category") ?? "").trim(),
             subcategory: String(get("subcategory") ?? "").trim() || undefined,
             description: String(get("description") ?? "").trim() || undefined,
             department: String(get("department") ?? "").trim(),
-            subDepartment: String(get("subDepartment") ?? "").trim() || undefined,
-            location: String(get("location") ?? "").trim(),
+            subDepartment:
+              String(get("subDepartment") ?? "").trim() || undefined,
+
             quantity: quantity ?? 0,
             unit: String(get("unit") ?? "").trim() || "unit",
             minStock: minStock ?? 5,
@@ -207,12 +254,18 @@ export function InventoryImportDialog({ open, onOpenChange }: { open: boolean; o
       setFileName(file.name);
       const bad = parsed.filter((p) => p.errors.length > 0).length;
       if (bad > 0) {
-        toast.warning(`Parsed ${parsed.length} rows — ${bad} row${bad === 1 ? "" : "s"} have errors and will be skipped.`);
+        toast.warning(
+          `Parsed ${parsed.length} rows — ${bad} row${bad === 1 ? "" : "s"} have errors and will be skipped.`,
+        );
       } else {
-        toast.success(`Parsed ${parsed.length} row${parsed.length === 1 ? "" : "s"} successfully.`);
+        toast.success(
+          `Parsed ${parsed.length} row${parsed.length === 1 ? "" : "s"} successfully.`,
+        );
       }
     } catch {
-      toast.error("Could not read the file. Make sure it is a valid Excel/CSV file.");
+      toast.error(
+        "Could not read the file. Make sure it is a valid Excel/CSV file.",
+      );
     }
   };
 
@@ -233,7 +286,6 @@ export function InventoryImportDialog({ open, onOpenChange }: { open: boolean; o
     const valid = rows.filter((r) => r.errors.length === 0);
     const now = new Date().toISOString();
     for (const { item } of valid) {
-      const status = computeStatus(item.quantity, item.reorderLevel, item.maxStock);
       addItem({
         ...item,
         id: uid("INV"),
@@ -241,11 +293,16 @@ export function InventoryImportDialog({ open, onOpenChange }: { open: boolean; o
         lastUpdated: now,
         createdAt: now,
       });
-      log("imported inventory", "Inventory", item.name, item.department);
+      log("imported inventory", "Inventory", item.deviceName, item.department);
     }
     const skipped = rows.length - valid.length;
-    toast.success(`Imported ${valid.length} item${valid.length === 1 ? "" : "s"} successfully.`);
-    if (skipped > 0) toast.warning(`${skipped} row${skipped === 1 ? "" : "s"} skipped due to errors.`);
+    toast.success(
+      `Imported ${valid.length} item${valid.length === 1 ? "" : "s"} successfully.`,
+    );
+    if (skipped > 0)
+      toast.warning(
+        `${skipped} row${skipped === 1 ? "" : "s"} skipped due to errors.`,
+      );
     onOpenChange(false);
   };
 
@@ -253,27 +310,46 @@ export function InventoryImportDialog({ open, onOpenChange }: { open: boolean; o
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><FileSpreadsheet className="text-primary size-5" /> Import Inventory</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <FileSpreadsheet className="text-primary size-5" /> Import Inventory
+          </DialogTitle>
           <DialogDescription>
-            Upload an Excel or CSV file to add multiple items to inventory. Each row must follow the same fields used in the inventory.
+            Upload an Excel or CSV file to add multiple items to inventory. Each
+            row must follow the same fields used in the inventory.
           </DialogDescription>
         </DialogHeader>
 
         {rows.length === 0 ? (
           <div className="space-y-3">
             <label
-              onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragging(true);
+              }}
               onDragLeave={() => setDragging(false)}
               onDrop={onDrop}
               className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors ${dragging ? "border-primary bg-primary/5" : "border-muted hover:border-primary/40 hover:bg-accent/50"}`}
             >
               <Upload className="text-muted-foreground size-8" />
-              <p className="text-sm font-medium">Click to choose a file or drag &amp; drop it here</p>
-              <p className="text-muted-foreground text-xs">Supported formats: .xlsx, .xls, .csv</p>
-              <input ref={inputRef} type="file" className="hidden" accept=".xlsx,.xls,.csv" onChange={onPickFile} />
+              <p className="text-sm font-medium">
+                Click to choose a file or drag &amp; drop it here
+              </p>
+              <p className="text-muted-foreground text-xs">
+                Supported formats: .xlsx, .xls, .csv
+              </p>
+              <input
+                ref={inputRef}
+                type="file"
+                className="hidden"
+                accept=".xlsx,.xls,.csv"
+                onChange={onPickFile}
+              />
             </label>
             <div className="flex items-center justify-between">
-              <p className="text-muted-foreground text-xs">Required columns: Item Name, SKU, Category, Department, Location, Unit, Supplier</p>
+              <p className="text-muted-foreground text-xs">
+                Required columns: Item Name, SKU, Category, Department, Unit,
+                Supplier
+              </p>
               <Button
                 variant="outline"
                 size="sm"
@@ -294,31 +370,55 @@ export function InventoryImportDialog({ open, onOpenChange }: { open: boolean; o
                 <span className="font-medium">{fileName}</span>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="success"><CheckCircle2 className="mr-1 inline size-3" />{validCount} valid</Badge>
+                <Badge variant="success">
+                  <CheckCircle2 className="mr-1 inline size-3" />
+                  {validCount} valid
+                </Badge>
                 {invalidRows.length > 0 && (
-                  <Badge variant="destructive"><AlertTriangle className="mr-1 inline size-3" />{invalidRows.length} with errors</Badge>
+                  <Badge variant="destructive">
+                    <AlertTriangle className="mr-1 inline size-3" />
+                    {invalidRows.length} with errors
+                  </Badge>
                 )}
               </div>
             </div>
 
             {invalidRows.length > 0 && (
               <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
-                <p className="text-destructive mb-2 text-xs font-semibold">Rows that will be skipped</p>
+                <p className="text-destructive mb-2 text-xs font-semibold">
+                  Rows that will be skipped
+                </p>
                 <div className="max-h-40 space-y-1.5 overflow-y-auto">
                   {invalidRows.slice(0, 8).map((r) => (
                     <p key={r.row} className="text-muted-foreground text-xs">
-                      <span className="font-mono font-medium text-foreground">Row {r.row}:</span> {r.errors.join("; ")}
+                      <span className="font-mono font-medium text-foreground">
+                        Row {r.row}:
+                      </span>{" "}
+                      {r.errors.join("; ")}
                     </p>
                   ))}
-                  {invalidRows.length > 8 && <p className="text-muted-foreground text-xs">…and {invalidRows.length - 8} more</p>}
+                  {invalidRows.length > 8 && (
+                    <p className="text-muted-foreground text-xs">
+                      …and {invalidRows.length - 8} more
+                    </p>
+                  )}
                 </div>
               </div>
             )}
 
             <DialogFooter className="gap-2">
-              <Button variant="outline" onClick={() => { setRows([]); setFileName(null); }}>Choose Another File</Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setRows([]);
+                  setFileName(null);
+                }}
+              >
+                Choose Another File
+              </Button>
               <Button onClick={onImport} disabled={validCount === 0}>
-                <Upload className="size-4" /> Import {validCount} Item{validCount === 1 ? "" : "s"}
+                <Upload className="size-4" /> Import {validCount} Item
+                {validCount === 1 ? "" : "s"}
               </Button>
             </DialogFooter>
           </div>
@@ -328,7 +428,13 @@ export function InventoryImportDialog({ open, onOpenChange }: { open: boolean; o
   );
 }
 
-function rawAlias(headerKeys: string[], raw: Record<string, unknown>, aliases: string[]): unknown {
-  const normalized = Object.fromEntries(Object.entries(raw).map(([k, v]) => [normalizeKey(k), v]));
+function rawAlias(
+  headerKeys: string[],
+  raw: Record<string, unknown>,
+  aliases: string[],
+): unknown {
+  const normalized = Object.fromEntries(
+    Object.entries(raw).map(([k, v]) => [normalizeKey(k), v]),
+  );
   return pick(normalized, aliases);
 }

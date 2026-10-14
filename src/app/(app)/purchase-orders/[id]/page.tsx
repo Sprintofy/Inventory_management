@@ -43,7 +43,7 @@ export default function PODetailPage({ params }: { params: Promise<{ id: string 
 
   const receive = () => {
     po.items.forEach((item) => {
-      const inv = state.inventory.find((i) => i.name === item.name);
+      const inv = state.inventory.find((i) => i.deviceName === item.name);
       if (inv) stockIn(inv.id, item.qty, po.supplier, `Delivery of ${po.poNumber}`);
       else toast.info(`Item "${item.name}" not in inventory — add it first to receive stock`);
     });

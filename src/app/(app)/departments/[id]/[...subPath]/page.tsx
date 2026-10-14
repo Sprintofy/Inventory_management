@@ -65,7 +65,7 @@ export default function SubDepartmentDetailPage({ params }: { params: Promise<{ 
   }, [node]);
 
   const nodeItems = React.useMemo(
-    () => (dept && node ? state.inventory.filter((i) => i.department === dept.name && !i.archived && scopeNames.includes(i.subDepartment ?? "")) : []),
+    () => (dept && node ? state.inventory.filter((i) => i.department === dept.name && scopeNames.includes(i.subDepartment ?? "")) : []),
     [state.inventory, dept, node, scopeNames]
   );
 
@@ -226,12 +226,11 @@ export default function SubDepartmentDetailPage({ params }: { params: Promise<{ 
                       <Package className="text-muted-foreground size-4" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium">{i.name}</p>
+                      <p className="text-sm font-medium">{i.deviceName}</p>
                       <p className="text-muted-foreground font-mono text-xs">{i.sku} · {i.subDepartment ?? dept.name}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className="text-muted-foreground text-xs">{i.location}</span>
                     <span className="text-sm font-semibold tabular-nums">{i.quantity}</span>
                   </div>
                 </div>

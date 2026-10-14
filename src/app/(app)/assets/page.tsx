@@ -32,7 +32,6 @@ const schema = z.object({
   category: z.string().min(1, "Select a category"),
   department: z.string().min(1, "Select a department"),
   assignedTo: z.string().optional(),
-  location: z.string().min(1, "Select a location"),
   cost: z.coerce.number().min(0),
   warranty: z.string().min(1, "Warranty is required"),
   condition: z.string().min(1),
@@ -54,13 +53,13 @@ export default function AssetsPage() {
 
   const form = useForm<SV>({
     resolver: zodResolver(schema) as unknown as Resolver<SV>,
-    defaultValues: { assetId: "", name: "", serialNumber: "", category: "", department: "", assignedTo: "", location: "", cost: 0, warranty: "1 year", condition: "new", status: "available" },
+    defaultValues: { assetId: "", name: "", serialNumber: "", category: "", department: "", assignedTo: "", cost: 0, warranty: "1 year", condition: "new", status: "available" },
   });
 
   React.useEffect(() => {
     if (dialogOpen) {
       form.reset(editing ? { ...editing, category: editing.category, cost: editing.cost } : {
-        assetId: uid("AST"), name: "", serialNumber: "", category: "", department: visibleDepartments.length === 1 ? visibleDepartments[0] : "", assignedTo: "", location: "", cost: 0, warranty: "1 year", condition: "new", status: "available",
+        assetId: uid("AST"), name: "", serialNumber: "", category: "", department: visibleDepartments.length === 1 ? visibleDepartments[0] : "", assignedTo: "", cost: 0, warranty: "1 year", condition: "new", status: "available",
       });
     }
   }, [dialogOpen, editing, form, visibleDepartments]);
@@ -85,7 +84,7 @@ export default function AssetsPage() {
       category: values.category,
       department: values.department,
       assignedTo: values.assignedTo || undefined,
-      location: values.location,
+      location: "",
       purchaseDate: editing?.purchaseDate ?? new Date().toISOString(),
       cost: values.cost,
       warranty: values.warranty,
@@ -119,7 +118,6 @@ export default function AssetsPage() {
               <TableHead>Category</TableHead>
               <TableHead>Department</TableHead>
               <TableHead>Assigned To</TableHead>
-              <TableHead>Location</TableHead>
               <TableHead>Cost</TableHead>
               <TableHead>Condition</TableHead>
               <TableHead>Status</TableHead>
@@ -143,7 +141,6 @@ export default function AssetsPage() {
                 <TableCell className="text-muted-foreground text-xs">{a.category}</TableCell>
                 <TableCell><span className="bg-muted inline-flex rounded-md px-2 py-0.5 text-xs font-medium">{a.department}</span></TableCell>
                 <TableCell className="text-xs">{a.assignedTo ?? <span className="text-muted-foreground/60">—</span>}</TableCell>
-                <TableCell className="text-muted-foreground text-xs">{a.location}</TableCell>
                 <TableCell className="text-sm font-medium tabular-nums">{formatCompact(a.cost)}</TableCell>
                 <TableCell><StatusBadge status={a.condition} /></TableCell>
                 <TableCell><StatusBadge status={a.status} /></TableCell>
@@ -200,12 +197,6 @@ export default function AssetsPage() {
                 )} />
                 <FormField control={form.control} name="assignedTo" render={({ field }) => (
                   <FormItem><FormLabel>Assigned To</FormLabel><FormControl><Input placeholder="Employee name (optional)" {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="location" render={({ field }) => (
-                  <FormItem><FormLabel>Location</FormLabel>
-                    <FormControl><Select value={field.value} onValueChange={field.onChange}><SelectTrigger className="w-full"><SelectValue placeholder="Select" /></SelectTrigger><SelectContent>{state.locations.map((l) => <SelectItem key={l.id} value={l.name}>{l.name}</SelectItem>)}</SelectContent></Select></FormControl>
-                    <FormMessage />
-                  </FormItem>
                 )} />
                 <FormField control={form.control} name="cost" render={({ field }) => (
                   <FormItem><FormLabel>Purchase Cost (₹)</FormLabel><FormControl><Input type="number" min={0} {...field} /></FormControl><FormMessage /></FormItem>

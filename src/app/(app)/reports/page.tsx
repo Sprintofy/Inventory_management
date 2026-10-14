@@ -74,13 +74,13 @@ export default function ReportsPage() {
   );
 
   const metrics = useMemo(() => {
-    const stockValue = scopeItems.reduce((s, i) => s + i.quantity * i.unitCost, 0);
+    const stockValue = scopeItems.reduce((s, i) => s + i.quantity, 0); // Total quantity
     const stockIn = scopeTransactions.filter((t) => t.type === "stock-in").reduce((s, t) => s + t.quantity, 0);
     const stockOut = scopeTransactions.filter((t) => t.type === "stock-out").reduce((s, t) => s + t.quantity, 0);
     const outItems = scopeTransactions.filter((t) => t.type === "stock-out");
     const outValue = outItems.reduce((s, t) => {
       const item = state.inventory.find((i) => i.id === t.itemId);
-      return s + t.quantity * (item?.unitCost ?? 0);
+      return s + t.quantity; // Total quantity of stock out
     }, 0);
     const categories = Object.entries(scopeItems.reduce<Record<string, number>>((acc, i) => {
       acc[i.category] = (acc[i.category] ?? 0) + i.quantity;
@@ -90,7 +90,7 @@ export default function ReportsPage() {
   }, [scopeItems, scopeTransactions, state.inventory]);
 
   const topItems = useMemo(
-    () => [...scopeItems].sort((a, b) => b.quantity * b.unitCost - a.quantity * a.unitCost).slice(0, 8),
+    () => [...scopeItems].sort((a, b) => b.quantity - a.quantity).slice(0, 8),
     [scopeItems]
   );
 
@@ -98,8 +98,8 @@ export default function ReportsPage() {
 
   const exportReport = () => {
     downloadCSV("inventory-report.csv", [
-      { Name: "Name", SKU: "SKU", Category: "Category", Department: "Department", "Sub-Department": "Sub-Department", Location: "Location", Quantity: "Quantity", "Unit Cost": "Unit Cost", Value: "Value", Status: "Status" },
-      ...scopeItems.map((i) => ({ Name: i.name, SKU: i.sku, Category: i.category, Department: i.department, "Sub-Department": i.subDepartment ?? "", Location: i.location, Quantity: i.quantity, "Unit Cost": i.unitCost, Value: i.quantity * i.unitCost, Status: i.status })),
+      { Name: "Name", SKU: "SKU", Category: "Category", Department: "Department", "Sub-Department": "Sub-Department", Quantity: "Quantity", "Unit Cost": "Unit Cost", Value: "Value", Status: "Status" },
+      ...scopeItems.map((i) => ({ Name: i.deviceName, SKU: i.sku, Category: i.category, Department: i.department, "Sub-Department": i.subDepartment ?? "", Quantity: i.quantity, Status: i.status })),
     ]);
     toast.success("Report exported as CSV");
   };
@@ -204,8 +204,8 @@ export default function ReportsPage() {
                 <TableRow className="hover:bg-transparent">
                   <TableHead>Item</TableHead>
                   <TableHead>Category</TableHead>
+                  <TableHead className="text-right">Last Updated</TableHead>
                   <TableHead className="text-right">Quantity</TableHead>
-                  <TableHead className="text-right">Value</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
@@ -213,7 +213,7 @@ export default function ReportsPage() {
                 {topItems.map((i) => (
                   <TableRow key={i.id}>
                     <TableCell>
-                      <p className="text-sm font-medium">{i.name}</p>
+                      <p className="text-sm font-medium">{i.deviceName}</p>
                       <p className="text-muted-foreground font-mono text-xs">{i.sku}</p>
                     </TableCell>
                     <TableCell className="text-xs">{i.category}</TableCell>

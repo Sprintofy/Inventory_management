@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Boxes, Eye, EyeOff, KeyRound, Lock, Mail, ShieldCheck, Wrench } from "lucide-react";
+import { Boxes, Eye, EyeOff, KeyRound, Lock, Mail, ShieldCheck, Wrench, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +22,7 @@ type LoginValues = z.infer<typeof loginSchema>;
 
 const demoList = [
   { label: "Super Admin", email: "admin@example.com", password: "password", icon: ShieldCheck, color: "bg-danger/10 text-danger" },
+  { label: "Department Manager", email: "col.trg@nda.in", password: "password", icon: Users, color: "bg-success/10 text-success" },
   { label: "Technician", email: "technician@gmail.com", password: "123456", icon: Wrench, color: "bg-warning/15 text-warning" },
 ];
 

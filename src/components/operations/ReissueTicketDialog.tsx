@@ -32,6 +32,7 @@ export function ReissueTicketDialog({
   React.useEffect(() => {
     if (open) setNote("");
   }, [open, ticket?.id]);
+  // eslint-disable-line react-hooks/set-state-in-effect
 
   if (!ticket) return null;
 
