@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { CloseTicketDialog } from "@/components/operations/CloseTicketDialog";
 import { ReissueTicketDialog } from "@/components/operations/ReissueTicketDialog";
@@ -22,7 +22,7 @@ import { useFakeLoading } from "@/hooks/use-fake-loading";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { exportTicketsExcel } from "@/lib/excel";
 import { issueCounts } from "@/lib/ticket-utils";
-import type { IssueStatus, RequestPriority, Ticket as TicketRecord, TicketIssue } from "@/types";
+import type { RequestPriority, TicketIssue } from "@/types";
 
 const priorityClass: Record<RequestPriority, string> = {
   low: "bg-muted text-muted-foreground",
@@ -31,22 +31,17 @@ const priorityClass: Record<RequestPriority, string> = {
   critical: "bg-danger/10 text-danger",
 };
 
-const issueStatuses: IssueStatus[] = ["open", "in-progress", "resolved", "closed"];
-
 function IssueItem({
   issue,
-  ticket,
   admin,
   onEdit,
   onDelete,
 }: {
   issue: TicketIssue;
-  ticket: TicketRecord;
   admin: boolean;
   onEdit: (i: TicketIssue) => void;
   onDelete: (i: TicketIssue) => void;
 }) {
-  const { updateIssue } = useApp();
   const resolved = issue.status === "resolved" || issue.status === "closed";
   return (
     <div className={`rounded-lg border p-3 ${resolved ? "bg-success/5 opacity-80" : "bg-card"}`}>
@@ -61,8 +56,6 @@ function IssueItem({
             <p className={`text-sm font-medium leading-snug ${resolved ? "line-through decoration-muted-foreground/50" : ""}`}>{issue.title}</p>
             {issue.description && <p className="text-muted-foreground mt-1 text-xs">{issue.description}</p>}
             <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
-              <span className={`inline-flex rounded-full px-2 py-0.5 font-medium ${priorityClass[issue.priority]}`}>{issue.priority}</span>
-              <StatusBadge status={issue.status} />
               {issue.assignedTo && <span className="text-muted-foreground">Assigned: {issue.assignedTo}</span>}
               <span className="text-muted-foreground" title={formatDateTime(issue.createdAt)}>Created {formatDate(issue.createdAt)}</span>
               {issue.resolvedAt && <span className="text-success" title={formatDateTime(issue.resolvedAt)}>Resolved {formatDate(issue.resolvedAt)}</span>}
@@ -78,12 +71,6 @@ function IssueItem({
               <Button variant="ghost" size="icon-sm" className="-mt-1 -mr-1"><MoreHorizontal className="size-4" /></Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              {issueStatuses.filter((s) => s !== issue.status).map((s) => (
-                <DropdownMenuItem key={s} onClick={() => updateIssue(ticket.id, issue.id, { status: s })} className="capitalize">
-                  Mark {s.replace("-", " ")}
-                </DropdownMenuItem>
-              ))}
-              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => onEdit(issue)}><Pencil className="size-3.5" /> Edit</DropdownMenuItem>
               <DropdownMenuItem variant="destructive" onClick={() => onDelete(issue)}><Trash2 className="size-3.5" /> Delete</DropdownMenuItem>
             </DropdownMenuContent>
@@ -345,7 +332,6 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                         <p className="truncate text-sm font-medium">{iss.title}</p>
                         <p className="text-muted-foreground text-xs">{iss.assignedTo ?? "Unassigned"}</p>
                       </div>
-                      <StatusBadge status={iss.status} />
                     </div>
                   ))}
                 </div>
@@ -401,7 +387,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
           ) : (
             <div className="space-y-2">
               {ticket.issues.map((iss) => (
-                <IssueItem key={iss.id} issue={iss} ticket={ticket} admin={admin} onEdit={(i) => { setEditingIssue(i); setIssueDialogOpen(true); }} onDelete={(i) => setDeleteIssue(i)} />
+                <IssueItem key={iss.id} issue={iss} admin={admin} onEdit={(i) => { setEditingIssue(i); setIssueDialogOpen(true); }} onDelete={(i) => setDeleteIssue(i)} />
               ))}
             </div>
           )}
