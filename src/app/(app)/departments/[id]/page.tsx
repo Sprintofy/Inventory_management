@@ -3,7 +3,7 @@
 import * as React from "react";
 import { use, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, BarChart3, Building2, ChevronRight, FileDown, FileText, Layers, MoreHorizontal, Package, Pencil, Plus, Ticket as TicketIcon, Trash2, User, Users as UsersIcon } from "lucide-react";
+import { ArrowLeft, BarChart3, Building2, ChevronRight, FileDown, Layers, MoreHorizontal, Package, Pencil, Plus, Ticket as TicketIcon, Trash2, User } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,16 +36,10 @@ export default function DepartmentDetailPage({ params }: { params: Promise<{ id:
     () => state.inventory.filter((i) => i.department === dept?.name),
     [state.inventory, dept]
   );
-  const deptUsers = state.users.filter((u) => u.department === dept?.name);
-  const routedRequests = React.useMemo(
-    () => (dept ? state.requests.filter((r) => r.department === dept.name) : []),
-    [state.requests, dept]
-  );
   const routedTickets = React.useMemo(
     () => (dept ? state.tickets.filter((t) => t.department === dept.name) : []),
     [state.tickets, dept]
   );
-  const openTickets = routedTickets.filter((t) => t.status !== "closed");
 
   if (!loading && !dept) {
     return (
@@ -103,18 +97,10 @@ export default function DepartmentDetailPage({ params }: { params: Promise<{ id:
         <span className="text-foreground font-medium">{dept.name}</span>
       </nav>
 
-      <div className="grid gap-4 sm:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2">
         <Card className="py-4"><CardContent>
           <p className="text-muted-foreground flex items-center gap-2 text-xs"><Layers className="size-3.5" /> Sub-departments</p>
           <p className="mt-1 text-2xl font-semibold tabular-nums">{dept.subDepartments.length}</p>
-        </CardContent></Card>
-        <Card className="py-4"><CardContent>
-          <p className="text-muted-foreground flex items-center gap-2 text-xs"><UsersIcon className="size-3.5" /> Members</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums">{deptUsers.length}</p>
-        </CardContent></Card>
-        <Card className="py-4"><CardContent>
-          <p className="text-muted-foreground flex items-center gap-2 text-xs"><FileText className="size-3.5" /> Routed Requests</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums">{routedRequests.length}</p>
         </CardContent></Card>
         <Card className="py-4"><CardContent>
           <p className="text-muted-foreground flex items-center gap-2 text-xs"><TicketIcon className="size-3.5" /> Routed Tickets</p>
@@ -212,85 +198,32 @@ export default function DepartmentDetailPage({ params }: { params: Promise<{ id:
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card>
-          <CardHeader className="flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-base">Team Members</CardTitle>
-            <Badge variant="secondary">{deptUsers.length}</Badge>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {deptUsers.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No users in this department yet.</p>
-            ) : (
-              deptUsers.slice(0, 6).map((u) => (
-                <div key={u.id} className="flex items-center gap-2.5">
-                  <div className="bg-primary/10 text-primary flex size-8 items-center justify-center rounded-full text-xs font-semibold">
-                    {u.name.split(" ").map((p) => p[0]).join("").slice(0, 2)}
-                  </div>
+      <Card>
+        <CardHeader className="flex-row items-center justify-between space-y-0">
+          <CardTitle className="flex items-center gap-2 text-base"><TicketIcon className="text-primary size-4" /> Routed Tickets</CardTitle>
+          <Badge variant="secondary">{routedTickets.length}</Badge>
+        </CardHeader>
+        <CardContent>
+          {routedTickets.length === 0 ? (
+            <p className="text-muted-foreground text-sm">No tickets routed to {dept.name}.</p>
+          ) : (
+            <div className="space-y-2">
+              {routedTickets.slice(0, 5).map((t) => (
+                <div key={t.id} className="flex items-center justify-between rounded-lg border px-3 py-2.5">
                   <div>
-                    <p className="text-sm font-medium">{u.name}</p>
-                    <p className="text-muted-foreground text-xs">{u.email}</p>
+                    <p className="text-sm font-medium">{t.title}</p>
+                    <p className="text-muted-foreground text-xs">{t.id} · {t.category}</p>
+                  </div>
+                  <div className="text-right">
+                    <Badge variant={t.status === "closed" ? "success" : t.status === "in-progress" ? "info" : "warning"} className="capitalize">{t.status}</Badge>
+                    <p className="text-muted-foreground mt-1 text-xs">{formatDate(t.createdAt)}</p>
                   </div>
                 </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex-row items-center justify-between space-y-0">
-            <CardTitle className="flex items-center gap-2 text-base"><FileText className="text-primary size-4" /> Routed Requests</CardTitle>
-            <Badge variant="secondary">{routedRequests.length}</Badge>
-          </CardHeader>
-          <CardContent>
-            {routedRequests.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No requests routed to {dept.name}.</p>
-            ) : (
-              <div className="space-y-2">
-                {routedRequests.slice(0, 5).map((r) => (
-                  <div key={r.id} className="flex items-center justify-between rounded-lg border px-3 py-2.5">
-                    <div>
-                      <p className="text-sm font-medium">{r.itemName}</p>
-                      <p className="text-muted-foreground text-xs">{r.id} · {r.requestedBy}</p>
-                    </div>
-                    <div className="text-right">
-                      <Badge variant={r.status === "completed" ? "success" : r.status === "approved" ? "info" : r.status === "rejected" ? "danger" : "warning"} className="capitalize">{r.status}</Badge>
-                      <p className="text-muted-foreground mt-1 text-xs">{formatDate(r.date)}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex-row items-center justify-between space-y-0">
-            <CardTitle className="flex items-center gap-2 text-base"><TicketIcon className="text-primary size-4" /> Routed Tickets</CardTitle>
-            <Badge variant="secondary">{routedTickets.length}</Badge>
-          </CardHeader>
-          <CardContent>
-            {routedTickets.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No tickets routed to {dept.name}.</p>
-            ) : (
-              <div className="space-y-2">
-                {routedTickets.slice(0, 5).map((t) => (
-                  <div key={t.id} className="flex items-center justify-between rounded-lg border px-3 py-2.5">
-                    <div>
-                      <p className="text-sm font-medium">{t.title}</p>
-                      <p className="text-muted-foreground text-xs">{t.id} · {t.category}</p>
-                    </div>
-                    <div className="text-right">
-                      <Badge variant={t.status === "closed" ? "success" : t.status === "in-progress" ? "info" : "warning"} className="capitalize">{t.status}</Badge>
-                      <p className="text-muted-foreground mt-1 text-xs">{formatDate(t.createdAt)}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <SubDepartmentDialog
         open={dialogOpen}
