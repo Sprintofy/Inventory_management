@@ -17,17 +17,26 @@ const moduleTone: Record<string, string> = {
   "Inventory": "bg-primary/10 text-primary",
   "Stock In": "bg-success/10 text-success",
   "Stock Out": "bg-success/10 text-success",
-  "Transfers": "bg-violet-500/10 text-violet-500",
-  "Adjustments": "bg-warning/15 text-warning",
-  "Purchase Orders": "bg-sky-500/10 text-sky-600",
-  "Suppliers": "bg-teal-500/10 text-teal-600",
-  "Assets": "bg-indigo-500/10 text-indigo-600",
+  "Tickets": "bg-sky-500/10 text-sky-600",
   "Categories": "bg-emerald-500/10 text-emerald-600",
-  "Locations": "bg-amber-500/10 text-amber-600",
   "Departments": "bg-pink-500/10 text-pink-600",
   "Users": "bg-cyan-500/10 text-cyan-600",
-  "Requests": "bg-orange-500/10 text-orange-600",
+  "Technicians": "bg-violet-500/10 text-violet-500",
 };
+
+// Modules with working UI in the current system. Logs from removed areas
+// (Purchase Orders, Suppliers, Assets, Locations, Adjustments, Transfers,
+// Requests) are hidden so the trail only shows actions still possible.
+const POSSIBLE_MODULES = [
+  "Inventory",
+  "Stock In",
+  "Stock Out",
+  "Tickets",
+  "Categories",
+  "Departments",
+  "Users",
+  "Technicians",
+];
 
 export default function ActivityPage() {
   const { state } = useApp();
@@ -36,20 +45,25 @@ export default function ActivityPage() {
   const [module, setModule] = React.useState("all");
   const [dept, setDept] = React.useState("all");
 
-  const users = useMemo(() => [...new Set(state.activities.map((a) => a.user))], [state.activities]);
-  const modules = useMemo(() => [...new Set(state.activities.map((a) => a.module))], [state.activities]);
-  const departments = useMemo(() => [...new Set(state.activities.map((a) => a.department))], [state.activities]);
+  const visibleActivities = useMemo(
+    () => state.activities.filter((a) => POSSIBLE_MODULES.includes(a.module)),
+    [state.activities]
+  );
+
+  const users = useMemo(() => [...new Set(visibleActivities.map((a) => a.user))], [visibleActivities]);
+  const modules = useMemo(() => POSSIBLE_MODULES.filter((m) => visibleActivities.some((a) => a.module === m)), [visibleActivities]);
+  const departments = useMemo(() => [...new Set(visibleActivities.map((a) => a.department))], [visibleActivities]);
 
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
-    return state.activities.filter((a) => {
+    return visibleActivities.filter((a) => {
       if (user !== "all" && a.user !== user) return false;
       if (module !== "all" && a.module !== module) return false;
       if (dept !== "all" && a.department !== dept) return false;
       if (term && !(a.action.toLowerCase().includes(term) || a.item.toLowerCase().includes(term))) return false;
       return true;
     });
-  }, [state.activities, query, user, module, dept]);
+  }, [visibleActivities, query, user, module, dept]);
 
   const hasFilters = query || user !== "all" || module !== "all" || dept !== "all";
 
