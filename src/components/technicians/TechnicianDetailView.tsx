@@ -91,7 +91,6 @@ export function TechnicianDetailView({ id, basePath = "/technicians" }: { id: st
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{technician.name}</h1>
-              <StatusBadge status={technician.availability} />
               <StatusBadge status={technician.status} dot={false} />
             </div>
             <p className="text-muted-foreground mt-0.5 text-sm">{technician.specialization} Specialist · <span className="font-mono text-xs">{technician.employeeId}</span></p>
@@ -108,7 +107,6 @@ export function TechnicianDetailView({ id, basePath = "/technicians" }: { id: st
                 ["Email", technician.email],
                 ["Phone", technician.phone ?? "Not provided"],
                 ["Specialization", technician.specialization],
-                ["Availability", technician.availability],
                 ["Status", technician.status],
                 ["Last Active", toDate(technician.lastActive) ? formatDate(technician.lastActive) : "Never"],
               ].map(([k, v]) => (

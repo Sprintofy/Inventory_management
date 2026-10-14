@@ -173,7 +173,6 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                   <p className="text-muted-foreground text-xs">Assigned Technician</p>
                   <p className="text-sm font-medium">{assignedTechnician.name}</p>
                   <p className="text-muted-foreground text-xs">{assignedTechnician.specialization} Specialist</p>
-                  <StatusBadge status={assignedTechnician.availability} className="mt-1" />
                 </div>
               </>
             ) : (
