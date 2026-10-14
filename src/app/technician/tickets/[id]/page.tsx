@@ -15,7 +15,6 @@ import {
   MapPin,
   MessageSquare,
   Package,
-  PlayCircle,
   Send,
   ShieldCheck,
   Wrench,
@@ -39,7 +38,7 @@ const priorityClass: Record<string, string> = {
 export default function TechnicianTicketPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const { state, user, updateTicketStatus, submitTicketSolution } = useApp();
+  const { state, user, submitTicketSolution } = useApp();
 
   // One remark per issue, keyed by issue id.
   const [remarks, setRemarks] = React.useState<Record<string, string>>({});
@@ -356,11 +355,6 @@ export default function TechnicianTicketPage({ params }: { params: Promise<{ id:
                 placeholder="Optional ticket-level note for the Admin. Each issue already has its own remark above."
               />
               <div className="flex flex-wrap items-center gap-2">
-                {ticket.status === "open" && (
-                  <Button variant="outline" onClick={() => updateTicketStatus(ticket.id, "in-progress")}>
-                    <PlayCircle className="size-4" /> Start work
-                  </Button>
-                )}
                 <Button onClick={onSubmit} disabled={pendingIssues.length === 0}>
                   <Send className="size-4" /> Submit Resolved
                 </Button>
