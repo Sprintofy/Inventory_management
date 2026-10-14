@@ -25,11 +25,11 @@ import {
   SelectTrigger,
 } from "@/components/ui/select";
 import { useRouter } from "next/navigation";
-import { useApp } from "@/store/app-store";
 import type { InventoryItem } from "@/types";
 import { cn } from "@/lib/utils";
 
 interface InventoryTableProps {
+  items: InventoryItem[];
   onEdit: (item: InventoryItem) => void;
 }
 
@@ -46,8 +46,7 @@ const allColumns = [
   { key: "actions", label: "Actions" },
 ] as const;
 
-export function InventoryTable({ onEdit }: InventoryTableProps) {
-  const { state } = useApp();
+export function InventoryTable({ items, onEdit }: InventoryTableProps) {
   const router = useRouter();
 
   const [page, setPage] = React.useState(0);
@@ -55,16 +54,17 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
 
   const paginatedItems = React.useMemo(() => {
     const start = page * itemsPerPage;
-    return state.inventory.slice(start, start + itemsPerPage);
-  }, [state.inventory, page, itemsPerPage]);
+    return items.slice(start, start + itemsPerPage);
+  }, [items, page, itemsPerPage]);
 
   const totalPages = Math.ceil(
-    (state.inventory.length || 0) / itemsPerPage,
+    (items.length || 0) / itemsPerPage,
   );
 
   React.useEffect(() => {
     if (page >= totalPages && totalPages > 0) {
-      setPage(totalPages - 1); // eslint-disable-line react-hooks/set-state-in-effect
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPage(totalPages - 1);
     }
   }, [totalPages, page]);
 
@@ -90,14 +90,14 @@ export function InventoryTable({ onEdit }: InventoryTableProps) {
         </div>
 
         <Pagination
-          total={state.inventory.length}
+          total={items.length}
           page={page + 1}
           pageSize={itemsPerPage}
           onPageChange={(newPage) => setPage(newPage - 1)}
         />
       </div>
 
-      {state.inventory.length === 0 ? (
+      {items.length === 0 ? (
         <EmptyState
           icon={PackagePlus}
           title="No items found"

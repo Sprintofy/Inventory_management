@@ -81,17 +81,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (role === "user" || role === "department-manager" || role === "department-user") {
       blocked.push(
         "/tickets",
-        "/purchase-orders",
-        "/suppliers",
-        "/assets",
-        "/adjustments",
-        "/locations",
         "/categories",
         "/departments",
         "/users",
         "/technicians",
         "/activity",
-        "/help",
       );
     }
     if (role === "viewer") {
@@ -99,17 +93,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         "/inventory",
         "/stock-in",
         "/stock-out",
-        "/purchase-orders",
-        "/suppliers",
-        "/assets",
-        "/adjustments",
-        "/locations",
         "/tickets",
         "/departments",
         "/users",
         "/technicians",
         "/activity",
-        "/help",
       );
     }
     return blocked;

@@ -4,7 +4,6 @@ import * as React from "react";
 import { usePathname } from "next/navigation";
 import {
   ChevronRight,
-  HelpCircle,
   LogOut,
   Menu,
   Shield,
@@ -45,23 +44,7 @@ const pageTitles: Array<{ match: RegExp; title: string; crumb: string }> = [
   { match: /^\/inventory\/.+/, title: "Item Details", crumb: "Inventory" },
   { match: /^\/stock-in/, title: "Stock In", crumb: "Stock In" },
   { match: /^\/stock-out/, title: "Stock Out", crumb: "Stock Out" },
-  { match: /^\/adjustments/, title: "Adjustments", crumb: "Adjustments" },
-  {
-    match: /^\/purchase-orders$/,
-    title: "Purchase Orders",
-    crumb: "Purchase Orders",
-  },
-  {
-    match: /^\/purchase-orders\/.+/,
-    title: "Purchase Order",
-    crumb: "Purchase Orders",
-  },
-  { match: /^\/suppliers$/, title: "Suppliers", crumb: "Suppliers" },
-  { match: /^\/suppliers\/.+/, title: "Supplier Profile", crumb: "Suppliers" },
-  { match: /^\/assets$/, title: "Assets", crumb: "Assets" },
-  { match: /^\/assets\/.+/, title: "Asset Details", crumb: "Assets" },
-  { match: /^\/categories/, title: "Categories", crbg: "Categories" },
-  { match: /^\/locations/, title: "Locations", crumb: "Locations" },
+  { match: /^\/categories/, title: "Categories", crumb: "Categories" },
   { match: /^\/departments$/, title: "Departments", crumb: "Departments" },
   {
     match: /^\/departments\/.+/,
@@ -71,7 +54,6 @@ const pageTitles: Array<{ match: RegExp; title: string; crumb: string }> = [
   { match: /^\/users/, title: "Users", crumb: "Users" },
   { match: /^\/reports/, title: "Reports", crumb: "Reports" },
   { match: /^\/activity/, title: "Activity Log", crumb: "Activity Log" },
-  { match: /^\/help/, title: "Help Center", crumb: "Help" },
   { match: /^\/tickets/, title: "Tickets", crumb: "Tickets" },
 ];
 

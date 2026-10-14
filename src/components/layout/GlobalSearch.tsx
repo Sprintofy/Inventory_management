@@ -61,9 +61,9 @@ export function GlobalSearch() {
       add(
         "Inventory",
         departmentItems
-          .filter((i) => match(i.name, i.sku, i.serialNumber, i.category))
+          .filter((i) => match(i.deviceName, i.sku, i.serialNumber, i.category))
           .slice(0, PER_TYPE_LIMIT)
-          .map((i) => ({ id: i.id, type: "Inventory", label: i.name, sublabel: `${i.sku} · ${i.department}`, href: `/inventory/${i.id}` })),
+          .map((i) => ({ id: i.id, type: "Inventory", label: i.deviceName, sublabel: `${i.sku} · ${i.department}`, href: `/inventory/${i.id}` })),
       );
     }
 
@@ -87,16 +87,6 @@ export function GlobalSearch() {
       );
     }
 
-    if (allowed("/adjustments")) {
-      add(
-        "Adjustments",
-        state.transactions
-          .filter((t) => t.type === "adjustment" && deptOk(t.department) && match(t.reference, t.itemName))
-          .slice(0, PER_TYPE_LIMIT)
-          .map((t) => ({ id: t.id, type: "Adjustments", label: t.reference, sublabel: t.itemName, href: "/adjustments" })),
-      );
-    }
-
     if (allowed("/tickets")) {
       add(
         "Tickets",
@@ -104,36 +94,6 @@ export function GlobalSearch() {
           .filter((t) => deptOk(t.department) && match(t.id, t.title, t.customer, t.category))
           .slice(0, PER_TYPE_LIMIT)
           .map((t) => ({ id: t.id, type: "Tickets", label: t.title, sublabel: `${t.id} · ${t.department}`, href: `/tickets/${t.id}` })),
-      );
-    }
-
-    if (allowed("/purchase-orders")) {
-      add(
-        "Purchase Orders",
-        state.purchaseOrders
-          .filter((po) => deptOk(po.department) && match(po.poNumber, po.supplier))
-          .slice(0, PER_TYPE_LIMIT)
-          .map((po) => ({ id: po.id, type: "Purchase Orders", label: po.poNumber, sublabel: `${po.supplier} · ${po.department}`, href: `/purchase-orders/${po.id}` })),
-      );
-    }
-
-    if (allowed("/suppliers")) {
-      add(
-        "Suppliers",
-        state.suppliers
-          .filter((s) => match(s.name, s.contactPerson))
-          .slice(0, PER_TYPE_LIMIT)
-          .map((s) => ({ id: s.id, type: "Suppliers", label: s.name, sublabel: s.contactPerson, href: `/suppliers/${s.id}` })),
-      );
-    }
-
-    if (allowed("/assets")) {
-      add(
-        "Assets",
-        state.assets
-          .filter((a) => match(a.name, a.assetId, a.serialNumber, a.assignedTo))
-          .slice(0, PER_TYPE_LIMIT)
-          .map((a) => ({ id: a.id, type: "Assets", label: a.name, sublabel: `${a.assetId} · ${a.department}`, href: `/assets/${a.id}` })),
       );
     }
 
@@ -164,16 +124,6 @@ export function GlobalSearch() {
           .filter((c) => match(c.name, c.description))
           .slice(0, PER_TYPE_LIMIT)
           .map((c) => ({ id: c.id, type: "Categories", label: c.name, sublabel: `${c.items} items`, href: "/categories" })),
-      );
-    }
-
-    if (allowed("/locations")) {
-      add(
-        "Locations",
-        state.locations
-          .filter((l) => match(l.name, l.type))
-          .slice(0, PER_TYPE_LIMIT)
-          .map((l) => ({ id: l.id, type: "Locations", label: l.name, sublabel: l.type, href: "/locations" })),
       );
     }
 

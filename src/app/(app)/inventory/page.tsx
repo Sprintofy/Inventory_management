@@ -151,6 +151,7 @@ export default function InventoryPage() {
           </div>
 
           <InventoryTable
+            items={filtered}
             onEdit={openEdit}
           />
       </div>

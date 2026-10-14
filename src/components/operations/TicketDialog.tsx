@@ -64,7 +64,7 @@ export function TicketDialog({ open, onOpenChange }: { open: boolean; onOpenChan
 
   const productOptions = React.useMemo(() => {
     const scope = isScopedUser ? activeDepartment : (selectedDepartment || "all");
-    return state.inventory.filter((i) => !i.archived && (scope === "all" || i.department === scope)).slice(0, 100);
+    return state.inventory.filter((i) => (scope === "all" || i.department === scope)).slice(0, 100);
   }, [state.inventory, isScopedUser, activeDepartment, selectedDepartment]);
 
   const onSubmit = (values: SV) => {
@@ -79,7 +79,7 @@ export function TicketDialog({ open, onOpenChange }: { open: boolean; onOpenChan
     const productSuffix = productIds.length > 0 ? ` (${productIds.length} product${productIds.length === 1 ? "" : "s"})` : "";
     addTicket({
       title: `${values.title}${productSuffix}`,
-      description: `${values.description}${productIds.length > 0 ? `\n\nProducts: ${productIds.map((id) => state.inventory.find((i) => i.id === id)?.name ?? id).join(", ")}` : ""}`,
+      description: `${values.description}${productIds.length > 0 ? `\n\nProducts: ${productIds.map((id) => state.inventory.find((i) => i.id === id)?.deviceName ?? id).join(", ")}` : ""}`,
       category: values.category || "General",
       department: dept,
       subDepartment: (isScopedUser ? (user?.subDepartment || values.subDepartment) : values.subDepartment) || undefined,
@@ -144,7 +144,7 @@ export function TicketDialog({ open, onOpenChange }: { open: boolean; onOpenChan
                 {productOptions.map((p) => (
                   <label key={p.id} className="flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-xs hover:bg-accent">
                     <input type="checkbox" checked={productIds.includes(p.id)} onChange={() => toggleProduct(p.id)} className="size-3.5 accent-primary" />
-                    <span className="flex-1 truncate font-medium">{p.name}</span>
+                    <span className="flex-1 truncate font-medium">{p.deviceName}</span>
                     <span className="text-muted-foreground font-mono text-[10px]">{p.sku}</span>
                   </label>
                 ))}

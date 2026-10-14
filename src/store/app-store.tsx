@@ -229,6 +229,13 @@ type Action =
       purpose: string;
       note?: string;
     }
+  | {
+      type: "ADJUST_STOCK";
+      itemId: string;
+      delta: number;
+      ref: string;
+      note?: string;
+    }
   | { type: "ADD_STOCK_IN_RECORD"; record: StockInRecord }
   | { type: "ADD_STOCK_OUT_RECORD"; record: StockOutRecord }
   | { type: "UPDATE_STOCK_IN"; id: string; status: StockInRecord["status"] }
@@ -537,9 +544,43 @@ function reducer(state: AppState, action: Action): AppState {
         ],
       };
     }
+    case "ADJUST_STOCK": {
+      const now = new Date().toISOString();
+      return {
+        ...state,
+        inventory: state.inventory.map((i) => {
+          if (i.id !== action.itemId) return i;
+          const qty = Math.max(0, i.quantity + action.delta);
+          return {
+            ...i,
+            quantity: qty,
+            status: qty <= 0 ? "out-of-stock" : qty <= 10 ? "low-stock" : "in-stock",
+            lastUpdated: now,
+          };
+        }),
+        transactions: [
+          {
+            id: uid("TXN"),
+            type: "adjustment",
+            reference: action.ref,
+            itemId: action.itemId,
+            itemName:
+              state.inventory.find((i) => i.id === action.itemId)?.deviceName ??
+              "",
+            quantity: action.delta,
+            department:
+              state.inventory.find((i) => i.id === action.itemId)?.department ??
+              state.department,
+            createdBy: state.user?.name ?? "Admin",
+            date: now,
+            note: action.note,
+          },
+          ...state.transactions,
+        ],
+      };
+    }
     case "ADD_STOCK_IN_RECORD":
-      return { ...state, stockIn: [action.record, ...state.stockIn] };
-    case "ADD_STOCK_OUT_RECORD":
+      return { ...state, stockIn: [action.record, ...state.stockIn] };    case "ADD_STOCK_OUT_RECORD":
       return { ...state, stockOut: [action.record, ...state.stockOut] };
     case "UPDATE_STOCK_IN":
       return {
@@ -995,6 +1036,7 @@ interface AppContextValue {
     purpose: string,
     note?: string,
   ) => void;
+  adjustStock: (itemId: string, delta: number, note?: string) => void;
   updateStockInStatus: (id: string, status: StockInRecord["status"]) => void;
   updateStockOutStatus: (id: string, status: StockOutRecord["status"]) => void;
   addTransfer: (
@@ -1446,6 +1488,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           state.user?.name ?? "Admin",
           "issued stock",
           "Stock Out",
+          item.deviceName,
+          item.department,
+        ),
+      });
+    },
+    [state],
+  );
+
+  const adjustStock = React.useCallback(
+    (itemId: string, delta: number, note?: string) => {
+      const item = state.inventory.find((i) => i.id === itemId);
+      if (!item) return;
+      if (delta < 0 && Math.abs(delta) > item.quantity) {
+        toast.error(`Insufficient stock — only ${item.quantity} available`);
+        return;
+      }
+      const ref = uid("ADJ");
+      dispatch({ type: "ADJUST_STOCK", itemId, delta, ref, note });
+      toast.success(
+        `Stock adjusted — ${delta > 0 ? "+" : ""}${delta} × ${item.deviceName}`,
+      );
+      dispatch({
+        type: "ADD_ACTIVITY",
+        activity: pushActivity(
+          state,
+          state.user?.name ?? "Admin",
+          "adjusted stock",
+          "Adjustments",
           item.deviceName,
           item.department,
         ),
@@ -2514,6 +2584,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     changeLocation,
     stockIn,
     stockOut,
+    adjustStock,
     updateStockInStatus,
     updateStockOutStatus,
     addTransfer,

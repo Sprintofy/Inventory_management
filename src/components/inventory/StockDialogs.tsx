@@ -35,7 +35,7 @@ export function StockInDialog({ open, onOpenChange, presetItem }: { open: boolea
   // eslint-disable-line react-hooks/set-state-in-effect
 
   const options = React.useMemo(
-    () => state.inventory.filter((i) => !i.archived && (visibleDepartments.length === 0 || visibleDepartments.includes(i.department))),
+    () => state.inventory.filter((i) => (visibleDepartments.length === 0 || visibleDepartments.includes(i.department))),
     [state.inventory, visibleDepartments]
   );
 
@@ -133,7 +133,7 @@ export function StockOutDialog({ open, onOpenChange, presetItem }: { open: boole
 
   const selectedItem = state.inventory.find((i) => i.id === itemId);
   const overAvailable = selectedItem && quantity > selectedItem.quantity;
-  const options = state.inventory.filter((i) => !i.archived && (visibleDepartments.length === 0 || visibleDepartments.includes(i.department)) && i.quantity > 0);
+  const options = state.inventory.filter((i) => (visibleDepartments.length === 0 || visibleDepartments.includes(i.department)) && i.quantity > 0);
 
   const onSubmit = () => {
     if (!itemId || quantity < 1 || purpose.trim().length < 2) {

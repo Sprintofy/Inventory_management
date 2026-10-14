@@ -13,7 +13,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useApp } from "@/store/app-store";
-import { downloadCSV, formatCompact, formatCurrency } from "@/lib/utils";
+import { downloadCSV, formatCompact } from "@/lib/utils";
 import type { SubDepartment } from "@/types";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell,
@@ -59,7 +59,7 @@ export default function ReportsPage() {
   const effectiveSub = sub !== "all" && subOptions.some((s) => s.name === sub) ? sub : "all";
 
   const scopeItems = useMemo(() => {
-    const items = dept === "all" ? state.inventory.filter((i) => !i.archived) : state.inventory.filter((i) => i.department === dept);
+    const items = dept === "all" ? state.inventory : state.inventory.filter((i) => i.department === dept);
     if (dept !== "all" && effectiveSub !== "all") {
       const node = findSubByName(deptObj?.subDepartments ?? [], effectiveSub);
       const names = node ? subtreeNames(node) : [effectiveSub];
@@ -74,20 +74,16 @@ export default function ReportsPage() {
   );
 
   const metrics = useMemo(() => {
-    const stockValue = scopeItems.reduce((s, i) => s + i.quantity, 0); // Total quantity
+    const stockValue = scopeItems.reduce((s, i) => s + i.quantity, 0);
     const stockIn = scopeTransactions.filter((t) => t.type === "stock-in").reduce((s, t) => s + t.quantity, 0);
     const stockOut = scopeTransactions.filter((t) => t.type === "stock-out").reduce((s, t) => s + t.quantity, 0);
-    const outItems = scopeTransactions.filter((t) => t.type === "stock-out");
-    const outValue = outItems.reduce((s, t) => {
-      const item = state.inventory.find((i) => i.id === t.itemId);
-      return s + t.quantity; // Total quantity of stock out
-    }, 0);
+    const outValue = scopeTransactions.filter((t) => t.type === "stock-out").reduce((s, t) => s + t.quantity, 0);
     const categories = Object.entries(scopeItems.reduce<Record<string, number>>((acc, i) => {
       acc[i.category] = (acc[i.category] ?? 0) + i.quantity;
       return acc;
     }, {})).map(([name, quantity]) => ({ name, quantity }));
     return { stockValue, stockIn, stockOut, outValue, categories };
-  }, [scopeItems, scopeTransactions, state.inventory]);
+  }, [scopeItems, scopeTransactions]);
 
   const topItems = useMemo(
     () => [...scopeItems].sort((a, b) => b.quantity - a.quantity).slice(0, 8),
@@ -98,7 +94,7 @@ export default function ReportsPage() {
 
   const exportReport = () => {
     downloadCSV("inventory-report.csv", [
-      { Name: "Name", SKU: "SKU", Category: "Category", Department: "Department", "Sub-Department": "Sub-Department", Quantity: "Quantity", "Unit Cost": "Unit Cost", Value: "Value", Status: "Status" },
+      { Name: "Name", SKU: "SKU", Category: "Category", Department: "Department", "Sub-Department": "Sub-Department", Quantity: "Quantity", Status: "Status" },
       ...scopeItems.map((i) => ({ Name: i.deviceName, SKU: i.sku, Category: i.category, Department: i.department, "Sub-Department": i.subDepartment ?? "", Quantity: i.quantity, Status: i.status })),
     ]);
     toast.success("Report exported as CSV");
@@ -204,8 +200,8 @@ export default function ReportsPage() {
                 <TableRow className="hover:bg-transparent">
                   <TableHead>Item</TableHead>
                   <TableHead>Category</TableHead>
-                  <TableHead className="text-right">Last Updated</TableHead>
                   <TableHead className="text-right">Quantity</TableHead>
+                  <TableHead className="text-right">Department</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
@@ -218,7 +214,7 @@ export default function ReportsPage() {
                     </TableCell>
                     <TableCell className="text-xs">{i.category}</TableCell>
                     <TableCell className="text-right text-sm tabular-nums">{i.quantity.toLocaleString()}</TableCell>
-                    <TableCell className="text-right text-sm font-medium tabular-nums">{formatCurrency(i.quantity * i.unitCost)}</TableCell>
+                    <TableCell className="text-right text-sm tabular-nums">{i.department}</TableCell>
                     <TableCell><StatusBadge status={i.status} /></TableCell>
                   </TableRow>
                 ))}

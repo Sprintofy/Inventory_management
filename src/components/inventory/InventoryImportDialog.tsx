@@ -25,25 +25,7 @@ import { uid } from "@/lib/utils";
 import { exportInventoryTemplate } from "@/lib/excel";
 import type { InventoryItem } from "@/types";
 
-type ParsedItem = Omit<
-  InventoryItem,
-  | "id"
-  | "status"
-  | "lastUpdated"
-  | "createdAt"
-  | "quantity"
-  | "minStock"
-  | "reorderLevel"
-  | "maxStock"
-  | "unitCost"
-> & {
-  quantity: number;
-  minStock: number;
-  reorderLevel: number;
-  maxStock: number;
-  unitCost: number;
-  subDepartment?: string;
-};
+type ParsedItem = Omit<InventoryItem, "id" | "status" | "lastUpdated" | "createdAt">;
 
 interface ParsedRow {
   row: number;
@@ -52,39 +34,31 @@ interface ParsedRow {
 }
 
 const HEADER_FIELDS: Record<string, string> = {
+  devicename: "deviceName",
   itemname: "deviceName",
   name: "deviceName",
   item: "deviceName",
+  brand: "brand",
+  modelnumber: "modelNumber",
+  model: "modelNumber",
   sku: "sku",
   code: "sku",
   category: "category",
-  subcategory: "subcategory",
   description: "description",
   itemdescription: "description",
+  specifications: "specifications",
+  spec: "specifications",
+  warrantyperiod: "warrantyPeriod",
+  warranty: "warrantyPeriod",
   department: "department",
   subdepartment: "subDepartment",
   quantity: "quantity",
   qty: "quantity",
   qtyonhand: "quantity",
   unit: "unit",
-  minstock: "minStock",
-  minimumnumberofitems: "minStock",
-  reorderlevel: "reorderLevel",
-  reorderpoint: "reorderLevel",
-  maxstock: "maxStock",
-  maximumnumberofitems: "maxStock",
-  unitcost: "unitCost",
-  unitprice: "unitCost",
-  cost: "unitCost",
-  price: "unitCost",
   supplier: "supplier",
   serialnumber: "serialNumber",
   serialno: "serialNumber",
-  assetnumber: "assetNumber",
-  batchnumber: "batchNumber",
-  batch: "batchNumber",
-  condition: "condition",
-  warranty: "warranty",
   notes: "notes",
   remarks: "notes",
 };
@@ -95,7 +69,6 @@ const REQUIRED_FIELDS: { field: string; label: string }[] = [
   { field: "category", label: "Category" },
   { field: "department", label: "Department" },
   { field: "unit", label: "Unit" },
-  { field: "supplier", label: "Supplier" },
 ];
 
 const normalizeKey = (k: string) => k.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -180,7 +153,7 @@ export function InventoryImportDialog({
         return;
       }
 
-      const parsed: any[] = raw.map((r, idx) => {
+      const parsed: ParsedRow[] = raw.map((r, idx) => {
         const rowNum = idx + 2;
         const get = (field: string) => {
           const aliases = Object.keys(HEADER_FIELDS).filter(
@@ -197,20 +170,8 @@ export function InventoryImportDialog({
         }
 
         const quantity = toNumber(get("quantity"));
-        const minStock = toNumber(get("minStock"));
-        const reorderLevel = toNumber(get("reorderLevel"));
-        const maxStock = toNumber(get("maxStock"));
-        const unitCost = toNumber(get("unitCost"));
         if (quantity === null) errors.push("Quantity must be a number");
         else if (quantity < 0) errors.push("Quantity cannot be negative");
-        if (unitCost === null) errors.push("Unit Cost must be a number");
-        else if (unitCost < 0) errors.push("Unit Cost cannot be negative");
-        if (minStock !== null && minStock < 0)
-          errors.push("Min Stock cannot be negative");
-        if (reorderLevel !== null && reorderLevel < 0)
-          errors.push("Reorder Level cannot be negative");
-        if (maxStock !== null && maxStock < 0)
-          errors.push("Max Stock cannot be negative");
 
         const sku = String(get("sku") ?? "").trim();
         if (
@@ -224,27 +185,21 @@ export function InventoryImportDialog({
           row: rowNum,
           errors,
           item: {
-            deviceName: String(get("name") ?? "").trim(),
+            deviceName: String(get("deviceName") ?? "").trim(),
+            brand: String(get("brand") ?? "").trim() || "—",
+            modelNumber: String(get("modelNumber") ?? "").trim() || "—",
             sku,
             category: String(get("category") ?? "").trim(),
-            subcategory: String(get("subcategory") ?? "").trim() || undefined,
             description: String(get("description") ?? "").trim() || undefined,
+            specifications: String(get("specifications") ?? "").trim() || undefined,
+            warrantyPeriod: String(get("warrantyPeriod") ?? "").trim() || undefined,
             department: String(get("department") ?? "").trim(),
             subDepartment:
               String(get("subDepartment") ?? "").trim() || undefined,
-
             quantity: quantity ?? 0,
             unit: String(get("unit") ?? "").trim() || "unit",
-            minStock: minStock ?? 5,
-            reorderLevel: reorderLevel ?? 10,
-            maxStock: maxStock ?? 100,
-            unitCost: unitCost ?? 0,
-            supplier: String(get("supplier") ?? "").trim(),
+            supplier: String(get("supplier") ?? "").trim() || undefined,
             serialNumber: String(get("serialNumber") ?? "").trim() || undefined,
-            assetNumber: String(get("assetNumber") ?? "").trim() || undefined,
-            batchNumber: String(get("batchNumber") ?? "").trim() || undefined,
-            condition: String(get("condition") ?? "").trim() || "New",
-            warranty: String(get("warranty") ?? "").trim() || undefined,
             notes: String(get("notes") ?? "").trim() || undefined,
           },
         };
@@ -286,10 +241,11 @@ export function InventoryImportDialog({
     const valid = rows.filter((r) => r.errors.length === 0);
     const now = new Date().toISOString();
     for (const { item } of valid) {
+      const qty = item.quantity;
       addItem({
         ...item,
         id: uid("INV"),
-        status,
+        status: qty <= 0 ? "out-of-stock" : qty <= 10 ? "low-stock" : "in-stock",
         lastUpdated: now,
         createdAt: now,
       });
@@ -347,8 +303,7 @@ export function InventoryImportDialog({
             </label>
             <div className="flex items-center justify-between">
               <p className="text-muted-foreground text-xs">
-                Required columns: Item Name, SKU, Category, Department, Unit,
-                Supplier
+                Required columns: Device Name, SKU, Category, Department, Unit
               </p>
               <Button
                 variant="outline"
