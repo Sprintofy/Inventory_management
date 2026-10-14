@@ -7,14 +7,12 @@ import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   ArrowLeft,
-  Boxes,
   Check,
   CircleDot,
   Clock,
   Inbox,
   MapPin,
   MessageSquare,
-  Package,
   Send,
   ShieldCheck,
   Wrench,
@@ -22,7 +20,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Textarea } from "@/components/ui/textarea";
 import { useApp } from "@/store/app-store";
@@ -190,36 +187,6 @@ export default function TechnicianTicketPage({ params }: { params: Promise<{ id:
           </CardContent>
         </Card>
 
-        {ticket.assets.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Asset on ticket</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {ticket.assets.map((a) => (
-                <div key={a.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <Package className="text-primary size-4 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="font-mono text-sm font-medium">{a.assetId}</p>
-                      <p className="text-muted-foreground truncate text-xs">
-                        {a.name}
-                        {a.serialNumber ? ` · SN: ${a.serialNumber}` : ""}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <StatusBadge status={a.status} />
-                    <Badge variant="neutral" className="text-[10px]">
-                      {a.currentLocation}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
-
         {/*
           Per-issue remarks. Every issue on this ticket has its own input, so a
           ticket with multiple issues produces multiple individual remarks
@@ -368,12 +335,6 @@ export default function TechnicianTicketPage({ params }: { params: Promise<{ id:
               </p>
             </CardContent>
           </Card>
-        )}
-
-        {ticket.assets.length > 0 && (
-          <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
-            <Boxes className="size-3.5" /> Once the Admin closes this ticket, the asset is marked available again.
-          </p>
         )}
 
         <div className="pb-4 text-center">

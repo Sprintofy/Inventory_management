@@ -13,7 +13,6 @@ import {
   Inbox,
   LogOut,
   MapPin,
-  Package,
   Timer,
   User,
   Wrench,
@@ -69,7 +68,6 @@ function StatTile({
 function TicketCard({ ticket }: { ticket: Ticket }) {
   const openIssues = ticket.issues.filter((i) => i.status === "open" || i.status === "in-progress");
   const awaitingReview = AWAITING_REVIEW.includes(ticket.status);
-  const asset = ticket.assets[0];
 
   return (
     <Link
@@ -102,14 +100,6 @@ function TicketCard({ ticket }: { ticket: Ticket }) {
         </div>
         <ChevronRight className="text-muted-foreground size-4 shrink-0" />
       </div>
-
-      {asset && (
-        <p className="text-muted-foreground bg-muted/40 mt-3 flex flex-wrap items-center gap-2 rounded-lg px-3 py-2 text-xs">
-          <Package className="size-3.5 shrink-0" />
-          <span className="font-mono font-medium text-foreground">{asset.assetId}</span>
-          <span className="truncate">{asset.name}</span>
-        </p>
-      )}
 
       {ticket.lastReissueNote && !awaitingReview && (
         <p className="bg-danger/10 text-danger mt-3 rounded-lg px-3 py-2 text-xs">

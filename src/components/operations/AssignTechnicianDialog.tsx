@@ -94,18 +94,6 @@ export function AssignTechnicianDialog({ open, onOpenChange, ticket, selectedTec
               <p className="mt-0.5 text-sm font-medium">{ticket.title}</p>
             </div>
 
-            <div className="rounded-lg border p-3">
-              <p className="text-muted-foreground text-xs">Asset</p>
-              <p className="mt-0.5 text-sm font-medium">
-                {ticket.assets.length > 0
-                  ? `${ticket.assets[0].name}`
-                  : "No asset assigned"}
-              </p>
-              {ticket.assets.length > 0 && (
-                <p className="font-mono text-muted-foreground text-xs">{ticket.assets[0].assetId}{ticket.assets[0].serialNumber ? ` · ${ticket.assets[0].serialNumber}` : ""}</p>
-              )}
-            </div>
-
             <FormField control={form.control} name="technicianId" render={({ field }) => (
               <FormItem><FormLabel>Select Technician</FormLabel>
                 <FormControl>

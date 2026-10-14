@@ -4,7 +4,7 @@ import * as React from "react";
 import { use, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Boxes, Check, CircleDot, FileDown, ListChecks, MoreHorizontal, Pencil, Plus, RotateCcw, Ticket, TicketCheck, Trash2, User, Wrench } from "lucide-react";
+import { ArrowLeft, Check, CircleDot, FileDown, MoreHorizontal, Pencil, Plus, RotateCcw, Ticket, TicketCheck, Trash2, User, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,17 +15,14 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { CloseTicketDialog } from "@/components/operations/CloseTicketDialog";
 import { ReissueTicketDialog } from "@/components/operations/ReissueTicketDialog";
-import { TicketAssetDialog } from "@/components/operations/TicketAssetDialog";
 import { IssueDialog } from "@/components/operations/IssueDialog";
-import { MovementDialog } from "@/components/operations/MovementDialog";
 import { AssignTechnicianDialog } from "@/components/operations/AssignTechnicianDialog";
-import { TicketAssetInfo } from "@/components/operations/TicketAssetInfo";
 import { useApp } from "@/store/app-store";
 import { useFakeLoading } from "@/hooks/use-fake-loading";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { exportTicketsExcel } from "@/lib/excel";
-import { issueCounts, ticketStatusFromIssues } from "@/lib/ticket-utils";
-import type { IssueStatus, RequestPriority, Ticket as TicketRecord, TicketAsset, TicketIssue, TicketStatus } from "@/types";
+import { issueCounts } from "@/lib/ticket-utils";
+import type { IssueStatus, RequestPriority, Ticket as TicketRecord, TicketIssue } from "@/types";
 
 const priorityClass: Record<RequestPriority, string> = {
   low: "bg-muted text-muted-foreground",
@@ -50,7 +47,6 @@ function IssueItem({
   onDelete: (i: TicketIssue) => void;
 }) {
   const { updateIssue } = useApp();
-  const asset = ticket.assets.find((a) => a.id === issue.assetId);
   const resolved = issue.status === "resolved" || issue.status === "closed";
   return (
     <div className={`rounded-lg border p-3 ${resolved ? "bg-success/5 opacity-80" : "bg-card"}`}>
@@ -67,7 +63,6 @@ function IssueItem({
             <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
               <span className={`inline-flex rounded-full px-2 py-0.5 font-medium ${priorityClass[issue.priority]}`}>{issue.priority}</span>
               <StatusBadge status={issue.status} />
-              {asset && <span className="bg-muted inline-flex items-center rounded-md px-1.5 py-0.5 font-medium"><Boxes className="mr-1 size-3" />{asset.assetId}</span>}
               {issue.assignedTo && <span className="text-muted-foreground">Assigned: {issue.assignedTo}</span>}
               <span className="text-muted-foreground" title={formatDateTime(issue.createdAt)}>Created {formatDate(issue.createdAt)}</span>
               {issue.resolvedAt && <span className="text-success" title={formatDateTime(issue.resolvedAt)}>Resolved {formatDate(issue.resolvedAt)}</span>}
@@ -101,16 +96,11 @@ function IssueItem({
 
 export default function TicketDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { state, can, updateTicket, updateIssue, removeIssue, removeTicketAsset } = useApp();  const router = useRouter();
+  const { state, can, updateIssue, removeIssue } = useApp();  const router = useRouter();
   const loading = useFakeLoading(300);
   const [closeOpen, setCloseOpen] = useState(false);
-  const [assetDialogOpen, setAssetDialogOpen] = useState(false);
-  const [editingAsset, setEditingAsset] = useState<TicketAsset | null>(null);
   const [issueDialogOpen, setIssueDialogOpen] = useState(false);
   const [editingIssue, setEditingIssue] = useState<TicketIssue | null>(null);
-  const [issueAssetId, setIssueAssetId] = useState<string | undefined>(undefined);
-  const [movementAsset, setMovementAsset] = useState<TicketAsset | null>(null);
-  const [deleteAsset, setDeleteAsset] = useState<TicketAsset | null>(null);
   const [deleteIssue, setDeleteIssue] = useState<TicketIssue | null>(null);
   const [assignTechnicianOpen, setAssignTechnicianOpen] = useState(false);
   const [reissueOpen, setReissueOpen] = useState(false);
@@ -136,20 +126,6 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   if (loading || !ticket) {
     return <div className="space-y-6"><Skeleton className="h-10 w-72" /><div className="grid gap-6 lg:grid-cols-3"><Skeleton className="h-64 lg:col-span-2" /><Skeleton className="h-64" /></div></div>;
   }
-
-  const assetMovements = (asset: TicketAsset) => state.movements.filter((m) => m.ticketId === ticket!.id && m.assetId === asset.assetId);
-
-  const setTicketStatus = (status: TicketStatus) => {
-    if (status === "resolved" && counts.resolved !== counts.total && counts.total > 0) {
-      toast.error("All issues must be resolved first");
-      return;
-    }
-    if (status === "partially-resolved" && counts.resolved === 0) {
-      toast.error("Resolve at least one issue first");
-      return;
-    }
-    updateTicket(ticket!.id, { status });
-  };
 
   const markIssueResolved = (issueId: string) => {
     updateIssue(ticket!.id, issueId, { status: "resolved" });
@@ -177,24 +153,6 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
             <Button variant="outline" onClick={() => { exportTicketsExcel([ticket], state.movements); toast.success("Exported ticket to Excel"); }}>
               <FileDown className="size-4" /> Export
             </Button>
-            {ticket.status === "open" && (
-              <Button variant="outline" onClick={() => setTicketStatus("in-progress")}>Mark In Progress</Button>
-            )}
-            {ticket.status === "in-progress" && (
-              <>
-                <Button variant="outline" onClick={() => setTicketStatus("partially-resolved")}>Partially Resolved</Button>
-                <Button variant="outline" onClick={() => setTicketStatus("open")}>Reopen</Button>
-              </>
-            )}
-            {ticket.status === "partially-resolved" && (
-              <>
-                <Button variant="outline" onClick={() => setTicketStatus("resolved")}>Mark Resolved</Button>
-                <Button variant="outline" onClick={() => setTicketStatus("open")}>Reopen</Button>
-              </>
-            )}
-            {(ticket.status === "resolved" || ticket.status === "work-completed") && (
-              <Button variant="outline" onClick={() => setTicketStatus("open")}>Reopen</Button>
-            )}
 
             {/* --- Admin review of a technician-submitted (solved) ticket --- */}
             {awaitingReview && (
@@ -210,11 +168,6 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
 
             {!awaitingReview && ticket.status !== "closed" && (
               <Button onClick={() => setCloseOpen(true)}><TicketCheck className="size-4" /> Close Ticket</Button>
-            )}
-            {ticket.status === "closed" && (
-              <Button variant="outline" onClick={() => { updateTicket(ticket.id, { status: ticketStatusFromIssues(ticket.issues, "resolved"), closedBy: undefined, closedAt: undefined, resolution: undefined }); toast.success("Ticket reopened"); }}>
-                <Check className="size-4" /> Reopen Ticket
-              </Button>
             )}
           </div>
         )}
@@ -259,16 +212,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card>
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-lg"><Boxes className="size-5" /></div>
-            <div>
-              <p className="text-2xl font-semibold tabular-nums">{ticket.assets.length}</p>
-              <p className="text-muted-foreground text-xs">Assets on ticket</p>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
             <div className="bg-warning/15 text-warning flex size-10 items-center justify-center rounded-lg"><CircleDot className="size-5" /></div>
@@ -370,114 +314,6 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
               )}
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-base"><Boxes className="text-primary size-4" /> Assets ({ticket.assets.length})</CardTitle>
-                {admin && (
-                  <Button size="sm" onClick={() => { setEditingAsset(null); setAssetDialogOpen(true); }}>
-                    <Plus className="size-4" /> Add Asset
-                  </Button>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              {ticket.assets.length === 0 ? (
-                <EmptyState icon={Boxes} title="No assets on this ticket" description="Add PCs, CPUs, fans, monitors and other equipment to this ticket." action={admin ? { label: "Add Asset", onClick: () => { setEditingAsset(null); setAssetDialogOpen(true); } } : undefined} />
-              ) : (
-                <div className="space-y-5">
-                  {ticket.assets.map((asset) => {
-                    const movements = assetMovements(asset);
-                    const assetIssues = ticket.issues.filter((iss) => iss.assetId === asset.id);
-                    return (
-                      <div key={asset.id} className="rounded-xl border">
-                        <div className="flex flex-col gap-3 border-b bg-muted/30 p-4 sm:flex-row sm:items-start sm:justify-between">
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="font-mono text-sm font-semibold">{asset.assetId}</span>
-                              <span className="bg-primary/10 text-primary inline-flex rounded-md px-2 py-0.5 text-xs font-medium">{asset.itemType}</span>
-                              <StatusBadge status={asset.status} />
-                            </div>
-                            <p className="mt-1 text-sm font-medium">{asset.name}</p>
-                            {asset.serialNumber && <p className="text-muted-foreground font-mono mt-0.5 text-xs">SN: {asset.serialNumber}</p>}
-                            <div className="text-muted-foreground mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
-                              <span>Location: <span className="font-medium text-foreground">{asset.currentLocation}</span></span>
-                              {asset.previousLocation && <span>Previous: <span className="font-medium text-foreground">{asset.previousLocation}</span></span>}
-                              {asset.checkInDate && <span>In: {formatDate(asset.checkInDate)}</span>}
-                              {asset.checkOutDate && <span>Out: {formatDate(asset.checkOutDate)}</span>}
-                            </div>
-                            {asset.notes && <p className="text-muted-foreground mt-1 text-xs italic">{asset.notes}</p>}
-                          </div>
-                          {admin && (
-                            <div className="flex shrink-0 items-center gap-2">
-                              <Button variant="outline" size="sm" onClick={() => setMovementAsset(asset)}>Record Movement</Button>
-                              <Button variant="outline" size="icon-sm" onClick={() => { setEditingAsset(asset); setAssetDialogOpen(true); }} aria-label="Edit asset"><Pencil className="size-3.5" /></Button>
-                              <Button variant="outline" size="icon-sm" className="text-destructive" onClick={() => setDeleteAsset(asset)} aria-label="Remove asset"><Trash2 className="size-3.5" /></Button>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="space-y-3 p-4">
-                          <TicketAssetInfo ticketAsset={asset} currentTicketId={ticket.id} />
-
-                          <div className="flex items-center justify-between">
-                            <h5 className="flex items-center gap-1.5 text-sm font-semibold">
-                              <ListChecks className="text-primary size-4" /> Issues ({assetIssues.length})
-                            </h5>
-                            {admin && (
-                              <Button variant="outline" size="sm" onClick={() => { setEditingIssue(null); setIssueAssetId(asset.id); setIssueDialogOpen(true); }}>
-                                <Plus className="size-3.5" /> Add Issue
-                              </Button>
-                            )}
-                          </div>
-                          {assetIssues.length === 0 ? (
-                            <p className="text-muted-foreground text-sm">No issues recorded for {asset.assetId}.</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {assetIssues.map((iss) => (
-                                <IssueItem key={iss.id} issue={iss} ticket={ticket} admin={admin} onEdit={(i) => { setEditingIssue(i); setIssueAssetId(asset.id); setIssueDialogOpen(true); }} onDelete={(i) => setDeleteIssue(i)} />
-                              ))}
-                            </div>
-                          )}
-
-                          {movements.length > 0 && (
-                            <div className="mt-4">
-                              <h5 className="mb-2 text-sm font-semibold">Movement History ({movements.length})</h5>
-                              <div className="overflow-x-auto rounded-lg border">
-                                <table className="w-full text-left text-xs">
-                                  <thead className="bg-muted/40 text-muted-foreground">
-                                    <tr>
-                                      <th className="px-3 py-2 font-medium">Date</th>
-                                      <th className="px-3 py-2 font-medium">Type</th>
-                                      <th className="px-3 py-2 font-medium">From → To</th>
-                                      <th className="px-3 py-2 font-medium">By</th>
-                                      <th className="px-3 py-2 font-medium">Remarks</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {movements.map((m) => (
-                                      <tr key={m.id} className="border-t">
-                                        <td className="text-muted-foreground px-3 py-2 whitespace-nowrap">{formatDateTime(m.date)}</td>
-                                        <td className="px-3 py-2"><StatusBadge status={m.movementType} /></td>
-                                        <td className="px-3 py-2"><span className="text-muted-foreground">{m.fromLocation}</span> → <span className="font-medium">{m.toLocation}</span></td>
-                                        <td className="px-3 py-2">{m.performedBy}</td>
-                                        <td className="text-muted-foreground px-3 py-2">{m.remarks ?? "—"}</td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
         </div>
 
         <div className="space-y-6">
@@ -507,7 +343,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                     <div key={iss.id} className="flex items-center justify-between gap-2 rounded-lg border p-2.5">
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium">{iss.title}</p>
-                        <p className="text-muted-foreground text-xs">{iss.assetId ? `Asset: ${ticket.assets.find((a) => a.id === iss.assetId)?.assetId ?? iss.assetId} · ` : ""}{iss.assignedTo ?? "Unassigned"}</p>
+                        <p className="text-muted-foreground text-xs">{iss.assignedTo ?? "Unassigned"}</p>
                       </div>
                       <StatusBadge status={iss.status} />
                     </div>
@@ -530,7 +366,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                       <RotateCcw className="size-3.5" /> Re-issue to {assignedTechnician?.name.split(" ")[0] ?? "technician"}
                     </Button>
                     <Button size="sm" className="w-full justify-start" onClick={() => setCloseOpen(true)}>
-                      <TicketCheck className="size-3.5 text-success" /> Close Ticket &amp; return asset
+                      <TicketCheck className="size-3.5 text-success" /> Close Ticket
                     </Button>
                   </>
                 )}
@@ -548,23 +384,35 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         </div>
       </div>
 
-      <TicketAssetDialog open={assetDialogOpen} onOpenChange={setAssetDialogOpen} ticketId={ticket.id} asset={editingAsset} />
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">Issues ({ticket.issues.length})</CardTitle>
+            {admin && (
+              <Button size="sm" onClick={() => { setEditingIssue(null); setIssueDialogOpen(true); }}>
+                <Plus className="size-4" /> Add Issue
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {ticket.issues.length === 0 ? (
+            <p className="text-muted-foreground text-sm">No issues recorded for this ticket.</p>
+          ) : (
+            <div className="space-y-2">
+              {ticket.issues.map((iss) => (
+                <IssueItem key={iss.id} issue={iss} ticket={ticket} admin={admin} onEdit={(i) => { setEditingIssue(i); setIssueDialogOpen(true); }} onDelete={(i) => setDeleteIssue(i)} />
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {issueDialogOpen && (
-        <IssueDialog open={issueDialogOpen} onOpenChange={setIssueDialogOpen} ticket={ticket} issue={editingIssue} defaultAssetId={issueAssetId} />
-      )}
-      {movementAsset && (
-        <MovementDialog open={!!movementAsset} onOpenChange={(o) => !o && setMovementAsset(null)} ticketId={ticket.id} asset={movementAsset} />
+        <IssueDialog open={issueDialogOpen} onOpenChange={setIssueDialogOpen} ticket={ticket} issue={editingIssue} />
       )}
       <CloseTicketDialog open={closeOpen} onOpenChange={setCloseOpen} ticket={ticket} />
       <ReissueTicketDialog open={reissueOpen} onOpenChange={setReissueOpen} ticket={ticket} />
-      <ConfirmDialog
-        open={!!deleteAsset}
-        onOpenChange={(o) => !o && setDeleteAsset(null)}
-        title={`Remove ${deleteAsset?.assetId}?`}
-        description={`This removes "${deleteAsset?.name}" and its issues from the ticket. Historical movements are kept for audit.`}
-        confirmLabel="Remove Asset"
-        onConfirm={() => { if (deleteAsset) removeTicketAsset(ticket.id, deleteAsset.id); setDeleteAsset(null); }}
-      />
       <ConfirmDialog
         open={!!deleteIssue}
         onOpenChange={(o) => !o && setDeleteIssue(null)}

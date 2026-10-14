@@ -20,7 +20,6 @@ const schema = z.object({
   priority: z.string().min(1, "Select priority"),
   status: z.string().min(1, "Select status"),
   assignedTo: z.string().optional(),
-  assetId: z.string().optional(),
   resolution: z.string().optional(),
 });
 type SV = z.output<typeof schema>;
@@ -30,18 +29,16 @@ export function IssueDialog({
   onOpenChange,
   ticket,
   issue,
-  defaultAssetId,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   ticket: Ticket;
   issue: TicketIssue | null;
-  defaultAssetId?: string;
 }) {
   const { state, addTicketIssue, updateIssue } = useApp();
   const form = useForm<SV>({
     resolver: zodResolver(schema) as unknown as Resolver<SV>,
-    defaultValues: { title: "", description: "", priority: "medium", status: "open", assignedTo: "", assetId: "", resolution: "" },
+    defaultValues: { title: "", description: "", priority: "medium", status: "open", assignedTo: "", resolution: "" },
   });
   const status = form.watch("status");
 
@@ -53,11 +50,10 @@ export function IssueDialog({
         priority: issue?.priority ?? "medium",
         status: issue?.status ?? "open",
         assignedTo: issue?.assignedTo ?? "",
-        assetId: issue?.assetId ?? defaultAssetId ?? "",
         resolution: issue?.resolution ?? "",
       });
     }
-  }, [open, form, issue, defaultAssetId]);
+  }, [open, form, issue]);
 
   const onSubmit = (values: SV) => {
     const payload = {
@@ -66,7 +62,6 @@ export function IssueDialog({
       priority: values.priority as RequestPriority,
       status: values.status as IssueStatus,
       assignedTo: values.assignedTo || undefined,
-      assetId: values.assetId || undefined,
       resolution: values.resolution || undefined,
     };
     if (issue) {
@@ -82,7 +77,7 @@ export function IssueDialog({
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><ListChecks className="text-primary size-5" /> {issue ? "Edit Issue" : "Add Issue"}</DialogTitle>
-          <DialogDescription>Record a problem for an asset on this ticket. Every issue is tracked and resolved independently.</DialogDescription>
+          <DialogDescription>Record a problem on this ticket. Every issue is tracked and resolved independently.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -101,22 +96,6 @@ export function IssueDialog({
               </FormItem>
             )} />
             <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="assetId" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Asset</FormLabel>
-                  <FormControl>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger className="w-full"><SelectValue placeholder="Link to asset" /></SelectTrigger>
-                      <SelectContent>
-                        {ticket.assets.map((a) => (
-                          <SelectItem key={a.id} value={a.id}>{a.assetId} — {a.itemType}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
               <FormField control={form.control} name="priority" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Priority</FormLabel>
