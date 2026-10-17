@@ -26,7 +26,7 @@ import { uid } from "@/lib/utils";
 import { ticketStatusFromIssues } from "@/lib/ticket-utils";
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3007/api";
+  process.env.NEXT_PUBLIC_API_URL || "/api";
 const TOKEN_KEY = "inventoryos-token";
 
 async function apiFetch(path: string, options: RequestInit = {}, token?: string | null) {
