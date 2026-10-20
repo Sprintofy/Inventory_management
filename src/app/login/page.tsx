@@ -32,9 +32,14 @@ export default function LoginPage() {
 
   const onSubmit = async (values: LoginValues) => {
     setError(null);
-    const ok = await login(values.email, values.password);
-    if (!ok) {
-      setError("Invalid credentials.");
+    try {
+      await login(values.email, values.password);
+    } catch (e) {
+      setError(
+        e instanceof Error && e.message
+          ? e.message
+          : "Invalid credentials.",
+      );
     }
   };
 

@@ -25,8 +25,14 @@ import type {
 import { uid } from "@/lib/utils";
 import { ticketStatusFromIssues } from "@/lib/ticket-utils";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || "/api";
+// The API mounts every route under /api (see Inventory_api/src/app.ts) and its
+// auth middleware only exempts /api/auth/login. A base URL without that prefix
+// makes every login attempt fail with 403 Forbidden, so normalise it here.
+const API_BASE = (() => {
+  const raw = (process.env.NEXT_PUBLIC_API_URL || "/api").trim().replace(/\/+$/, "");
+  if (!raw) return "/api";
+  return raw.endsWith("/api") ? raw : `${raw}/api`;
+})();
 const TOKEN_KEY = "inventoryos-token";
 
 async function apiFetch(path: string, options: RequestInit = {}, token?: string | null) {
@@ -481,30 +487,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const login = React.useCallback(
     async (email: string, password: string) => {
+      // Errors are intentionally propagated so the login screen can show the
+      // real reason (bad password, API unreachable, DB down) instead of a
+      // blanket "Invalid credentials".
+      const data = await apiFetch("/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      });
+      const t = data.token as string;
+      const user = data.user as User;
       try {
-        const data = await apiFetch("/auth/login", {
-          method: "POST",
-          body: JSON.stringify({ email, password }),
-        });
-        const t = data.token as string;
-        const user = data.user as User;
-        try {
-          window.localStorage.setItem(TOKEN_KEY, t);
-        } catch {
-          // ignore
-        }
-        setToken(t);
-        const loaded = await loadAll(t);
-        setState({
-          ...emptyState(user),
-          ...loaded,
-          user,
-          department: user.role === "super-admin" || user.role === "admin" ? "all" : user.department,
-        });
-        return true;
+        window.localStorage.setItem(TOKEN_KEY, t);
       } catch {
-        return false;
+        // ignore
       }
+      setToken(t);
+      const loaded = await loadAll(t);
+      setState({
+        ...emptyState(user),
+        ...loaded,
+        user,
+        department: user.role === "super-admin" || user.role === "admin" ? "all" : user.department,
+      });
+      return true;
     },
     [loadAll],
   );
