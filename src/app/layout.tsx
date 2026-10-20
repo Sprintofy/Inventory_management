@@ -1,11 +1,17 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { AppProviders } from "@/components/providers";
 
-const inter = Inter({
+// The font file is vendored in the repo (src/app/fonts) instead of being pulled
+// from Google Fonts at build time. next/font/google downloads the CSS and the
+// woff2 files during `next build`, which makes the build fail on a machine
+// with no internet access. next/font/local is fully offline.
+const inter = localFont({
+  src: "./fonts/InterVariable.woff2",
   variable: "--font-inter",
-  subsets: ["latin"],
+  display: "swap",
+  weight: "100 900",
 });
 
 export const metadata: Metadata = {
