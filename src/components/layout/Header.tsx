@@ -1,18 +1,18 @@
 "use client";
 
 import * as React from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   ChevronRight,
   LogOut,
   Menu,
   Shield,
   Building2,
+  Edit,
 } from "lucide-react";
 import { useApp } from "@/store/app-store";
 import { GlobalSearch } from "@/components/layout/GlobalSearch";
 import { NotificationsPopover } from "@/components/layout/NotificationsPopover";
-import { DepartmentSelector } from "@/components/layout/DepartmentSelector";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -59,6 +59,7 @@ const pageTitles: Array<{ match: RegExp; title: string; crumb: string }> = [
 
 export function Header() {
   const { user, role, toggleNav, logout, visibleDepartments } = useApp();
+  const router = useRouter();
   const pathname = usePathname();
   const meta = pageTitles.find((p) => p.match.test(pathname));
 
@@ -93,8 +94,6 @@ export function Header() {
       <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
         <GlobalSearch />
         <NotificationsPopover />
-
-        {user && <DepartmentSelector className="hidden w-[180px] md:flex" />}
 
         {/* ── User Profile Dropdown ── */}
         {user && (
@@ -162,6 +161,21 @@ export function Header() {
                   </div>
                 </>
               )}
+
+              <DropdownMenuSeparator className="my-0" />
+
+              {/* Profile Details */}
+              <div className="p-1.5">
+                <DropdownMenuItem
+                  onClick={() => {
+                    router.push("/profile");
+                  }}
+                  className="cursor-pointer gap-2.5 rounded-md px-2.5 py-2 focus:bg-accent focus:text-foreground"
+                >
+                  <Edit className="size-4" />
+                  <span className="font-medium">Change Profile Details</span>
+                </DropdownMenuItem>
+              </div>
 
               <DropdownMenuSeparator className="my-0" />
 

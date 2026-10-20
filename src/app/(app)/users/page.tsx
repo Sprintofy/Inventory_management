@@ -4,7 +4,7 @@ import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, type Resolver } from "react-hook-form";
 import { z } from "zod";
-import { Eye, MoreHorizontal, Plus, Trash2, UserCircle2, Users as UsersIcon } from "lucide-react";
+import { MoreHorizontal, Plus, Trash2, UserCircle2, Users as UsersIcon } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SearchInput } from "@/components/ui/SearchInput";
@@ -19,9 +19,10 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { useRouter } from "next/navigation";
 import { useApp } from "@/store/app-store";
 import { useFakeLoadingOn } from "@/hooks/use-fake-loading";
-import { uid } from "@/lib/utils";
+import { uid, formatISO } from "@/lib/utils";
 import type { SubDepartment, User } from "@/types";
 
 const schema = z.object({
@@ -35,6 +36,7 @@ const schema = z.object({
 type SV = z.output<typeof schema>;
 
 export default function UsersPage() {
+  const router = useRouter();
   const { state, addUser, updateUser, deleteUser, can } = useApp();
   const [search, setSearch] = React.useState("");
   const [dateFrom, setDateFrom] = React.useState("");
@@ -43,7 +45,6 @@ export default function UsersPage() {
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<User | null>(null);
   const [deleting, setDeleting] = React.useState<User | null>(null);
-  const [viewing, setViewing] = React.useState<User | null>(null);
   const loading = useFakeLoadingOn(search);
   const pageSize = 10;
 
@@ -152,15 +153,17 @@ export default function UsersPage() {
                   {u.subDepartment && <span className="text-muted-foreground mt-0.5 block text-[11px]">{u.subDepartment}</span>}
                 </TableCell>
                 <TableCell className="text-xs">{u.post ?? "—"}</TableCell>
-                <TableCell className="text-muted-foreground text-xs">{u.lastActive}</TableCell>
+                <TableCell className="text-muted-foreground text-xs">{formatISO(u.lastActive)}</TableCell>
                 <TableCell className="pr-4 text-right">
                   {can("users.manage") && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon-sm"><MoreHorizontal className="size-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-44">
-                        <DropdownMenuItem onClick={() => setViewing(u)}><Eye className="size-3.5" /> View details</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => router.push(`/users/${u.id}`)}><UserCircle2 className="size-3.5" /> View details</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => { setEditing(u); setDialogOpen(true); }}><UserCircle2 className="size-3.5" /> Edit</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleting(u)}><Trash2 className="size-3.5" /> Delete</DropdownMenuItem>
+                        {u.role !== "super-admin" && (
+                  <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleting(u)}><Trash2 className="size-3.5" /> Delete</DropdownMenuItem>
+                )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   )}
@@ -212,33 +215,6 @@ export default function UsersPage() {
               </DialogFooter>
             </form>
           </Form>
-        </DialogContent>
-      </Dialog>
-
-      {/* View details (Mar 10) */}
-      <Dialog open={!!viewing} onOpenChange={(o) => !o && setViewing(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>User details</DialogTitle>
-            <DialogDescription>Full profile of the selected user.</DialogDescription>
-          </DialogHeader>
-          {viewing && (
-            <div className="space-y-3 text-sm">
-              <div className="flex items-center gap-3">
-                <div className="bg-primary/10 text-primary flex size-11 items-center justify-center rounded-full text-sm font-semibold">{viewing.name.split(" ").map((p) => p[0]).join("").slice(0, 2)}</div>
-                <div><p className="font-medium">{viewing.name}</p><p className="text-muted-foreground text-xs">{viewing.email}</p></div>
-              </div>
-              <div className="grid grid-cols-2 gap-3 rounded-lg border p-3 text-xs">
-                <div><p className="text-muted-foreground">Employee ID</p><p className="font-medium">{viewing.employeeId}</p></div>
-                <div><p className="text-muted-foreground">Post</p><p className="font-medium">{viewing.post ?? "—"}</p></div>
-                <div><p className="text-muted-foreground">Department</p><p className="font-medium">{viewing.department}</p></div>
-                <div><p className="text-muted-foreground">Sub-department</p><p className="font-medium">{viewing.subDepartment ?? "—"}</p></div>
-                <div><p className="text-muted-foreground">Last Active</p><p className="font-medium">{viewing.lastActive}</p></div>
-                <div><p className="text-muted-foreground">Login</p><p className="font-mono text-[11px]">{viewing.email} / ••••••</p></div>
-              </div>
-            </div>
-          )}
-          <DialogFooter><Button variant="outline" onClick={() => setViewing(null)}>Close</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 

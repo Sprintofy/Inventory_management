@@ -2,9 +2,9 @@
 
 import * as React from "react";
 import { use, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Check, CircleDot, FileDown, MoreHorizontal, Pencil, Plus, RotateCcw, Ticket, TicketCheck, Trash2, User, Wrench } from "lucide-react";
+import { Check, CircleDot, FileDown, MoreHorizontal, Pencil, Plus, RotateCcw, Ticket, TicketCheck, Trash2, User, Wrench } from "lucide-react";
+import { BackButton } from "@/components/ui/BackButton";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -83,7 +83,7 @@ function IssueItem({
 
 export default function TicketDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { state, can, updateIssue, removeIssue } = useApp();  const router = useRouter();
+  const { state, can, updateIssue, removeIssue } = useApp();
   const loading = useFakeLoading(300);
   const [closeOpen, setCloseOpen] = useState(false);
   const [issueDialogOpen, setIssueDialogOpen] = useState(false);
@@ -122,9 +122,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => router.push("/tickets")} aria-label="Back">
-            <ArrowLeft className="size-4" />
-          </Button>
+          <BackButton label="Back" />
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{ticket.id}</h1>

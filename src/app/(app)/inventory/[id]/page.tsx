@@ -3,9 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { use, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
   Building2,
   CalendarDays,
   ChevronDown,
@@ -29,11 +27,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useApp } from "@/store/app-store";
 import { useFakeLoading } from "@/hooks/use-fake-loading";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/utils";
+import { BackButton } from "@/components/ui/BackButton";
 
 export default function InventoryDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { state, can } = useApp();
-  const router = useRouter();
   const loading = useFakeLoading(300);
 
   const item = state.inventory.find((i) => i.id === id);
@@ -80,9 +78,7 @@ export default function InventoryDetailPage({ params }: { params: Promise<{ id: 
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => router.push("/inventory")} aria-label="Back to Inventory">
-            <ArrowLeft className="size-4" />
-          </Button>
+          <BackButton label="Back to Inventory" />
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{item.deviceName}</h1>

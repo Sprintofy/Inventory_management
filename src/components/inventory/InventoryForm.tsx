@@ -410,21 +410,7 @@ export function InventoryForm({
                     <FormItem>
                       <FormLabel>Supplier (optional)</FormLabel>
                       <FormControl>
-                        <Select
-                          value={field.value ?? ""}
-                          onValueChange={field.onChange}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select supplier" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {state.suppliers.map((s) => (
-                              <SelectItem key={s.id} value={s.name}>
-                                {s.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Input placeholder="e.g. ABC Supplies" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

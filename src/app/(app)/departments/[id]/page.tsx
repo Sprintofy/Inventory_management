@@ -3,7 +3,8 @@
 import * as React from "react";
 import { use, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, BarChart3, Building2, ChevronRight, FileDown, Layers, MoreHorizontal, Package, Pencil, Plus, Ticket as TicketIcon, Trash2, User } from "lucide-react";
+import { BarChart3, Building2, ChevronRight, FileDown, Layers, MoreHorizontal, Package, Pencil, Plus, Ticket as TicketIcon, Trash2, User } from "lucide-react";
+import { BackButton } from "@/components/ui/BackButton";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -57,9 +58,7 @@ export default function DepartmentDetailPage({ params }: { params: Promise<{ id:
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => router.push("/departments")} aria-label="Back">
-            <ArrowLeft className="size-4" />
-          </Button>
+          <BackButton label="Back" />
           <div className="flex size-11 items-center justify-center rounded-xl text-white" style={{ backgroundColor: dept.color }}>
             <Building2 className="size-6" />
           </div>

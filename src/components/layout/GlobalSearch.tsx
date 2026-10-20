@@ -14,6 +14,7 @@ interface SearchResult {
   label: string;
   sublabel: string;
   href: string;
+  detailsHref?: string;
 }
 
 interface ResultSection {
@@ -31,7 +32,9 @@ export function GlobalSearch() {
   const [q, setQ] = React.useState("");
   const inputRef = React.useRef<HTMLInputElement>(null);
 
-  // Keyboard shortcut (⌘K or Ctrl+K) to focus search
+  const isMac = typeof navigator !== "undefined" && /Mac/i.test(navigator.platform);
+
+  // Keyboard shortcut (⌘K on Mac, Ctrl+K on Windows/Linux) to focus search
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
@@ -103,7 +106,7 @@ export function GlobalSearch() {
         state.users
           .filter((u) => match(u.name, u.email, u.department, u.role))
           .slice(0, PER_TYPE_LIMIT)
-          .map((u) => ({ id: u.id, type: "Users", label: u.name, sublabel: `${u.email} · ${u.department}`, href: "/users" })),
+          .map((u) => ({ id: u.id, type: "Users", label: u.name, sublabel: `${u.email} · ${u.department}`, href: `/users/${u.id}` })),
       );
     }
 
@@ -159,7 +162,7 @@ export function GlobalSearch() {
           />
           {!q ? (
             <kbd className="bg-muted text-muted-foreground pointer-events-none absolute right-2.5 rounded border px-1.5 py-0.5 text-[10px] font-medium hidden md:inline">
-              ⌘K
+              {isMac ? "⌘K" : "Ctrl+K"}
             </kbd>
           ) : (
             <button

@@ -48,6 +48,16 @@ export function formatDate(date: string | Date | undefined | null, opts?: Intl.D
   }).format(d);
 }
 
+/**
+ * Returns an ISO-8601 UTC string like 2026-10-14T17:41:29.395Z.
+ * Native Date#toISOString — no new packages.
+ */
+export function formatISO(date: string | Date | undefined | null) {
+  const d = toDate(date);
+  if (!d) return "—";
+  return d.toISOString();
+}
+
 export function formatDateTime(date: string | Date | undefined | null) {
   const d = toDate(date);
   if (!d) return "—";

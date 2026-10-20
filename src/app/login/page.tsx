@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Boxes, Eye, EyeOff, KeyRound, Lock, Mail, ShieldCheck, Wrench, Users } from "lucide-react";
+import { Boxes, Eye, EyeOff, KeyRound, Lock, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,12 +18,6 @@ const loginSchema = z.object({
 });
 
 type LoginValues = z.infer<typeof loginSchema>;
-
-const demoList = [
-  { label: "Super Admin", email: "admin@example.com", password: "password", icon: ShieldCheck, color: "bg-danger/10 text-danger" },
-  { label: "Department Manager", email: "col.trg@nda.in", password: "password", icon: Users, color: "bg-success/10 text-success" },
-  { label: "Technician", email: "technician@gmail.com", password: "123456", icon: Wrench, color: "bg-warning/15 text-warning" },
-];
 
 export default function LoginPage() {
   const router = useRouter();
@@ -40,7 +34,7 @@ export default function LoginPage() {
     setError(null);
     const ok = await login(values.email, values.password);
     if (!ok) {
-      setError("Invalid credentials. Use one of the demo accounts below.");
+      setError("Invalid credentials.");
     }
   };
 
@@ -52,12 +46,6 @@ export default function LoginPage() {
       router.push("/dashboard");
     }
   }, [user, router]);
-
-  const fillDemo = (email: string, password: string) => {
-    form.setValue("email", email);
-    form.setValue("password", password);
-    setError(null);
-  };
 
   return (
     <div className="bg-muted/40 flex min-h-screen items-center justify-center p-4">
@@ -125,31 +113,6 @@ export default function LoginPage() {
           </form>
         </Form>
 
-        <div className="mt-8">
-          <div className="mb-3 flex items-center gap-3">
-            <div className="bg-border h-px flex-1" />
-            <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">Demo accounts</span>
-            <div className="bg-border h-px flex-1" />
-          </div>
-          <div className="space-y-2">
-            {demoList.map((d) => (
-              <button
-                key={d.email}
-                onClick={() => fillDemo(d.email, d.password)}
-                className="hover:bg-accent flex w-full cursor-pointer items-center gap-3 rounded-lg border p-3 text-left transition-colors"
-              >
-                <span className={`flex size-8 shrink-0 items-center justify-center rounded-md ${d.color}`}>
-                  <d.icon className="size-4" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-medium">{d.label}</span>
-                  <span className="text-muted-foreground block truncate text-xs">{d.email}</span>
-                </span>
-                <span className="text-muted-foreground font-mono text-[11px]">{d.password}</span>
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );
