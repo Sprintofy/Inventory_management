@@ -12,36 +12,36 @@ import { Pagination } from "@/components/ui/Pagination";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SearchInput } from "@/components/ui/SearchInput";
-import { StockOutDialog } from "@/components/inventory/StockDialogs";
+import { StockOutFilters, emptyStockOutFilters, type StockOutFiltersState } from "@/components/inventory/InventoryFilters";
 import { useApp } from "@/store/app-store";
 import { useFakeLoading } from "@/hooks/use-fake-loading";
 import { downloadCSV, formatDate } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
-import { StockOutFilters, emptyStockOutFilters, type StockOutFiltersState } from "@/components/inventory/InventoryFilters";
 
 export default function StockOutPage() {
-  const { state, activeDepartment, user } = useApp();
+  const { state, activeDepartment, user, fetchStockOut } = useApp();
   const router = useRouter();
   const loading = useFakeLoading();
   const [page, setPage] = React.useState(1);
   const [search, setSearch] = React.useState("");
   const [filters, setFilters] = React.useState<StockOutFiltersState>(emptyStockOutFilters);
-  const [dialogOpen, setDialogOpen] = React.useState(false);
   const pageSize = 10;
 
   const scopeLabel = activeDepartment === "all" ? "All Departments" : `${activeDepartment}${user?.subDepartment ? ` / ${user.subDepartment}` : ""}`;
 
+  // Fetch server-filtered records whenever filters change
+  React.useEffect(() => {
+    fetchStockOut(filters);
+  }, [filters, fetchStockOut]);
+
   const records = React.useMemo(() => {
     const term = search.trim().toLowerCase();
-    return state.stockOut.filter((r) => {
+    return state.stockOutRecords.filter((r) => {
       if (activeDepartment !== "all" && r.department !== activeDepartment) return false;
       if (term && !(r.itemName.toLowerCase().includes(term) || r.reference.toLowerCase().includes(term) || r.purpose.toLowerCase().includes(term))) return false;
-      if (filters.status !== "all" && r.status !== filters.status) return false;
-      if (filters.dateFrom && new Date(r.date) < new Date(filters.dateFrom)) return false;
-      if (filters.dateTo && new Date(r.date) > new Date(filters.dateTo + "T23:59:59")) return false;
       return true;
     });
-  }, [state.stockOut, activeDepartment, search, filters]);
+  }, [state.stockOutRecords, activeDepartment, search]);
 
   const paged = records.slice((page - 1) * pageSize, page * pageSize);
 
@@ -60,7 +60,7 @@ export default function StockOutPage() {
           <>
             <Button variant="outline" onClick={() => toast.success("Import: choose a CSV (demo)")}><FileUp className="size-4" /> Import</Button>
             <Button variant="outline" onClick={doExport}><FileDown className="size-4" /> Export</Button>
-            <Button onClick={() => setDialogOpen(true)}><Plus className="size-4" /> Record Stock Out</Button>
+            <Button onClick={() => { window.location.href = "/stock-out/create"; }}><Plus className="size-4" /> Record Stock Out</Button>
           </>
         }
       />
@@ -99,7 +99,7 @@ export default function StockOutPage() {
             ))}
             {!loading && paged.length === 0 && (
               <TableRow><TableCell colSpan={7} className="p-0">
-                <EmptyState icon={PackageMinus} title="No stock out records" description="Issue inventory to start tracking outbound stock." action={{ label: "Issue Stock", onClick: () => setDialogOpen(true) }} />
+                <EmptyState icon={PackageMinus} title="No stock out records" description="Issue inventory to start tracking outbound stock." action={{ label: "Issue Stock", onClick: () => { window.location.href = "/stock-out/create"; } }} />
               </TableCell></TableRow>
             )}
             {!loading && paged.map((r) => (
@@ -122,8 +122,6 @@ export default function StockOutPage() {
           <Pagination total={records.length} page={page} pageSize={pageSize} onPageChange={setPage} />
         </div>
       </div>
-
-      <StockOutDialog open={dialogOpen} onOpenChange={setDialogOpen} />
     </div>
   );
 }

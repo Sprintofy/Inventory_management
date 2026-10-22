@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Check, FileDown, MoreHorizontal, Plus, Ticket } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -15,15 +16,14 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { TicketDialog } from "@/components/operations/TicketDialog";
-import { CloseTicketDialog } from "@/components/operations/CloseTicketDialog";
+
 import { useApp } from "@/store/app-store";
 import { useFakeLoading } from "@/hooks/use-fake-loading";
 import { formatDate, timeAgo } from "@/lib/utils";
 import { exportTicketsExcel } from "@/lib/excel";
 import { issueCounts } from "@/lib/ticket-utils";
 import { toast } from "sonner";
-import type { RequestPriority, Ticket as TicketRecord, TicketStatus } from "@/types";
+import type { RequestPriority, TicketStatus } from "@/types";
 
 const priorityClass: Record<RequestPriority, string> = {
   low: "bg-muted text-muted-foreground",
@@ -46,13 +46,11 @@ export default function TicketsPage() {
   const [dateTo, setDateTo] = React.useState("");
   const [search, setSearch] = React.useState("");
   const [page, setPage] = React.useState(1);
-  const [dialogOpen, setDialogOpen] = React.useState(false);
-  const [closeTicket, setCloseTicket] = React.useState<TicketRecord | null>(null);
+
   const pageSize = 10;
 
   const isDeptUser = role === "user" || role === "department-manager" || role === "department-user";
-  // Generate Ticket removed for department login — super-admin only.
-  const canGenerate = role === "super-admin" || role === "admin";
+  const canGenerate = can("tickets.manage");
   const admin = canGenerate;
   const scopeLabel = activeDepartment === "all" ? "All Departments" : `${activeDepartment}${user?.subDepartment ? ` / ${user.subDepartment}` : ""}`;
 
@@ -90,7 +88,7 @@ export default function TicketsPage() {
             <Button variant="outline" onClick={doImport}><FileDown className="size-4" /> Import</Button>
             <Button variant="outline" onClick={exportExcel}><FileDown className="size-4" /> Export</Button>
             <Button variant="outline" onClick={exportExcel}><FileDown className="size-4" /> Export Excel</Button>
-            {admin && <Button onClick={() => setDialogOpen(true)}><Plus className="size-4" /> Generate Ticket</Button>}
+            {admin && <Button asChild><Link href="/tickets/create"><Plus className="size-4" /> Generate Ticket</Link></Button>}
           </>
         }
       />
@@ -144,7 +142,7 @@ export default function TicketsPage() {
             ))}
             {!loading && paged.length === 0 && (
               <TableRow><TableCell colSpan={9} className="p-0">
-                <EmptyState icon={Ticket} title="No tickets found" description="Generated tickets will appear here." action={admin ? { label: "Generate Ticket", onClick: () => setDialogOpen(true) } : undefined} />
+                <EmptyState icon={Ticket} title="No tickets found" description="Generated tickets will appear here." action={admin ? { label: "Generate Ticket", onClick: () => { window.location.href = "/tickets/create"; } } : undefined} />
               </TableCell></TableRow>
             )}
             {!loading && paged.map((t) => {
@@ -181,7 +179,6 @@ export default function TicketsPage() {
                           ) : (
                             <DropdownMenuItem onClick={() => updateTicket(t.id, { status: "open" })}>Reopen ticket</DropdownMenuItem>
                           )}
-                          <DropdownMenuItem onClick={() => setCloseTicket(t)}><Check className="size-3.5 text-success" /> Close ticket</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     ) : (
@@ -205,8 +202,6 @@ export default function TicketsPage() {
         </div>
       </div>
 
-      <TicketDialog open={dialogOpen} onOpenChange={setDialogOpen} />
-      <CloseTicketDialog open={!!closeTicket} onOpenChange={(o) => !o && setCloseTicket(null)} ticket={closeTicket} />
     </div>
   );
 }

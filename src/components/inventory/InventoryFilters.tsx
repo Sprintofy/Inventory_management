@@ -66,7 +66,7 @@ export function InventoryFilters({
             <div className="space-y-1.5">
               <Label className="text-xs">Department</Label>
               <Select value={filters.department} onValueChange={(v) => set({ department: v })}>
-                <SelectTrigger size="sm" className="w-full"><SelectValue /></SelectTrigger>
+                <SelectTrigger size="sm" className="w-full"><SelectValue placeholder="Select department" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All</SelectItem>
                   {visibleDepartments.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
@@ -76,7 +76,7 @@ export function InventoryFilters({
             <div className="space-y-1.5">
               <Label className="text-xs">Category</Label>
               <Select value={filters.category} onValueChange={(v) => set({ category: v })}>
-                <SelectTrigger size="sm" className="w-full"><SelectValue /></SelectTrigger>
+                <SelectTrigger size="sm" className="w-full"><SelectValue placeholder="Select category" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All</SelectItem>
                   {state.categories.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
@@ -86,7 +86,7 @@ export function InventoryFilters({
             <div className="space-y-1.5 col-span-2">
               <Label className="text-xs">Supplier</Label>
               <Select value={filters.supplier} onValueChange={(v) => set({ supplier: v })}>
-                <SelectTrigger size="sm" className="w-full"><SelectValue /></SelectTrigger>
+                <SelectTrigger size="sm" className="w-full"><SelectValue placeholder="Select supplier" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All</SelectItem>
                   {state.suppliers.map((s) => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}

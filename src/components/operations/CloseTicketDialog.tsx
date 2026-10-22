@@ -46,7 +46,7 @@ export function CloseTicketDialog({ open, onOpenChange, ticket }: { open: boolea
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><TicketCheck className="text-success size-5" /> Close Ticket</DialogTitle>
           <DialogDescription>
-            {ticket.id} — {ticket.title}. Review the issues and the technician&apos;s resolved comments below, add your notes, then close the ticket.
+            {ticket.id} — {ticket.title}. Review the issues below, add your resolution remarks, then close the ticket.
           </DialogDescription>
         </DialogHeader>
 
@@ -70,9 +70,9 @@ export function CloseTicketDialog({ open, onOpenChange, ticket }: { open: boolea
                     <p className="text-muted-foreground mt-1.5 text-xs">{issue.description}</p>
                   )}
                   <div className="mt-2 rounded-lg border-l-2 border-success/50 bg-success/5 p-3">
-                    <p className="text-[11px] font-semibold tracking-wide text-success uppercase">Resolved comment (technician)</p>
+                    <p className="text-[11px] font-semibold tracking-wide text-success uppercase">Resolution</p>
                     <p className="text-muted-foreground mt-1 text-xs italic">
-                      {issue.resolution?.trim() || "— No resolved comment recorded —"}
+                      {issue.resolution?.trim() || "— No resolution recorded —"}
                     </p>
                   </div>
                 </div>
@@ -81,12 +81,12 @@ export function CloseTicketDialog({ open, onOpenChange, ticket }: { open: boolea
           )}
 
           <div className="rounded-xl border bg-muted/30 p-4">
-            <label className="mb-1.5 block text-sm font-medium">Admin Notes <span className="text-destructive">*</span></label>
+            <label className="mb-1.5 block text-sm font-medium">Resolution Remarks <span className="text-destructive">*</span></label>
             <Textarea
               rows={3}
               value={notes}
               onChange={(e) => { setNotes(e.target.value); if (notesError) setNotesError(null); }}
-              placeholder="Add your closing notes for this ticket"
+              placeholder="Add your resolution remarks for this ticket"
               className={cn(notesError && "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/20")}
             />
             {notesError && <p className="text-destructive mt-1 text-sm">{notesError}</p>}

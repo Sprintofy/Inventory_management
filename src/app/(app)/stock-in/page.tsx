@@ -12,39 +12,38 @@ import { Pagination } from "@/components/ui/Pagination";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SearchInput } from "@/components/ui/SearchInput";
-import { StockInDialog } from "@/components/inventory/StockDialogs";
+import { StockInFilters, emptyStockInFilters, type StockInFiltersState } from "@/components/inventory/InventoryFilters";
 import { useApp } from "@/store/app-store";
 import { useFakeLoading } from "@/hooks/use-fake-loading";
 import { downloadCSV, formatDate } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
-import { StockInFilters, emptyStockInFilters, type StockInFiltersState } from "@/components/inventory/InventoryFilters";
 
 export default function StockInPage() {
-  const { state, activeDepartment, user } = useApp();
+  const { state, activeDepartment, user, fetchStockIn } = useApp();
   const router = useRouter();
   const loading = useFakeLoading();
   const [page, setPage] = React.useState(1);
   const [search, setSearch] = React.useState("");
   const [filters, setFilters] = React.useState<StockInFiltersState>(emptyStockInFilters);
-  const [dialogOpen, setDialogOpen] = React.useState(false);
   const pageSize = 10;
 
   const scopeLabel = activeDepartment === "all" ? "All Departments" : `${activeDepartment}${user?.subDepartment ? ` / ${user.subDepartment}` : ""}`;
 
   const suppliers = React.useMemo(() => [...new Set(state.stockIn.map((r) => r.supplier))].sort(), [state.stockIn]);
 
+  // Fetch server-filtered records whenever filters change
+  React.useEffect(() => {
+    fetchStockIn(filters);
+  }, [filters, fetchStockIn]);
+
   const records = React.useMemo(() => {
     const term = search.trim().toLowerCase();
-    return state.stockIn.filter((r) => {
+    return state.stockInRecords.filter((r) => {
       if (activeDepartment !== "all" && r.department !== activeDepartment) return false;
       if (term && !(r.itemName.toLowerCase().includes(term) || r.reference.toLowerCase().includes(term) || r.supplier.toLowerCase().includes(term) || r.createdBy.toLowerCase().includes(term))) return false;
-      if (filters.supplier !== "all" && r.supplier !== filters.supplier) return false;
-      if (filters.status !== "all" && r.status !== filters.status) return false;
-      if (filters.dateFrom && new Date(r.date) < new Date(filters.dateFrom)) return false;
-      if (filters.dateTo && new Date(r.date) > new Date(filters.dateTo + "T23:59:59")) return false;
       return true;
     });
-  }, [state.stockIn, activeDepartment, search, filters]);
+  }, [state.stockInRecords, activeDepartment, search]);
 
   const paged = records.slice((page - 1) * pageSize, page * pageSize);
 
@@ -69,7 +68,7 @@ export default function StockInPage() {
             <Button variant="outline" onClick={doImport}><FileUp className="size-4" /> Import</Button>
             <Button variant="outline" onClick={doExportCSV}><FileDown className="size-4" /> Export</Button>
             <Button variant="outline" onClick={doExportExcel}><FileDown className="size-4" /> Export Excel</Button>
-            <Button onClick={() => setDialogOpen(true)}><Plus className="size-4" /> Record Stock In</Button>
+            <Button onClick={() => { window.location.href = "/stock-in/create"; }}><Plus className="size-4" /> Record Stock In</Button>
           </>
         }
       />
@@ -110,7 +109,7 @@ export default function StockInPage() {
             ))}
             {!loading && paged.length === 0 && (
               <TableRow><TableCell colSpan={7} className="p-0">
-                <EmptyState icon={ArrowDownToLine} title="No stock in records" description="Record incoming inventory to get started." action={{ label: "Record Stock In", onClick: () => setDialogOpen(true) }} />
+                <EmptyState icon={ArrowDownToLine} title="No stock in records" description="Record incoming inventory to get started." action={{ label: "Record Stock In", onClick: () => { window.location.href = "/stock-in/create"; } }} />
               </TableCell></TableRow>
             )}
             {!loading && paged.map((r) => (
@@ -133,8 +132,6 @@ export default function StockInPage() {
           <Pagination total={records.length} page={page} pageSize={pageSize} onPageChange={setPage} />
         </div>
       </div>
-
-      <StockInDialog open={dialogOpen} onOpenChange={setDialogOpen} />
     </div>
   );
 }

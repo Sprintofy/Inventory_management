@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import { use, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Check, CircleDot, FileDown, MoreHorizontal, Pencil, Plus, RotateCcw, Ticket, TicketCheck, Trash2, User, Wrench } from "lucide-react";
+import { Check, CircleDot, FileDown, MoreHorizontal, Pencil, Plus, Ticket, TicketCheck, Trash2 } from "lucide-react";
 import { BackButton } from "@/components/ui/BackButton";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -14,9 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { CloseTicketDialog } from "@/components/operations/CloseTicketDialog";
-import { ReissueTicketDialog } from "@/components/operations/ReissueTicketDialog";
 import { IssueDialog } from "@/components/operations/IssueDialog";
-import { AssignTechnicianDialog } from "@/components/operations/AssignTechnicianDialog";
 import { useApp } from "@/store/app-store";
 import { useFakeLoading } from "@/hooks/use-fake-loading";
 import { formatDate, formatDateTime } from "@/lib/utils";
@@ -61,7 +60,10 @@ function IssueItem({
               {issue.resolvedAt && <span className="text-success" title={formatDateTime(issue.resolvedAt)}>Resolved {formatDate(issue.resolvedAt)}</span>}
             </div>
             {issue.resolution && (
-              <p className="text-muted-foreground mt-2 border-l-2 border-success/50 pl-2 text-xs italic">{issue.resolution}</p>
+              <div className="mt-3 rounded-lg border border-success/100 bg-success/5 p-3">
+                <h5 className="text-xs font-semibold text-success">Resolution:</h5>
+                <p className="text-muted-foreground text-sm">{issue.resolution}</p>
+              </div>
             )}
           </div>
         </div>
@@ -83,24 +85,18 @@ function IssueItem({
 
 export default function TicketDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { state, can, updateIssue, removeIssue } = useApp();
+  const { state, can, updateIssue, removeIssue, closeTicket } = useApp();
+  const router = useRouter();
   const loading = useFakeLoading(300);
   const [closeOpen, setCloseOpen] = useState(false);
   const [issueDialogOpen, setIssueDialogOpen] = useState(false);
   const [editingIssue, setEditingIssue] = useState<TicketIssue | null>(null);
   const [deleteIssue, setDeleteIssue] = useState<TicketIssue | null>(null);
-  const [assignTechnicianOpen, setAssignTechnicianOpen] = useState(false);
-  const [reissueOpen, setReissueOpen] = useState(false);
-  const [selectedTechnicianId, setSelectedTechnicianId] = useState<string | null>(null);
 
   const ticket = useMemo(() => state.tickets.find((t) => t.id === id), [state.tickets, id]);
-  const assignedTechnician = useMemo(() => state.technicians.find((t) => t.id === ticket?.technicianId), [state.technicians, ticket]);
   const admin = can("tickets.manage");
 
   const counts = useMemo(() => (ticket ? issueCounts(ticket.issues) : { open: 0, inProgress: 0, resolved: 0, total: 0 }), [ticket]);
-
-  // A ticket the technician has submitted back for the Admin to review.
-  const awaitingReview = ticket?.status === "work-completed" || ticket?.status === "resolved";
 
   if (!loading && !ticket) {
     return (
@@ -115,7 +111,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   }
 
   const markIssueResolved = (issueId: string) => {
-    updateIssue(ticket!.id, issueId, { status: "resolved" });
+    router.push(`/tickets/${ticket!.id}/resolve/${issueId}`);
   };
 
   return (
@@ -139,63 +135,10 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
               <FileDown className="size-4" /> Export
             </Button>
 
-            {/* --- Admin review of a technician-submitted (solved) ticket --- */}
-            {awaitingReview && (
-              <>
-                <Button variant="outline" onClick={() => setReissueOpen(true)} disabled={!ticket.technicianId}>
-                  <RotateCcw className="size-4" /> Re-issue to Technician
-                </Button>
-                <Button onClick={() => setCloseOpen(true)}>
-                  <TicketCheck className="size-4" /> Close Ticket
-                </Button>
-              </>
-            )}
-
-            {!awaitingReview && ticket.status !== "closed" && (
-              <Button onClick={() => setCloseOpen(true)}><TicketCheck className="size-4" /> Close Ticket</Button>
-            )}
+            <Button onClick={() => setCloseOpen(true)}><TicketCheck className="size-4" /> Close Ticket</Button>
           </div>
         )}
       </div>
-
-      {/* Technician Assignment */}
-      <Card>
-        <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            {assignedTechnician ? (
-              <>
-                <Link href={`/technicians/${assignedTechnician.id}`} className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-full text-xs font-semibold">
-                  {assignedTechnician.name.split(" ").map((p) => p[0]).join("").slice(0, 2)}
-                </Link>
-                <div>
-                  <p className="text-muted-foreground text-xs">Assigned Technician</p>
-                  <p className="text-sm font-medium">{assignedTechnician.name}</p>
-                  <p className="text-muted-foreground text-xs">{assignedTechnician.specialization} Specialist</p>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="bg-muted text-muted-foreground flex size-10 items-center justify-center rounded-full">
-                  <User className="size-5" />
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Assigned Technician</p>
-                  <p className="text-muted-foreground text-sm font-medium">No technician assigned</p>
-                </div>
-              </>
-            )}
-          </div>
-          {admin && (
-            <Button
-              variant={ticket.technicianId ? "outline" : "default"}
-              disabled={ticket.status === "closed"}
-              onClick={() => { setSelectedTechnicianId(ticket.technicianId ?? null); setAssignTechnicianOpen(true); }}
-            >
-              <User className="size-4" /> {ticket.technicianId ? "Change Technician" : "Assign Technician"}
-            </Button>
-          )}
-        </CardContent>
-      </Card>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <Card>
@@ -258,39 +201,6 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                 <p className="text-muted-foreground mt-1.5 text-sm">{ticket.description}</p>
               </div>
 
-              {/* Re-issue history */}
-              {ticket.reissueCount ? (
-                <div className="bg-danger/5 mt-6 rounded-lg border p-4">
-                  <h4 className="text-danger flex items-center gap-1.5 text-sm font-semibold">
-                    <RotateCcw className="size-4" /> Re-issued {ticket.reissueCount} time{ticket.reissueCount === 1 ? "" : "s"}
-                  </h4>
-                  {ticket.lastReissueNote && (
-                    <p className="text-muted-foreground mt-1.5 text-sm">{ticket.lastReissueNote}</p>
-                  )}
-                </div>
-              ) : null}
-
-              {/* Technician's resolution remarks — the Admin review loop */}
-              {ticket.technicianRemark && (
-                <div className={`mt-6 rounded-lg border p-4 ${awaitingReview ? "bg-info/5" : "bg-muted/30"}`}>
-                  <h4 className="text-info flex flex-wrap items-center gap-1.5 text-sm font-semibold">
-                    <Wrench className="size-4" /> Technician Remarks
-                    {assignedTechnician && <span className="text-muted-foreground font-normal">— {assignedTechnician.name}</span>}
-                    {ticket.submittedAt && (
-                      <span className="text-muted-foreground font-normal">
-                        · submitted {formatDateTime(ticket.submittedAt)}
-                      </span>
-                    )}
-                  </h4>
-                  <p className="text-muted-foreground mt-1.5 text-sm italic">{ticket.technicianRemark}</p>
-                  {awaitingReview && (
-                    <p className="text-info mt-2 text-xs font-medium">
-                      Awaiting your review — close the ticket or re-issue it back to the technician.
-                    </p>
-                  )}
-                </div>
-              )}
-
               {ticket.status === "closed" && ticket.resolution && (
                 <div className="mt-6 rounded-lg border bg-success/5 p-4">
                   <h4 className="flex items-center gap-1.5 text-sm font-semibold text-success"><TicketCheck className="size-4" /> Resolution</h4>
@@ -341,25 +251,12 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
             <Card>
               <CardHeader><CardTitle className="text-base">Quick Actions</CardTitle></CardHeader>
               <CardContent className="space-y-2">
-                {awaitingReview && (
-                  <>
-                    <p className="text-muted-foreground text-xs">
-                      The technician submitted this ticket as solved. Review the remarks and decide.
-                    </p>
-                    <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => setReissueOpen(true)} disabled={!ticket.technicianId}>
-                      <RotateCcw className="size-3.5" /> Re-issue to {assignedTechnician?.name.split(" ")[0] ?? "technician"}
-                    </Button>
-                    <Button size="sm" className="w-full justify-start" onClick={() => setCloseOpen(true)}>
-                      <TicketCheck className="size-3.5 text-success" /> Close Ticket
-                    </Button>
-                  </>
-                )}
-                {!awaitingReview && ticket.issues.filter((iss) => iss.status === "open" || iss.status === "in-progress").map((iss) => (
+                {ticket.status !== "closed" && ticket.issues.filter((iss) => iss.status === "open" || iss.status === "in-progress").map((iss) => (
                   <Button key={iss.id} variant="outline" size="sm" className="w-full justify-start" onClick={() => markIssueResolved(iss.id)}>
                     <Check className="size-3.5 text-success" /> Resolve: {iss.title}
                   </Button>
                 ))}
-                {!awaitingReview && ticket.issues.every((iss) => iss.status === "resolved" || iss.status === "closed") && ticket.issues.length > 0 && (
+                {ticket.status !== "closed" && ticket.issues.every((iss) => iss.status === "resolved" || iss.status === "closed") && ticket.issues.length > 0 && (
                   <Button size="sm" className="w-full" onClick={() => setCloseOpen(true)}><TicketCheck className="size-4" /> Close Ticket</Button>
                 )}
               </CardContent>
@@ -396,7 +293,6 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         <IssueDialog open={issueDialogOpen} onOpenChange={setIssueDialogOpen} ticket={ticket} issue={editingIssue} />
       )}
       <CloseTicketDialog open={closeOpen} onOpenChange={setCloseOpen} ticket={ticket} />
-      <ReissueTicketDialog open={reissueOpen} onOpenChange={setReissueOpen} ticket={ticket} />
       <ConfirmDialog
         open={!!deleteIssue}
         onOpenChange={(o) => !o && setDeleteIssue(null)}
@@ -404,13 +300,6 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         description={deleteIssue ? `"${deleteIssue.title}" will be removed from this ticket.` : ""}
         confirmLabel="Delete Issue"
         onConfirm={() => { if (deleteIssue) removeIssue(ticket.id, deleteIssue.id); setDeleteIssue(null); }}
-      />
-      <AssignTechnicianDialog
-        open={assignTechnicianOpen}
-        onOpenChange={setAssignTechnicianOpen}
-        ticket={ticket}
-        selectedTechnicianId={selectedTechnicianId}
-        onSelectTechnician={setSelectedTechnicianId}
       />
     </div>
   );

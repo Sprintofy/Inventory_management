@@ -24,6 +24,7 @@ import type {
 } from "@/types";
 import { uid } from "@/lib/utils";
 import { ticketStatusFromIssues } from "@/lib/ticket-utils";
+import type { StockInFiltersState, StockOutFiltersState } from "@/components/inventory/InventoryFilters";
 
 // The API mounts every route under /api (see Inventory_api/src/app.ts) and its
 // auth middleware only exempts /api/auth/login. A base URL without that prefix
@@ -131,6 +132,7 @@ const rolePermissions: Record<Role, Permission[]> = {
     "requests.create",
     "transfers.create",
     "reports.view",
+    "tickets.manage",
   ],
   "department-user": [
     "inventory.manage",
@@ -172,6 +174,8 @@ interface AppState {
   transfers: Transfer[];
   stockIn: StockInRecord[];
   stockOut: StockOutRecord[];
+  stockInRecords: StockInRecord[];
+  stockOutRecords: StockOutRecord[];
   users: User[];
   departments: Department[];
   activities: Activity[];
@@ -210,6 +214,8 @@ const emptyState = (user: User | null): AppState => ({
   transfers: [],
   stockIn: [],
   stockOut: [],
+  stockInRecords: [],
+  stockOutRecords: [],
   users: [],
   departments: [],
   activities: [],
@@ -266,6 +272,7 @@ interface AppContextValue {
     quantity: number,
     supplier: string,
     note?: string,
+    reference?: string,
   ) => void;
   stockOut: (
     itemId: string,
@@ -273,9 +280,12 @@ interface AppContextValue {
     recipient: string,
     purpose: string,
     note?: string,
+    reference?: string,
   ) => void;
   updateStockInStatus: (id: string, status: StockInRecord["status"]) => void;
   updateStockOutStatus: (id: string, status: StockOutRecord["status"]) => void;
+  fetchStockIn: (filters: StockInFiltersState) => Promise<void>;
+  fetchStockOut: (filters: StockOutFiltersState) => Promise<void>;
   addTransfer: (
     t: Omit<Transfer, "id" | "transferNo" | "status" | "requestedBy" | "date">,
   ) => void;
@@ -389,7 +399,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const user = me as User;
       const data = await loadAll(stored);
       setToken(stored);
-      setState({ ...emptyState(user), ...data, user, department: user.role === "super-admin" || user.role === "admin" ? "all" : user.department });
+      setState({ ...emptyState(user), ...data, user, stockInRecords: data.stockIn, stockOutRecords: data.stockOut, department: user.role === "super-admin" || user.role === "admin" ? "all" : user.department });
     } catch {
       try {
         window.localStorage.removeItem(TOKEN_KEY);
@@ -426,7 +436,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (state.user) return [state.user.department];
       return [];
     }
-    if (role === "technician") return [];
     if (state.user) return [state.user.department];
     return state.departments.map((d) => d.name);
   }, [role, state.user, state.departments]);
@@ -435,8 +444,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (
       role === "user" ||
       role === "department-manager" ||
-      role === "department-user" ||
-      role === "technician"
+      role === "department-user"
     ) {
       return visibleDepartments;
     }
@@ -445,13 +453,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const activeDepartment = React.useMemo(() => {
     if (
+      role === "super-admin" ||
+      role === "admin"
+    ) {
+      return "all";
+    }
+    if (
       role === "user" ||
       role === "department-manager" ||
       role === "department-user"
     ) {
       return visibleDepartments[0] ?? state.user?.department ?? "all";
     }
-    if (role === "technician") return state.user?.department ?? "all";
     if (
       state.department !== "all" &&
       visibleDepartments.includes(state.department)
@@ -507,6 +520,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ...emptyState(user),
         ...loaded,
         user,
+        stockInRecords: loaded.stockIn,
+        stockOutRecords: loaded.stockOut,
         department: user.role === "super-admin" || user.role === "admin" ? "all" : user.department,
       });
       return true;
@@ -627,6 +642,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       recipient: string,
       purpose: string,
       note?: string,
+      reference?: string,
     ) => {
       const item = state.inventory.find((i) => i.id === itemId);
       if (!item) return;
@@ -636,7 +652,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       void (async () => {
         try {
-          const ref = uid("SO");
+          const ref = reference || uid("SO");
           const data = await authCall("/inventory/stock-out", {
             method: "POST",
             body: JSON.stringify({ itemId, quantity, recipient, purpose, note, ref }),
@@ -646,6 +662,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             inventory: s.inventory.map((i) => (i.id === itemId ? (data.item as InventoryItem) : i)),
             transactions: [data.transaction as StockTransaction, ...s.transactions],
             stockOut: [data.record as StockOutRecord, ...s.stockOut],
+            stockOutRecords: [data.record as StockOutRecord, ...s.stockOutRecords],
             activities: [data.activity as Activity, ...s.activities],
           }));
           toast.success(`Stock issued — ${quantity} × ${item.deviceName} to ${recipient}`);
@@ -683,6 +700,39 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           fail(e, "Could not update record");
         }
       })();
+    },
+    [authCall, fail],
+  );
+
+  const fetchStockIn = React.useCallback(
+    async (filters: StockInFiltersState) => {
+      try {
+        const params = new URLSearchParams();
+        if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
+        if (filters.dateTo) params.set("dateTo", filters.dateTo);
+        if (filters.status && filters.status !== "all") params.set("status", filters.status);
+        if (filters.supplier && filters.supplier !== "all") params.set("supplier", filters.supplier);
+        const data = await authCall(`/inventory/stock-in?${params.toString()}`);
+        setState((s) => ({ ...s, stockInRecords: data.results || data }));
+      } catch (e) {
+        fail(e, "Could not fetch stock in records");
+      }
+    },
+    [authCall, fail],
+  );
+
+  const fetchStockOut = React.useCallback(
+    async (filters: StockOutFiltersState) => {
+      try {
+        const params = new URLSearchParams();
+        if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
+        if (filters.dateTo) params.set("dateTo", filters.dateTo);
+        if (filters.status && filters.status !== "all") params.set("status", filters.status);
+        const data = await authCall(`/inventory/stock-out?${params.toString()}`);
+        setState((s) => ({ ...s, stockOutRecords: data.results || data }));
+      } catch (e) {
+        fail(e, "Could not fetch stock out records");
+      }
     },
     [authCall, fail],
   );
@@ -940,10 +990,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         try {
           const t = state.tickets.find((x) => x.id === id);
           if (!t) return;
-          if (state.user?.role === "technician" && t.technicianId !== state.user.id) {
-            toast.error("You can only submit tickets assigned to you");
-            return;
-          }
           const pending = t.issues.filter((i) => i.status === "open" || i.status === "in-progress");
           const missing = pending.filter((i) => !(issueResolutions[i.id] ?? "").trim());
           if (missing.length > 0) {
@@ -1286,6 +1332,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       stockOut,
       updateStockInStatus,
       updateStockOutStatus,
+      fetchStockIn,
+      fetchStockOut,
       addTransfer,
       updateTransfer,
       addRequest,
@@ -1342,6 +1390,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       stockOut,
       updateStockInStatus,
       updateStockOutStatus,
+      fetchStockIn,
+      fetchStockOut,
       addTransfer,
       updateTransfer,
       addRequest,

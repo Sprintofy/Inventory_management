@@ -54,8 +54,8 @@ export const navGroups: NavGroup[] = [
   {
     label: "Operations",
     items: [
-      // Tickets visible to admin only — removed for department login.
-      { title: "Tickets", href: "/tickets", icon: Ticket, roles: ADMIN, keywords: ["issue", "support", "complaint", "service"] },
+      // Tickets visible to admin and department-manager.
+      { title: "Tickets", href: "/tickets", icon: Ticket, roles: ["super-admin", "admin", "department-manager"], keywords: ["issue", "support", "complaint", "service"] },
     ],
   },
   {
@@ -69,7 +69,6 @@ export const navGroups: NavGroup[] = [
     items: [
       { title: "Departments", href: "/departments", icon: Building2, roles: DEPT_ROLES, keywords: ["department", "dept", "team", "division"] },
       { title: "Users", href: "/users", icon: Users, roles: ADMIN, keywords: ["user", "people", "staff", "employee", "account"] },
-      { title: "Technicians", href: "/technicians", icon: User, roles: ADMIN, keywords: ["technician", "tech", "support", "staff"] },
     ],
   },
   {

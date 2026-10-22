@@ -9,9 +9,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { InventoryFilters, emptyFilters, type InventoryFiltersState } from "@/components/inventory/InventoryFilters";
 import { InventoryTable } from "@/components/inventory/InventoryTable";
-import { InventoryForm } from "@/components/inventory/InventoryForm";
 import { InventoryImportDialog } from "@/components/inventory/InventoryImportDialog";
-import { StockInDialog, StockOutDialog } from "@/components/inventory/StockDialogs";
 import { useApp } from "@/store/app-store";
 import { downloadCSV, formatDate } from "@/lib/toast-utils";
 import { exportInventoryExcel } from "@/lib/excel";
@@ -22,20 +20,6 @@ export default function InventoryPage() {
   const searchParams = useSearchParams();
   const [search, setSearch] = React.useState(searchParams.get("q") ?? "");
   const [filters, setFilters] = React.useState<InventoryFiltersState>(emptyFilters);
-  const [formOpen, setFormOpen] = React.useState(false);
-  const [editing, setEditing] = React.useState<InventoryItem | null>(null);
-  const [stockInOpen, setStockInOpen] = React.useState(false);
-  const [stockOutOpen, setStockOutOpen] = React.useState(false);
-  const [stockTarget, setStockTarget] = React.useState<InventoryItem | null>(null);
-  const [importOpen, setImportOpen] = React.useState(false);
-
-  React.useEffect(() => {
-    if (searchParams.get("new") === "1") {
-      setTimeout(() => {
-        setFormOpen(true);
-      }, 0);
-    }
-  }, [searchParams]);
 
   const filtered = React.useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -86,21 +70,6 @@ export default function InventoryPage() {
     toast.success(`Exported ${filtered.length} items to Excel`);
   };
 
-  const openEdit = (item: InventoryItem) => {
-    setEditing(item);
-    setFormOpen(true);
-  };
-
-  const openStockIn = (item: InventoryItem) => {
-    setStockTarget(item);
-    setStockInOpen(true);
-  };
-
-  const openStockOut = (item: InventoryItem) => {
-    setStockTarget(item);
-    setStockOutOpen(true);
-  };
-
   return (
     <div className="space-y-5">
       <PageHeader
@@ -109,13 +78,10 @@ export default function InventoryPage() {
         breadcrumb={[{ label: "Inventory" }]}
         actions={
           <>
-            {can("inventory.manage") && (
-              <Button variant="outline" onClick={() => setImportOpen(true)}><FileUp className="size-4" /> Import</Button>
-            )}
             <Button variant="outline" onClick={exportExcel}><FileDown className="size-4" /> Export to Excel</Button>
             <Button variant="outline" onClick={exportAll}>Export CSV</Button>
             {can("inventory.manage") && (
-              <Button onClick={() => { setEditing(null); setFormOpen(true); }}>
+              <Button onClick={() => { window.location.href = "/inventory/create"; }}>
                 <Plus className="size-4" /> Add Item
               </Button>
             )}
@@ -152,14 +118,10 @@ export default function InventoryPage() {
 
           <InventoryTable
             items={filtered}
-            onEdit={openEdit}
+            onEdit={() => {}}
           />
       </div>
 
-      <InventoryForm open={formOpen} onOpenChange={setFormOpen} item={editing} />
-      <InventoryImportDialog open={importOpen} onOpenChange={setImportOpen} />
-      <StockInDialog open={stockInOpen} onOpenChange={setStockInOpen} presetItem={stockTarget} />
-      <StockOutDialog open={stockOutOpen} onOpenChange={setStockOutOpen} presetItem={stockTarget} />
     </div>
   );
 }

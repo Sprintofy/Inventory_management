@@ -4,13 +4,24 @@ import * as React from "react";
 import { PackageMinus, PackagePlus, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { FormControl } from "@/components/ui/form";
 import { useApp } from "@/store/app-store";
 import type { InventoryItem } from "@/types";
 import { formatNumber } from "@/lib/utils";
+import { PageHeader } from "@/components/ui/PageHeader";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface StockLine {
   itemId: string;
@@ -21,7 +32,12 @@ interface StockLine {
  * Multi-item Stock In (Mar 6) — no Supplier tab.
  * Department is derived from the item / logged-in user scope.
  */
-export function StockInDialog({ open, onOpenChange, presetItem }: { open: boolean; onOpenChange: (o: boolean) => void; presetItem?: InventoryItem | null }) {
+export function StockInDialog({
+  open,
+  onOpenChange,
+  presetItem,
+  fullPage = false,
+}: { open: boolean; onOpenChange: (o: boolean) => void; presetItem?: InventoryItem | null; fullPage?: boolean }) {
   const { state, visibleDepartments, stockIn } = useApp();
   const [lines, setLines] = React.useState<StockLine[]>([{ itemId: "", quantity: 1 }]);
   const [note, setNote] = React.useState("");
@@ -54,8 +70,85 @@ export function StockInDialog({ open, onOpenChange, presetItem }: { open: boolea
       const item = state.inventory.find((i) => i.id === l.itemId);
       stockIn(l.itemId, l.quantity, item?.supplier ?? "Internal", note || undefined);
     }
-    onOpenChange(false);
+    if (!fullPage) {
+      onOpenChange(false);
+    } else {
+      window.location.href = "/stock-in";
+    }
   };
+
+  const renderContent = () => (
+    <div className="space-y-3">
+      {lines.map((l, idx) => {
+        const sel = state.inventory.find((i) => i.id === l.itemId);
+        return (
+          <div key={idx} className="flex items-end gap-2 rounded-lg border p-3">
+            <div className="flex-1 space-y-1.5">
+              <Label className="text-xs">Item {idx + 1}</Label>
+              <Select value={l.itemId} onValueChange={(v) => updateLine(idx, { itemId: v })} >
+                <SelectTrigger className="w-full"><SelectValue placeholder="Select item" /></SelectTrigger>
+                <SelectContent>
+                  {options.map((i) => (
+                    <SelectItem key={i.id} value={i.id}>{i.deviceName} ({i.sku}) — {formatNumber(i.quantity)} in stock</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {sel && <p className="text-muted-foreground text-[11px]">Current: {formatNumber(sel.quantity)} → {formatNumber(sel.quantity + (l.quantity || 0))}</p>}
+            </div>
+            <div className="w-24 space-y-1.5">
+              <Label className="text-xs">Qty</Label>
+              <Input type="number" min={1} value={l.quantity} onChange={(e) => updateLine(idx, { quantity: Math.max(1, Number(e.target.value) || 1) })} />
+            </div>
+            {lines.length > 1 && (
+              <Button type="button" variant="ghost" size="icon-sm" onClick={() => setLines((prev) => prev.filter((_, i) => i !== idx))} aria-label="Remove row">
+                <Trash2 className="size-4 text-destructive" />
+              </Button>
+            )}
+          </div>
+        );
+      })}
+      <Button type="button" variant="outline" size="sm" onClick={() => setLines((prev) => [...prev, { itemId: "", quantity: 1 }])}>
+        <Plus className="size-3.5" /> Add another item
+      </Button>
+      <div className="space-y-1.5">
+        <Label className="text-xs">Note (optional)</Label>
+        <Input placeholder="e.g. Purchase order reference" value={note} onChange={(e) => setNote(e.target.value)} />
+      </div>
+    </div>
+  );
+
+  if (fullPage) {
+    return (
+      <div className="space-y-5">
+        <PageHeader
+          title="Record Stock In"
+          description="Add one or more items. Quantity is added to each item's stock."
+          breadcrumb={[
+            { label: "Stock In", href: "/stock-in" },
+            { label: "Record Stock In" },
+          ]}
+          actions={
+            <>
+              <Link href="/stock-in">
+                <Button variant="outline">Back</Button>
+              </Link>
+            </>
+          }
+        />
+        <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="space-y-6">
+          {renderContent()}
+          <div className="flex flex-row gap-2 pt-4">
+            <Link href="/stock-in">
+              <Button variant="outline">Cancel</Button>
+            </Link>
+            <Button type="submit" disabled={!valid} className="bg-success hover:bg-success/90 text-white">
+              Record Stock In ({lines.length})
+            </Button>
+          </div>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -64,43 +157,7 @@ export function StockInDialog({ open, onOpenChange, presetItem }: { open: boolea
           <DialogTitle className="flex items-center gap-2"><PackagePlus className="text-success size-5" /> Record Stock In</DialogTitle>
           <DialogDescription>Add one or more items. Quantity is added to each item&apos;s stock.</DialogDescription>
         </DialogHeader>
-        <div className="space-y-3">
-          {lines.map((l, idx) => {
-            const sel = state.inventory.find((i) => i.id === l.itemId);
-            return (
-              <div key={idx} className="flex items-end gap-2 rounded-lg border p-3">
-                <div className="flex-1 space-y-1.5">
-                  <Label className="text-xs">Item {idx + 1}</Label>
-                  <Select value={l.itemId} onValueChange={(v) => updateLine(idx, { itemId: v })}>
-                    <SelectTrigger className="w-full"><SelectValue placeholder="Select item" /></SelectTrigger>
-                    <SelectContent>
-                      {options.map((i) => (
-                        <SelectItem key={i.id} value={i.id}>{i.deviceName} ({i.sku}) — {formatNumber(i.quantity)} in stock</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {sel && <p className="text-muted-foreground text-[11px]">Current: {formatNumber(sel.quantity)} → {formatNumber(sel.quantity + (l.quantity || 0))}</p>}
-                </div>
-                <div className="w-24 space-y-1.5">
-                  <Label className="text-xs">Qty</Label>
-                  <Input type="number" min={1} value={l.quantity} onChange={(e) => updateLine(idx, { quantity: Math.max(1, Number(e.target.value) || 1) })} />
-                </div>
-                {lines.length > 1 && (
-                  <Button type="button" variant="ghost" size="icon-sm" onClick={() => setLines((prev) => prev.filter((_, i) => i !== idx))} aria-label="Remove row">
-                    <Trash2 className="size-4 text-destructive" />
-                  </Button>
-                )}
-              </div>
-            );
-          })}
-          <Button type="button" variant="outline" size="sm" onClick={() => setLines((prev) => [...prev, { itemId: "", quantity: 1 }])}>
-            <Plus className="size-3.5" /> Add another item
-          </Button>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Note (optional)</Label>
-            <Input placeholder="e.g. Purchase order reference" value={note} onChange={(e) => setNote(e.target.value)} />
-          </div>
-        </div>
+        {renderContent()}
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button type="button" disabled={!valid} onClick={onSubmit} className="bg-success hover:bg-success/90 text-white">Record Stock In ({lines.length})</Button>
@@ -114,12 +171,19 @@ export function StockInDialog({ open, onOpenChange, presetItem }: { open: boolea
  * Stock Out — Recipient / Employee removed (Mar 7).
  * Issues to the item's own department with a purpose only.
  */
-export function StockOutDialog({ open, onOpenChange, presetItem }: { open: boolean; onOpenChange: (o: boolean) => void; presetItem?: InventoryItem | null }) {
+export function StockOutDialog({
+  open,
+  onOpenChange,
+  presetItem,
+  fullPage = false,
+}: { open: boolean; onOpenChange: (o: boolean) => void; presetItem?: InventoryItem | null; fullPage?: boolean }) {
+  const router = useRouter();
   const { state, visibleDepartments, stockOut, user } = useApp();
   const [itemId, setItemId] = React.useState("");
   const [quantity, setQuantity] = React.useState(1);
   const [purpose, setPurpose] = React.useState("");
   const [note, setNote] = React.useState("");
+  const [reference, setReference] = React.useState("");
 
   React.useEffect(() => {
     if (open) {
@@ -127,6 +191,7 @@ export function StockOutDialog({ open, onOpenChange, presetItem }: { open: boole
       setQuantity(1);
       setPurpose("");
       setNote("");
+      setReference(`SO-${Date.now().toString().slice(-6)}`);
     }
   }, [open, presetItem]);
   // eslint-disable-line react-hooks/set-state-in-effect
@@ -149,9 +214,86 @@ export function StockOutDialog({ open, onOpenChange, presetItem }: { open: boole
       return;
     }
     // Recipient removed — issue is recorded against the user's department scope.
-    stockOut(itemId, quantity, user?.name ?? "Department", purpose.trim(), note || undefined);
-    onOpenChange(false);
+    stockOut(itemId, quantity, user?.name ?? "Department", purpose.trim(), note || undefined, reference);
+    if (!fullPage) {
+      onOpenChange(false);
+    } else {
+      window.location.href = "/stock-out";
+    }
   };
+
+  const renderContent = () => (
+    <div className="space-y-4">
+      <div className="space-y-1.5">
+        <Label className="text-xs">Reference</Label>
+        <Input value={reference} onChange={(e) => setReference(e.target.value)} />
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-xs">Item (closed tickets only)</Label>
+        <Select value={itemId} onValueChange={setItemId}>
+          <SelectTrigger className="w-full"><SelectValue placeholder="Select item" /></SelectTrigger>
+          <SelectContent>
+            {options.map((i) => (
+              <SelectItem key={i.id} value={i.id}>{i.deviceName} ({i.sku}) — {i.quantity} left</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {options.length === 0 && (
+          <p className="text-muted-foreground text-[11px]">No items with closed tickets — only items from closed tickets can be issued.</p>
+        )}
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <Label className="text-xs">Quantity</Label>
+          <Input type="number" min={1} max={selectedItem?.quantity ?? 1} value={quantity} onChange={(e) => setQuantity(Math.max(1, Number(e.target.value) || 1))} />
+          {selectedItem && (
+            <p className={overAvailable ? "text-destructive text-[11px] font-medium" : "text-muted-foreground text-[11px]"}>
+              {overAvailable ? `Only ${selectedItem.quantity} available` : `Available: ${formatNumber(selectedItem.quantity)}`}
+            </p>
+          )}
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Purpose</Label>
+          <Input placeholder="e.g. Project deployment" value={purpose} onChange={(e) => setPurpose(e.target.value)} />
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-xs">Note (optional)</Label>
+        <Input placeholder="Additional remarks" value={note} onChange={(e) => setNote(e.target.value)} />
+      </div>
+    </div>
+  );
+
+  if (fullPage) {
+    return (
+      <div className="space-y-5">
+        <PageHeader
+          title="Issue Stock"
+          description="Issue inventory from your department. Stock quantity will be reduced."
+          breadcrumb={[
+            { label: "Stock Out", href: "/stock-out" },
+            { label: "Issue Stock" },
+          ]}
+          actions={
+            <>
+              <Link href="/stock-out">
+                <Button variant="outline">Back</Button>
+              </Link>
+            </>
+          }
+        />
+        <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="space-y-6">
+          {renderContent()}
+          <div className="flex flex-row gap-2 pt-4">
+            <Link href="/stock-out">
+              <Button variant="outline">Cancel</Button>
+            </Link>
+            <Button type="submit" disabled={!!overAvailable || !itemId || purpose.trim().length < 2}>Issue Stock</Button>
+          </div>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -160,41 +302,7 @@ export function StockOutDialog({ open, onOpenChange, presetItem }: { open: boole
           <DialogTitle className="flex items-center gap-2"><PackageMinus className="text-primary size-5" /> Issue Stock</DialogTitle>
           <DialogDescription>Issue inventory from your department. Stock quantity will be reduced.</DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <Label className="text-xs">Item (closed tickets only)</Label>
-            <Select value={itemId} onValueChange={setItemId}>
-              <SelectTrigger className="w-full"><SelectValue placeholder="Select item" /></SelectTrigger>
-              <SelectContent>
-                {options.map((i) => (
-                  <SelectItem key={i.id} value={i.id}>{i.deviceName} ({i.sku}) — {i.quantity} left</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {options.length === 0 && (
-              <p className="text-muted-foreground text-[11px]">No items with closed tickets — only items from closed tickets can be issued.</p>
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Quantity</Label>
-              <Input type="number" min={1} max={selectedItem?.quantity ?? 1} value={quantity} onChange={(e) => setQuantity(Math.max(1, Number(e.target.value) || 1))} />
-              {selectedItem && (
-                <p className={overAvailable ? "text-destructive text-[11px] font-medium" : "text-muted-foreground text-[11px]"}>
-                  {overAvailable ? `Only ${selectedItem.quantity} available` : `Available: ${formatNumber(selectedItem.quantity)}`}
-                </p>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Purpose</Label>
-              <Input placeholder="e.g. Project deployment" value={purpose} onChange={(e) => setPurpose(e.target.value)} />
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Note (optional)</Label>
-            <Input placeholder="Additional remarks" value={note} onChange={(e) => setNote(e.target.value)} />
-          </div>
-        </div>
+        {renderContent()}
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button type="button" disabled={!!overAvailable || !itemId || purpose.trim().length < 2} onClick={onSubmit}>Issue Stock</Button>

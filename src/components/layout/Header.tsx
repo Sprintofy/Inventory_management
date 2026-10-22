@@ -35,7 +35,6 @@ const roleLabels: Record<string, string> = {
   "department-manager": "User",
   "department-user": "User",
   viewer: "Viewer",
-  technician: "Technician",
 };
 
 const pageTitles: Array<{ match: RegExp; title: string; crumb: string }> = [

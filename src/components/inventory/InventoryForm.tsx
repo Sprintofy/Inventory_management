@@ -4,7 +4,6 @@ import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, type Resolver } from "react-hook-form";
 import { z } from "zod";
-import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,10 +30,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { Textarea } from "@/components/ui/textarea";
 import { cn, uid } from "@/lib/utils";
 import { useApp } from "@/store/app-store";
 import type { InventoryItem, SubDepartment } from "@/types";
+import Link from "next/link";
 
 const formSchema = z.object({
   deviceName: z.string().min(2, "Device name is required"),
@@ -56,25 +57,6 @@ const formSchema = z.object({
 });
 
 type FormValues = z.output<typeof formSchema>;
-
-const steps = [
-  { id: "basic", label: "Basic Info" },
-  { id: "details", label: "Details" },
-  { id: "inventory", label: "Inventory" },
-];
-
-const stepFields: Record<string, (keyof FormValues)[]> = {
-  basic: [
-    "deviceName",
-    "brand",
-    "modelNumber",
-    "category",
-    "sku",
-    "supplier",
-    "department",
-  ],
-  details: ["description", "specifications", "warrantyPeriod", "serialNumber", "notes"],
-  inventory: ["quantity", "unit", "status"],};
 
 function emptyValues(department: string): FormValues {
   return {
@@ -149,15 +131,16 @@ interface InventoryFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   item?: InventoryItem | null;
+  fullPage?: boolean;
 }
 
 export function InventoryForm({
   open,
   onOpenChange,
   item,
+  fullPage = false,
 }: InventoryFormProps) {
   const { state, activeDepartment, subDepartmentsFor, addItem, updateItem, log } = useApp();
-  const [step, setStep] = React.useState(0);
 
   const departmentOptions = React.useMemo(
     () =>
@@ -176,7 +159,6 @@ export function InventoryForm({
 
   React.useEffect(() => {
     if (open) {
-      setStep(0);
       if (item) form.reset(valuesOf(item, subDepartmentsFor(item.department)));
       else
         form.reset(
@@ -184,7 +166,6 @@ export function InventoryForm({
         );
     }
   }, [open, item, form, activeDepartment, subDepartmentsFor]);
-  // eslint-disable-line react-hooks/set-state-in-effect
 
   const watchedDepartment = form.watch("department");
   const watchedLevels = form.watch("subLevels") ?? [];
@@ -214,19 +195,6 @@ export function InventoryForm({
     if (v) next[k] = v;
     form.setValue("subLevels", next, { shouldDirty: true });
   };
-
-  const validateStep = async (i: number) => {
-    const fields = stepFields[steps[i].id];
-    const result = await form.trigger(fields as never);
-    return result;
-  };
-
-  const next = async () => {
-    if (await validateStep(step))
-      setStep((s) => Math.min(s + 1, steps.length - 1));
-  };
-
-  const prev = () => setStep((s) => Math.max(s - 1, 0));
 
   const onSubmit = (values: FormValues) => {
     const now = new Date().toISOString();
@@ -277,8 +245,436 @@ export function InventoryForm({
       toast.success("Inventory item added successfully");
     }
 
-    onOpenChange(false);
+    if (!fullPage) {
+      onOpenChange(false);
+    } else {
+      window.location.href = "/inventory";
+    }
   };
+
+  const renderFormContent = () => (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+
+        {/* Section 1: Basic Info */}
+        <section className="space-y-4">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            Basic Info
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="deviceName"
+              render={({ field }) => (
+                <FormItem className="sm:col-span-2">
+                  <FormLabel>Device Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder='e.g. MacBook Pro 14"' {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="brand"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Brand</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. Apple" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="modelNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Model Number</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="e.g. MacBook Pro 14 M3"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Category</FormLabel>
+                  <FormControl>
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {state.categories.map((c, idx) => (
+                          <SelectItem key={`cat-${c.id}-${idx}`} value={c.name}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="sku"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>SKU</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. IT-DEV-001" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="supplier"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Supplier (optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. ABC Supplies" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="department"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Department</FormLabel>
+                  <FormControl>
+                    <Select
+                      value={field.value}
+                      onValueChange={(v) => {
+                        field.onChange(v);
+                        form.setValue("subLevels", []);
+                      }}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select department" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {departmentOptions.map((d) => (
+                          <SelectItem key={d} value={d}>
+                            {d}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {levelChain.map((level, k) => {
+              const kept =
+                level.value &&
+                !level.options.some((s) => s.name === level.value)
+                  ? level.value
+                  : null;
+              return (
+                <FormField
+                  key={k}
+                  control={form.control}
+                  name="subLevels"
+                  render={() => (
+                    <FormItem>
+                      <FormLabel>
+                        {k === 0
+                          ? "Sub-department (optional)"
+                          : `Layer ${k + 1} (optional)`}
+                      </FormLabel>
+                      <FormControl>
+                        <Select
+                          value={level.value ?? ""}
+                          onValueChange={(v) => setLevel(k, v)}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue
+                              placeholder={
+                                k === 0
+                                  ? "Select sub-department"
+                                  : `Select layer ${k + 1}`
+                              }
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {level.options.length === 0 && !kept ? (
+                              <SelectItem value="__none" disabled>
+                                {k === 0
+                                  ? "No sub-departments"
+                                  : "No further layers"}
+                              </SelectItem>
+                            ) : (
+                              <>
+                                {kept && (
+                                  <SelectItem value={kept}>
+                                    {kept} (kept)
+                                  </SelectItem>
+                                )}
+                                {level.options.map((s) => (
+                                  <SelectItem key={s.id} value={s.name}>
+                                    {s.name}
+                                  </SelectItem>
+                                ))}
+                              </>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Section 2: Details */}
+        <section className="space-y-4">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            Details
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem className="sm:col-span-2">
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={2}
+                      placeholder="Short description of the item"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="specifications"
+              render={({ field }) => (
+                <FormItem className="sm:col-span-2">
+                  <FormLabel>Specifications</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={3}
+                      placeholder="Technical specifications"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="serialNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Serial Number (optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. SN-MBP-1001" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="warrantyPeriod"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Warranty Period</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem className="sm:col-span-2">
+                  <FormLabel>Notes (optional)</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={2}
+                      placeholder="Additional notes about this item"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </section>
+
+        {/* Section 3: Inventory */}
+        <section className="space-y-4">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            Inventory
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="quantity"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Quantity</FormLabel>
+                  <FormControl>
+                    <Input type="number" min={0} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="unit"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Unit</FormLabel>
+                  <FormControl>
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select unit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[
+                          "unit",
+                          "box",
+                          "pack",
+                          "set",
+                          "pair",
+                          "roll",
+                          "drum",
+                          "ream",
+                          "coil",
+                          "kit",
+                          "can",
+                          "sheet",
+                        ].map((u) => (
+                          <SelectItem key={u} value={u}>
+                            {u}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status</FormLabel>
+                  <FormControl>
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </section>
+
+        {fullPage ? (
+          <div className="flex flex-row gap-2 pt-4">
+            <Link href="/inventory">
+              <Button variant="outline">Cancel</Button>
+            </Link>
+            <Button type="submit">
+              {item ? "Update Item" : "Save Item"}
+            </Button>
+          </div>
+        ) : (
+          <DialogFooter className="border-t pt-4">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">
+              {item ? "Update Item" : "Save Item"}
+            </Button>
+          </DialogFooter>
+        )}
+      </form>
+    </Form>
+  );
+
+  if (fullPage) {
+    return (
+      <div className="space-y-5">
+        <PageHeader
+          title={item ? "Edit Inventory Item" : "Add Inventory Item"}
+          description={
+            item
+              ? "Update the details of this inventory item."
+              : "Create a new item in your inventory."
+          }
+          breadcrumb={[
+            { label: "Inventory", href: "/inventory" },
+            { label: item ? "Edit Item" : "Add Item" },
+          ]}
+          actions={
+            <>
+              <Link href="/inventory">
+                <Button variant="outline">Back</Button>
+              </Link>
+            </>
+          }
+        />
+        {renderFormContent()}
+      </div>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -291,410 +687,7 @@ export function InventoryForm({
               : "Create a new item in your inventory. All fields marked are required."}
           </DialogDescription>
         </DialogHeader>
-
-        <div className="mb-2 flex items-center gap-1">
-          {steps.map((s, i) => (
-            <React.Fragment key={s.id}>
-              <button
-                type="button"
-                onClick={() => i < step && setStep(i)}
-                className={cn(
-                  "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
-                  i === step
-                    ? "bg-primary text-primary-foreground"
-                    : i < step
-                      ? "bg-primary/10 text-primary cursor-pointer"
-                      : "bg-muted text-muted-foreground",
-                )}
-              >
-                {i < step ? <Check className="size-3" /> : <span>{i + 1}</span>}
-                <span className="hidden sm:inline">{s.label}</span>
-              </button>
-              {i < steps.length - 1 && (
-                <span className="bg-border h-px flex-1" />
-              )}
-            </React.Fragment>
-          ))}
-        </div>
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-            {step === 0 && (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="deviceName"
-                  render={({ field }) => (
-                    <FormItem className="sm:col-span-2">
-                      <FormLabel>Device Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder='e.g. MacBook Pro 14"' {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="brand"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Brand</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g. Apple" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="modelNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Model Number</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="e.g. MacBook Pro 14 M3"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="category"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Category</FormLabel>
-                      <FormControl>
-                        <Select
-                          value={field.value}
-                          onValueChange={field.onChange}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select category" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {state.categories.map((c) => (
-                              <SelectItem key={c.id} value={c.name}>
-                                {c.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="sku"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>SKU</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g. IT-DEV-001" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="supplier"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Supplier (optional)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g. ABC Supplies" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="department"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Department</FormLabel>
-                      <FormControl>
-                        <Select
-                          value={field.value}
-                          onValueChange={(v) => {
-                            field.onChange(v);
-                            form.setValue("subLevels", []);
-                          }}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select department" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {departmentOptions.map((d) => (
-                              <SelectItem key={d} value={d}>
-                                {d}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                {levelChain.map((level, k) => {
-                  const kept =
-                    level.value &&
-                    !level.options.some((s) => s.name === level.value)
-                      ? level.value
-                      : null;
-                  return (
-                    <FormField
-                      key={k}
-                      control={form.control}
-                      name="subLevels"
-                      render={() => (
-                        <FormItem>
-                          <FormLabel>
-                            {k === 0
-                              ? "Sub-department (optional)"
-                              : `Layer ${k + 1} (optional)`}
-                          </FormLabel>
-                          <FormControl>
-                            <Select
-                              value={level.value ?? ""}
-                              onValueChange={(v) => setLevel(k, v)}
-                            >
-                              <SelectTrigger className="w-full">
-                                <SelectValue
-                                  placeholder={
-                                    k === 0
-                                      ? "Select sub-department"
-                                      : `Select layer ${k + 1}`
-                                  }
-                                />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {level.options.length === 0 && !kept ? (
-                                  <SelectItem value="__none" disabled>
-                                    {k === 0
-                                      ? "No sub-departments"
-                                      : "No further layers"}
-                                  </SelectItem>
-                                ) : (
-                                  <>
-                                    {kept && (
-                                      <SelectItem value={kept}>
-                                        {kept} (kept)
-                                      </SelectItem>
-                                    )}
-                                    {level.options.map((s) => (
-                                      <SelectItem key={s.id} value={s.name}>
-                                        {s.name}
-                                      </SelectItem>
-                                    ))}
-                                  </>
-                                )}
-                              </SelectContent>
-                            </Select>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  );
-                })}
-              </div>
-            )}
-
-            {step === 1 && (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem className="sm:col-span-2">
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          rows={2}
-                          placeholder="Short description of the item"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="specifications"
-                  render={({ field }) => (
-                    <FormItem className="sm:col-span-2">
-                      <FormLabel>Specifications</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          rows={3}
-                          placeholder="Technical specifications"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="serialNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Serial Number (optional)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g. SN-MBP-1001" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="warrantyPeriod"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Warranty Period</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem className="sm:col-span-2">
-                      <FormLabel>Notes (optional)</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          rows={2}
-                          placeholder="Additional notes about this item"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            )}
-
-            {step === 2 && (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="quantity"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Quantity</FormLabel>
-                      <FormControl>
-                        <Input type="number" min={0} {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="unit"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Unit</FormLabel>
-                      <FormControl>
-                        <Select
-                          value={field.value}
-                          onValueChange={field.onChange}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select unit" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {[
-                              "unit",
-                              "box",
-                              "pack",
-                              "set",
-                              "pair",
-                              "roll",
-                              "drum",
-                              "ream",
-                              "coil",
-                              "kit",
-                              "can",
-                              "sheet",
-                            ].map((u) => (
-                              <SelectItem key={u} value={u}>
-                                {u}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <FormControl>
-                        <Select
-                          value={field.value}
-                          onValueChange={field.onChange}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="active">Active</SelectItem>
-                            <SelectItem value="inactive">Inactive</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            )}
-
-            <DialogFooter className="border-t pt-4">
-              {step > 0 && (
-                <Button type="button" variant="outline" onClick={prev}>
-                  <ChevronLeft className="size-4" /> Previous
-                </Button>
-              )}
-              {step < steps.length - 1 ? (
-                <Button type="button" onClick={next}>
-                  Next <ChevronRight className="size-4" />
-                </Button>
-              ) : (
-                <Button type="submit">
-                  {item ? "Update Item" : "Save Item"}
-                </Button>
-              )}
-            </DialogFooter>
-          </form>
-        </Form>
+        {renderFormContent()}
       </DialogContent>
     </Dialog>
   );

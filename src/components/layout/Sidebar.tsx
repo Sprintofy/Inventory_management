@@ -61,7 +61,6 @@ const roleLabels: Record<string, string> = {
   "department-manager": "User",
   "department-user": "User",
   viewer: "Viewer",
-  technician: "Technician",
 };
 
 function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {

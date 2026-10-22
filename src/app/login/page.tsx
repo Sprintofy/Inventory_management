@@ -45,11 +45,7 @@ export default function LoginPage() {
 
   React.useEffect(() => {
     if (!user) return;
-    if (user.role === "technician") {
-      router.push("/technician/dashboard");
-    } else {
-      router.push("/dashboard");
-    }
+    router.push("/dashboard");
   }, [user, router]);
 
   return (
