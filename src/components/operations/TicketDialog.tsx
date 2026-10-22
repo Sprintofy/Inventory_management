@@ -15,8 +15,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { useApp } from "@/store/app-store";
-import { cn, uid } from "@/lib/utils";
+import { uid } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -38,11 +46,14 @@ const ticketCategories = [
 
 const schema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
-  description: z.string().min(10, "Describe the issue in at least 10 characters"),
+  description: z
+    .string()
+    .min(10, "Describe the issue in at least 10 characters"),
   category: z.string().min(1, "Select a category"),
   department: z.string().min(1, "Select a department"),
   subDepartment: z.string().optional(),
   priority: z.string().min(1, "Select priority"),
+  productId: z.string().optional(),
 });
 
 type SV = z.output<typeof schema>;
@@ -88,6 +99,7 @@ export default function TicketCreateDialog({
       department: "",
       subDepartment: "",
       priority: "medium",
+      productId: "",
     },
   });
 
@@ -98,7 +110,6 @@ export default function TicketCreateDialog({
 
   const [issues, setIssues] = React.useState<IssueFormValues[]>([emptyIssue()]);
   const [issuesError, setIssuesError] = React.useState<string | null>(null);
-  const [productIds, setProductIds] = React.useState<string[]>([]);
   const [productSearch, setProductSearch] = React.useState("");
 
   React.useEffect(() => {
@@ -106,7 +117,6 @@ export default function TicketCreateDialog({
       form.reset();
       setIssues([emptyIssue()]);
       setIssuesError(null);
-      setProductIds([]);
       setProductSearch("");
     }
   }, [open, form]);
@@ -124,11 +134,6 @@ export default function TicketCreateDialog({
       p.deviceName.toLowerCase().includes(productSearch.toLowerCase()) ||
       (p.sku || "").toLowerCase().includes(productSearch.toLowerCase()),
   );
-
-  const toggleProduct = (id: string) =>
-    setProductIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
 
   const updateIssueField = (
     idx: number,
@@ -170,6 +175,10 @@ export default function TicketCreateDialog({
     const dept = isScopedUser ? activeDepartment : values.department;
     const now = new Date().toISOString();
 
+    const selectedProduct = values.productId
+      ? state.inventory.find((inv) => inv.id === values.productId)
+      : undefined;
+
     const ticketIssues: TicketIssue[] = trimmed.map((iss) => ({
       id: uid("ISS"),
       title: iss.title,
@@ -181,22 +190,17 @@ export default function TicketCreateDialog({
       resolution: undefined,
     }));
 
-    const suffix =
-      productIds.length > 0
-        ? ` (${productIds.length} product${productIds.length === 1 ? "" : "s"})`
-        : "";
+    const itemIds = values.productId ? [values.productId] : [];
+
+    const suffix = selectedProduct ? ` (${selectedProduct.deviceName})` : "";
 
     addTicket({
       title: `${values.title}${suffix}`,
       description: `${values.description}${
-        productIds.length > 0
-          ? `\n\nProducts: ${productIds
-              .map(
-                (id) =>
-                  state.inventory.find((inv) => inv.id === id)?.deviceName ??
-                  id,
-              )
-              .join(", ")}`
+        selectedProduct
+          ? `\n\nProduct: ${selectedProduct.deviceName}${
+              selectedProduct.sku ? ` (${selectedProduct.sku})` : ""
+            }`
           : ""
       }`,
       category: values.category || "General",
@@ -207,7 +211,7 @@ export default function TicketCreateDialog({
           : values.subDepartment) || undefined,
       priority: values.priority as RequestPriority,
       issues: ticketIssues,
-      itemIds: productIds,
+      itemIds,
       assets: [],
       customer: undefined,
     });
@@ -217,98 +221,336 @@ export default function TicketCreateDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Ticket className="text-primary size-5" /> Generate Ticket
           </DialogTitle>
           <DialogDescription>
-            Create a new support ticket. A product can have multiple issues — add them all here.
+            Create a new support ticket. Select one product and add the issues.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Title</label>
-            <Input
-              placeholder="Short summary of the product / issue"
-              {...form.register("title")}
-              className={cn(
-                form.formState.errors.title &&
-                  "border-destructive focus-visible:ring-destructive",
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Title</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Short summary of the product / issue"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
             />
-            {form.formState.errors.title && (
-              <p className="text-sm text-destructive">
-                {form.formState.errors.title.message}
-              </p>
-            )}
-          </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Description</label>
-            <Textarea
-              rows={3}
-              placeholder="Describe the problem in detail"
-              {...form.register("description")}
-              className={cn(
-                form.formState.errors.description &&
-                  "border-destructive focus-visible:ring-destructive",
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      rows={3}
+                      placeholder="Describe the problem in detail"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
             />
-            {form.formState.errors.description && (
-              <p className="text-sm text-destructive">
-                {form.formState.errors.description.message}
-              </p>
-            )}
-          </div>
 
-          <fieldset className="space-y-3">
-            <legend className="flex items-center gap-1.5 text-sm font-medium">
-              <ListChecks className="size-3.5" /> Issues
-              <span className="font-normal text-muted-foreground">
-                (add multiple)
-              </span>
-            </legend>
+            <fieldset className="space-y-3">
+              <legend className="flex items-center gap-1.5 text-sm font-medium">
+                <ListChecks className="size-3.5" /> Issues
+                <span className="font-normal text-muted-foreground">
+                  (add multiple)
+                </span>
+              </legend>
 
-            {issues.map((issue, i) => (
-              <div key={i} className="relative space-y-3 rounded-lg border p-4">
-                {issues.length > 1 && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-2 top-2 h-7 w-7"
-                    aria-label="Remove issue"
-                    onClick={() => removeIssue(i)}
-                  >
-                    <X className="size-4" />
-                  </Button>
-                )}
-
-                <Input
-                  placeholder={`Issue ${i + 1} — e.g. Screen flickering`}
-                  value={issue.title}
-                  onChange={(e) => updateIssueField(i, "title", e.target.value)}
-                />
-                <Textarea
-                  rows={2}
-                  placeholder="Describe this issue"
-                  value={issue.description}
-                  onChange={(e) =>
-                    updateIssueField(i, "description", e.target.value)
-                  }
-                />
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-muted-foreground">
-                      Priority
-                    </label>
-                    <Select
-                      value={issue.priority}
-                      onValueChange={(v) => updateIssueField(i, "priority", v)}
+              {issues.map((issue, i) => (
+                <div
+                  key={i}
+                  className="relative space-y-3 rounded-lg border p-4"
+                >
+                  {issues.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-2 top-2 h-7 w-7"
+                      aria-label="Remove issue"
+                      onClick={() => removeIssue(i)}
                     >
+                      <X className="size-4" />
+                    </Button>
+                  )}
+
+                  <Input
+                    placeholder={`Issue ${i + 1} — e.g. Screen flickering`}
+                    value={issue.title}
+                    onChange={(e) =>
+                      updateIssueField(i, "title", e.target.value)
+                    }
+                  />
+                  <Textarea
+                    rows={2}
+                    placeholder="Describe this issue"
+                    value={issue.description}
+                    onChange={(e) => {
+                      updateIssueField(i, "description", e.target.value);
+                    }}
+                  />
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">
+                        Priority
+                      </label>
+                      <Select
+                        value={issue.priority}
+                        onValueChange={(v) =>
+                          updateIssueField(i, "priority", v)
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PRIORITIES.map((p) => (
+                            <SelectItem
+                              key={p}
+                              value={p}
+                              className="capitalize"
+                            >
+                              {p}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">
+                        Technician
+                      </label>
+                      <Select
+                        value={issue.assignedTo || "__none__"}
+                        onValueChange={(v) =>
+                          updateIssueField(
+                            i,
+                            "assignedTo",
+                            v === "__none__" ? "" : v,
+                          )
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Optional" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">Unassigned</SelectItem>
+                          {state.users
+                            .filter((u) => u.status === "active")
+                            .map((u) => (
+                              <SelectItem key={u.id} value={u.name}>
+                                {u.name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {issuesError && (
+                <p className="text-sm text-destructive">{issuesError}</p>
+              )}
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addIssue}
+              >
+                <Plus className="mr-1 size-3.5" /> Add Issue
+              </Button>
+            </fieldset>
+
+            <FormField
+              control={form.control}
+              name="productId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Product</FormLabel>
+                  <FormControl>
+                    <Select
+                      value={field.value || ""}
+                      onValueChange={(v) => field.onChange(v || undefined)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select a product" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <Input
+                          placeholder="Search products…"
+                          value={productSearch}
+                          onChange={(e) => setProductSearch(e.target.value)}
+                          className="h-9 text-sm mb-2"
+                        />
+                        {filteredProducts.length === 0 ? (
+                          <p className="p-3 text-sm text-muted-foreground">
+                            No products found
+                          </p>
+                        ) : (
+                          filteredProducts.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.deviceName}
+                              {p.sku && (
+                                <span className="ml-auto text-muted-foreground text-xs">
+                                  ({p.sku})
+                                </span>
+                              )}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {!isScopedUser && (
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category</FormLabel>
+                      <FormControl>
+                        <Select
+                          value={field.value}
+                          onValueChange={field.onChange}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ticketCategories.map((c) => (
+                              <SelectItem key={c} value={c}>
+                                {c}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="department"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Department</FormLabel>
+                      <FormControl>
+                        <Select
+                          value={field.value}
+                          onValueChange={(v) => {
+                            field.onChange(v);
+                            form.setValue("subDepartment", "");
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select department" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {state.departments.map((d) => (
+                              <SelectItem key={d.id} value={d.name}>
+                                {d.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
+
+            {isScopedUser && (
+              <p className="rounded-md bg-muted px-3 py-2 text-xs">
+                Department:{" "}
+                <span className="font-medium">
+                  {activeDepartment}
+                  {user?.subDepartment ? ` / ${user.subDepartment}` : ""}
+                </span>{" "}
+                (auto)
+              </p>
+            )}
+
+            {subOptions.length > 0 && !isScopedUser && (
+              <FormField
+                control={form.control}
+                name="subDepartment"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Sub-department
+                      <span className="font-normal text-muted-foreground">
+                        (routed destination)
+                      </span>
+                    </FormLabel>
+                    <FormControl>
+                      <Select
+                        value={field.value || "__none__"}
+                        onValueChange={(v) =>
+                          field.onChange(v === "__none__" ? "" : v)
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue
+                            placeholder={`Route to ${effectiveDept} sub-department`}
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">None</SelectItem>
+                          {subOptions.map((s) => (
+                            <SelectItem key={s.id} value={s.name}>
+                              {s.name} ({s.code})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            <FormField
+              control={form.control}
+              name="priority"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Ticket Priority</FormLabel>
+                  <FormControl>
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -320,218 +562,26 @@ export default function TicketCreateDialog({
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-muted-foreground">
-                      Technician
-                    </label>
-                    <Select
-                      value={issue.assignedTo || "__none__"}
-                      onValueChange={(v) =>
-                        updateIssueField(
-                          i,
-                          "assignedTo",
-                          v === "__none__" ? "" : v,
-                        )
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Optional" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">Unassigned</SelectItem>
-                        {state.users
-                          .filter((u) => u.status === "active")
-                          .map((u) => (
-                            <SelectItem key={u.id} value={u.name}>
-                              {u.name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {issuesError && (
-              <p className="text-sm text-destructive">{issuesError}</p>
-            )}
-
-            <Button type="button" variant="outline" size="sm" onClick={addIssue}>
-              <Plus className="mr-1 size-3.5" /> Add Issue
-            </Button>
-          </fieldset>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">
-              Products
-              <span className="font-normal text-muted-foreground">
-                (stock-in items)
-              </span>
-            </label>
-
-            <Input
-              placeholder="Search products…"
-              value={productSearch}
-              onChange={(e) => setProductSearch(e.target.value)}
-              className="h-9 text-sm"
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
 
-            <div className="max-h-44 divide-y overflow-y-auto rounded-md border">
-              {filteredProducts.length === 0 ? (
-                <p className="p-3 text-sm text-muted-foreground">
-                  No products found
-                </p>
-              ) : (
-                filteredProducts.map((p) => (
-                  <label
-                    key={p.id}
-                    className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-muted/50"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={productIds.includes(p.id)}
-                      onChange={() => toggleProduct(p.id)}
-                      className="rounded border-input"
-                    />
-                    {p.deviceName}
-                    {p.sku && (
-                      <span className="text-muted-foreground">({p.sku})</span>
-                    )}
-                  </label>
-                ))
-              )}
-            </div>
-
-            {productIds.length > 0 && (
-              <p className="text-xs text-muted-foreground">
-                {productIds.length} product
-                {productIds.length === 1 ? "" : "s"} selected
-              </p>
-            )}
-          </div>
-
-          {!isScopedUser && (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Category</label>
-                <Select
-                  value={watchedCategory}
-                  onValueChange={(v) => form.setValue("category", v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ticketCategories.map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {c}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Department</label>
-                <Select
-                  value={watchedDepartment}
-                  onValueChange={(v) => {
-                    form.setValue("department", v);
-                    form.setValue("subDepartment", "");
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {state.departments.map((d) => (
-                      <SelectItem key={d.id} value={d.name}>
-                        {d.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
-
-          {isScopedUser && (
-            <p className="rounded-md bg-muted px-3 py-2 text-xs">
-              Department:{" "}
-              <span className="font-medium">
-                {activeDepartment}
-                {user?.subDepartment ? ` / ${user.subDepartment}` : ""}
-              </span>{" "}
-              (auto)
-            </p>
-          )}
-
-          {subOptions.length > 0 && !isScopedUser && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
-                Sub-department{" "}
-                <span className="font-normal text-muted-foreground">
-                  (routed destination)
-                </span>
-              </label>
-              <Select
-                value={watchedSubDepartment || "__none__"}
-                onValueChange={(v) =>
-                  form.setValue("subDepartment", v === "__none__" ? "" : v)
-                }
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
               >
-                <SelectTrigger>
-                  <SelectValue
-                    placeholder={`Route to ${effectiveDept} sub-department`}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">None</SelectItem>
-                  {subOptions.map((s) => (
-                    <SelectItem key={s.id} value={s.name}>
-                      {s.name} ({s.code})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Ticket Priority</label>
-            <Select
-              value={watchedPriority}
-              onValueChange={(v) => form.setValue("priority", v)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PRIORITIES.map((p) => (
-                  <SelectItem key={p} value={p} className="capitalize">
-                    {p}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit">
-              <Ticket className="mr-1.5 size-4" /> Create Ticket
-            </Button>
-          </DialogFooter>
-        </form>
+                Cancel
+              </Button>
+              <Button type="submit">
+                <Ticket className="mr-1.5 size-4" /> Create Ticket
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );
