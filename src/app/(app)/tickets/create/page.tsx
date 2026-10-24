@@ -363,25 +363,13 @@ export default function TicketCreatePage() {
                     <label className="text-xs font-medium text-muted-foreground">
                       Assigned Technician
                     </label>
-                    <Select
+                    <Input
                       value={issue.assignedTo || ""}
-                      onValueChange={(v) =>
-                        updateIssueField(i, "assignedTo", v)
+                      onChange={(e) =>
+                        updateIssueField(i, "assignedTo", e.target.value)
                       }
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Assign technician (optional)" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {state.users
-                          .filter((u) => u.status === "active")
-                          .map((u) => (
-                            <SelectItem key={u.id} value={u.name}>
-                              {u.name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
+                      placeholder="Enter technician name (optional)"
+                    />
                   </div>
                 </div>
               </div>

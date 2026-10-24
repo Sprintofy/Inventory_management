@@ -358,30 +358,13 @@ export default function TicketCreateDialog({
                       <label className="text-xs font-medium text-muted-foreground">
                         Technician
                       </label>
-                      <Select
-                        value={issue.assignedTo || "__none__"}
-                        onValueChange={(v) =>
-                          updateIssueField(
-                            i,
-                            "assignedTo",
-                            v === "__none__" ? "" : v,
-                          )
+                      <Input
+                        value={issue.assignedTo || ""}
+                        onChange={(e) =>
+                          updateIssueField(i, "assignedTo", e.target.value)
                         }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Optional" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">Unassigned</SelectItem>
-                          {state.users
-                            .filter((u) => u.status === "active")
-                            .map((u) => (
-                              <SelectItem key={u.id} value={u.name}>
-                                {u.name}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
+                        placeholder="Enter technician name (optional)"
+                      />
                     </div>
                   </div>
                 </div>
