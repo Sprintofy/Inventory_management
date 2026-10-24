@@ -306,6 +306,7 @@ export interface StockInRecord {
 export interface StockOutRecord {
   id: string;
   reference: string;
+  itemId: string;
   date: string;
   itemName: string;
   recipient: string;

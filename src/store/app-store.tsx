@@ -176,6 +176,9 @@ interface AppState {
   stockOut: StockOutRecord[];
   stockInRecords: StockInRecord[];
   stockOutRecords: StockOutRecord[];
+  stockInHistory: StockInRecord[];
+  stockOutHistory: StockOutRecord[];
+  ticketHistory: Ticket[];
   users: User[];
   departments: Department[];
   activities: Activity[];
@@ -216,6 +219,9 @@ const emptyState = (user: User | null): AppState => ({
   stockOut: [],
   stockInRecords: [],
   stockOutRecords: [],
+  stockInHistory: [],
+  stockOutHistory: [],
+  ticketHistory: [],
   users: [],
   departments: [],
   activities: [],
@@ -286,6 +292,9 @@ interface AppContextValue {
   updateStockOutStatus: (id: string, status: StockOutRecord["status"]) => void;
   fetchStockIn: (filters: StockInFiltersState) => Promise<void>;
   fetchStockOut: (filters: StockOutFiltersState) => Promise<void>;
+  fetchStockInHistory: (itemId: string) => Promise<void>;
+  fetchStockOutHistory: (itemId: string) => Promise<void>;
+  fetchTicketHistory: (itemId: string) => Promise<void>;
   addTransfer: (
     t: Omit<Transfer, "id" | "transferNo" | "status" | "requestedBy" | "date">,
   ) => void;
@@ -732,6 +741,42 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setState((s) => ({ ...s, stockOutRecords: data.results || data }));
       } catch (e) {
         fail(e, "Could not fetch stock out records");
+      }
+    },
+    [authCall, fail],
+  );
+
+  const fetchStockInHistory = React.useCallback(
+    async (itemId: string) => {
+      try {
+        const data = await authCall(`/inventory/stock-in/history?itemId=${encodeURIComponent(itemId)}`);
+        setState((s) => ({ ...s, stockInHistory: data.results || data }));
+      } catch (e) {
+        fail(e, "Could not fetch stock-in history");
+      }
+    },
+    [authCall, fail],
+  );
+
+  const fetchStockOutHistory = React.useCallback(
+    async (itemId: string) => {
+      try {
+        const data = await authCall(`/inventory/stock-out/history?itemId=${encodeURIComponent(itemId)}`);
+        setState((s) => ({ ...s, stockOutHistory: data.results || data }));
+      } catch (e) {
+        fail(e, "Could not fetch stock-out history");
+      }
+    },
+    [authCall, fail],
+  );
+
+  const fetchTicketHistory = React.useCallback(
+    async (itemId: string) => {
+      try {
+        const data = await authCall(`/tickets/history?itemId=${encodeURIComponent(itemId)}`);
+        setState((s) => ({ ...s, ticketHistory: data.results || data }));
+      } catch (e) {
+        fail(e, "Could not fetch ticket history");
       }
     },
     [authCall, fail],
@@ -1334,6 +1379,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       updateStockOutStatus,
       fetchStockIn,
       fetchStockOut,
+      fetchStockInHistory,
+      fetchStockOutHistory,
+      fetchTicketHistory,
       addTransfer,
       updateTransfer,
       addRequest,
@@ -1392,6 +1440,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       updateStockOutStatus,
       fetchStockIn,
       fetchStockOut,
+      fetchStockInHistory,
+      fetchStockOutHistory,
+      fetchTicketHistory,
       addTransfer,
       updateTransfer,
       addRequest,
