@@ -17,7 +17,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FormControl } from "@/components/ui/form";
 import { useApp } from "@/store/app-store";
-import type { InventoryItem, StockInRecord, StockOutRecord, Ticket } from "@/types";
+import type {
+  InventoryItem,
+  StockInRecord,
+  StockOutRecord,
+  Ticket,
+  TicketIssue,
+} from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDate, formatNumber } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -43,7 +49,9 @@ interface HistoryRecord {
 }
 
 /**
- * Right-side panel showing a selected product's stock-in and stock-out history.
+ * Right-side panel showing a selected product's stock-in, stock-out, and ticket
+ * history, grouped by date. For tickets, the linked issues and their resolution
+ * are also displayed.
  */
 function ProductHistoryPanel({
   itemId,
@@ -52,7 +60,12 @@ function ProductHistoryPanel({
   itemId: string;
   itemName: string;
 }) {
-  const { state, fetchStockInHistory, fetchStockOutHistory, fetchTicketHistory } = useApp();
+  const {
+    state,
+    fetchStockInHistory,
+    fetchStockOutHistory,
+    fetchTicketHistory,
+  } = useApp();
 
   React.useEffect(() => {
     if (!itemId) return;
@@ -67,9 +80,52 @@ function ProductHistoryPanel({
   const outHistory = state.stockOutHistory.filter(
     (r: StockOutRecord) => r.itemId === itemId,
   );
-
   const ticketHistory = (state.ticketHistory as Ticket[]).filter(
     (t: Ticket) => t.itemIds.includes(itemId),
+  );
+
+  // Build a unified date-keyed timeline: stock-in, stock-out, and tickets.
+  const timeline: Record<
+    string,
+    { in: StockInRecord[]; out: StockOutRecord[]; tickets: Ticket[] }
+  > = {};
+  const add = (dateKey: string, kind: "in" | "out" | "tickets", record: any) => {
+    if (!timeline[dateKey]) timeline[dateKey] = { in: [], out: [], tickets: [] };
+    timeline[dateKey][kind].push(record);
+  };
+  for (const r of inHistory) add(formatDate(r.date), "in", r);
+  for (const r of outHistory) add(formatDate(r.date), "out", r);
+  for (const t of ticketHistory) add(formatDate(t.createdAt), "tickets", t);
+
+  const sortedDates = Object.keys(timeline).sort((a, b) => b.localeCompare(a));
+
+  const statusColor = (status: string) => {
+    switch (status) {
+      case "open":
+        return "text-primary";
+      case "in-progress":
+        return "text-warning";
+      case "resolved":
+        return "text-success";
+      case "closed":
+        return "text-muted-foreground";
+      default:
+        return "text-muted-foreground";
+    }
+  };
+
+  const issueChip = (iss: TicketIssue) => (
+    <div className="flex items-center gap-2 text-[10px] mt-0.5">
+      <span className={`font-medium ${statusColor(iss.status)}`}>
+        {iss.status.charAt(0).toUpperCase() + iss.status.slice(1)}
+      </span>
+      {iss.resolution && (
+        <>
+          <span className="text-muted-foreground">|</span>
+          <span className="text-success font-medium">Resolved</span>
+        </>
+      )}
+    </div>
   );
 
   return (
@@ -80,119 +136,181 @@ function ProductHistoryPanel({
       </div>
       <p className="text-xs text-muted-foreground">{itemName}</p>
 
-      <div className="space-y-2">
-        <div className="flex items-center gap-1.5 mb-1">
-          <span className="text-xs font-semibold text-success">
-            ▲ Stock In
-          </span>
-          <span className="text-xs font-normal text-muted-foreground">
-            ({inHistory.length})
-          </span>
-        </div>
-        {inHistory.length === 0 ? (
-          <p className="text-xs text-muted-foreground italic">
-            No stock-in records yet.
-          </p>
-        ) : (
-          <div className="space-y-1">
-            {inHistory.map((r) => (
-              <div
-                key={r.id}
-                className="flex items-center justify-between text-xs bg-muted/30 rounded p-2"
-              >
-                <div className="min-w-[110px]">
-                  <div className="text-xs font-medium">{formatDate(r.date)}</div>
-                  <div className="text-[10px] text-muted-foreground truncate">
-                    {r.reference}
+      {sortedDates.length === 0 ? (
+        <p className="text-xs text-muted-foreground italic text-center py-4">
+          No history records found for this product.
+        </p>
+      ) : (
+        <div className="space-y-3">
+          {sortedDates.map((dateKey) => {
+            const day = timeline[dateKey];
+            const total =
+              day.in.length + day.out.length + day.tickets.length;
+            return (
+              <div key={dateKey} className="rounded-lg border bg-muted/30 p-2.5">
+                {/* Date header */}
+                <div className="mb-1.5 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Clock className="text-muted-foreground size-3.5" />
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      {dateKey}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground ml-auto">
+                      {total} record{total !== 1 ? "s" : ""}
+                    </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="font-semibold text-success">+{r.quantity}</div>
-                  <div className="text-[10px] text-muted-foreground">
-                    {r.department || "-"}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
 
-        <div className="flex items-center gap-1.5 mb-1">
-          <span className="text-xs font-semibold text-destructive">
-            ▼ Stock Out
-          </span>
-          <span className="text-xs font-normal text-muted-foreground">
-            ({outHistory.length})
-          </span>
-        </div>
-        {outHistory.length === 0 ? (
-          <p className="text-xs text-muted-foreground italic">
-            No stock-out records yet.
-          </p>
-        ) : (
-          <div className="space-y-1">
-            {outHistory.map((r) => (
-              <div
-                key={r.id}
-                className="flex items-center justify-between text-xs bg-muted/30 rounded p-2"
-              >
-                <div className="min-w-[110px]">
-                  <div className="text-xs font-medium">{formatDate(r.date)}</div>
-                  <div className="text-[10px] text-muted-foreground truncate">
-                    {r.reference}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="font-semibold text-destructive">
-                    -{r.quantity}
-                  </div>
-                  <div className="text-[10px] text-muted-foreground">
-                    {r.purpose || r.department || "-"}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+                <div className="space-y-1.5">
+                  {/* Stock In */}
+                  {day.in.length > 0 && (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[9px] font-semibold text-success uppercase tracking-wider">
+                          Stock In
+                        </span>
+                        <span className="text-[9px] font-normal text-muted-foreground">
+                          ({day.in.length})
+                        </span>
+                      </div>
+                      {day.in.map((r) => (
+                        <div
+                          key={r.id}
+                          className="flex items-center justify-between text-xs bg-white/50 rounded p-1.5 border border-white/30"
+                        >
+                          <div className="min-w-[90px]">
+                            <div className="text-xs font-medium text-success">
+                              +{r.quantity}
+                            </div>
+                            <div className="text-[9px] text-muted-foreground truncate">
+                              {r.reference}
+                            </div>
+                            {r.supplier && (
+                              <div className="text-[9px] text-muted-foreground">
+                                {r.supplier}
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-[9px] text-muted-foreground">
+                            {r.department || "-"}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
-        <div className="flex items-center gap-1.5 mb-1">
-          <span className="text-xs font-semibold text-primary">
-            🎫 Tickets
-          </span>
-          <span className="text-xs font-normal text-muted-foreground">
-            ({ticketHistory.length})
-          </span>
-        </div>
-        {ticketHistory.length === 0 ? (
-          <p className="text-xs text-muted-foreground italic">
-            No tickets raised for this product yet.
-          </p>
-        ) : (
-          <div className="space-y-1">
-            {ticketHistory.map((t) => (
-              <div
-                key={t.id}
-                className="flex items-center justify-between text-xs bg-muted/30 rounded p-2"
-              >
-                <div className="min-w-[110px]">
-                  <div className="text-xs font-medium">{t.title}</div>
-                  <div className="text-[10px] text-muted-foreground truncate">
-                    {t.id}
-                  </div>
+                  {/* Stock Out */}
+                  {day.out.length > 0 && (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[9px] font-semibold text-destructive uppercase tracking-wider">
+                          Stock Out
+                        </span>
+                        <span className="text-[9px] font-normal text-muted-foreground">
+                          ({day.out.length})
+                        </span>
+                      </div>
+                      {day.out.map((r) => (
+                        <div
+                          key={r.id}
+                          className="flex items-center justify-between text-xs bg-white/50 rounded p-1.5 border border-white/30"
+                        >
+                          <div className="min-w-[90px]">
+                            <div className="text-xs font-medium text-destructive">
+                              -{r.quantity}
+                            </div>
+                            <div className="text-[9px] text-muted-foreground truncate">
+                              {r.reference}
+                            </div>
+                            {r.purpose && (
+                              <div className="text-[9px] text-muted-foreground">
+                                {r.purpose}
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-[9px] text-muted-foreground">
+                            {r.department || "-"}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Tickets with issues */}
+                  {day.tickets.length > 0 && (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[9px] font-semibold text-primary uppercase tracking-wider">
+                          Tickets
+                        </span>
+                        <span className="text-[9px] font-normal text-muted-foreground">
+                          ({day.tickets.length})
+                        </span>
+                      </div>
+                      {day.tickets.map((t) => (
+                        <div
+                          key={t.id}
+                          className="space-y-1"
+                        >
+                          {/* Ticket row */}
+                          <div
+                            className="flex items-center justify-between text-xs bg-white/60 rounded p-1.5 border border-white/40"
+                          >
+                            <div className="min-w-[90px]">
+                              <div className="text-xs font-medium text-primary truncate">
+                                {t.title}
+                              </div>
+                              <div className="text-[9px] text-muted-foreground truncate">
+                                {t.id}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className={`text-[9px] font-medium ${statusColor(t.status)}`}>
+                                {t.status.charAt(0).toUpperCase() + t.status.slice(1)}
+                              </span>
+                              <div className="w-0.5 h-4 bg-muted" />
+                              <div className="text-[9px] text-muted-foreground">
+                                {t.priority.charAt(0).toUpperCase() + t.priority.slice(1)}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Ticket's own issues immediately below */}
+                          {t.issues.length > 0 && (
+                            <div className="mt-0.5 space-y-0.5">
+                              {t.issues.map((iss) => (
+                                <div
+                                  key={iss.id}
+                                  className="flex items-center justify-between text-[9px] pl-3 py-1 border-l-2 border-muted/40 bg-white/30 rounded-r"
+                                >
+                                  <div className="flex items-center gap-2 min-w-[90px]">
+                                    <span className="text-muted-foreground truncate">
+                                      {iss.title}
+                                    </span>
+                                    {iss.resolution && (
+                                      <span className="text-success font-medium">
+                                        Resolved
+                                      </span>
+                                    )}
+                                  </div>
+                                  {issueChip(iss)}
+                                  <div className="text-muted-foreground">
+                                    {iss.description || "—"}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="font-semibold text-primary">
-                    {t.priority.charAt(0).toUpperCase() + t.priority.slice(1)}
-                  </div>
-                  <div className="text-[10px] text-muted-foreground">
-                    {t.status}
-                  </div>
-                </div>
+                  )}
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       <div className="border-t border-muted mt-2 pt-1.5">
         <p className="text-[10px] text-muted-foreground text-center">
@@ -203,10 +321,6 @@ function ProductHistoryPanel({
   );
 }
 
-/**
- * Multi-item Stock In (Mar 6) — no Supplier tab.
- * Department is derived from the item / logged-in user scope.
- */
 export function StockInDialog({
   open,
   onOpenChange,
