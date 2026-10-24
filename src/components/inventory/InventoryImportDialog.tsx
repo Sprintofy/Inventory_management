@@ -65,7 +65,7 @@ const HEADER_FIELDS: Record<string, string> = {
 
 const REQUIRED_FIELDS: { field: string; label: string }[] = [
   { field: "deviceName", label: "Device Name" },
-  { field: "sku", label: "SKU" },
+  { field: "sku", label: "Reg No." },
   { field: "category", label: "Category" },
   { field: "department", label: "Department" },
   { field: "unit", label: "Unit" },
@@ -175,10 +175,10 @@ export function InventoryImportDialog({
 
         const sku = String(get("sku") ?? "").trim();
         if (
-          !errors.includes("SKU is required") &&
+          !errors.includes("Reg No. is required") &&
           state.inventory.some((i) => i.sku.toLowerCase() === sku.toLowerCase())
         ) {
-          errors.push(`SKU "${sku}" already exists in inventory`);
+          errors.push(`Reg No. "${sku}" already exists in inventory`);
         }
 
         return {
@@ -302,7 +302,7 @@ export function InventoryImportDialog({
             </label>
             <div className="flex items-center justify-between">
               <p className="text-muted-foreground text-xs">
-                Required columns: Device Name, SKU, Category, Department, Unit
+                Required columns: Device Name, Reg No., Category, Department, Unit
               </p>
               <Button
                 variant="outline"

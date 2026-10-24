@@ -66,7 +66,7 @@ export function GlobalSearch() {
         departmentItems
           .filter((i) => match(i.deviceName, i.sku, i.serialNumber, i.category))
           .slice(0, PER_TYPE_LIMIT)
-          .map((i) => ({ id: i.id, type: "Inventory", label: i.deviceName, sublabel: `${i.sku} · ${i.department}`, href: `/inventory/${i.id}` })),
+          .map((i) => ({ id: i.id, type: "Inventory", label: i.deviceName, sublabel: `Reg No. ${i.sku} · ${i.department}`, href: `/inventory/${i.id}` })),
       );
     }
 

@@ -393,7 +393,7 @@ export function StockInDialog({
                 <SelectContent>
                   {options.map((i) => (
                     <SelectItem key={i.id} value={i.id}>
-                      {i.deviceName} ({i.sku}) — {formatNumber(i.quantity)} in stock
+                      {i.deviceName} (Reg No. {i.sku}) — {formatNumber(i.quantity)} in stock
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -616,7 +616,7 @@ export function StockOutDialog({
           <SelectContent>
             {options.map((i) => (
               <SelectItem key={i.id} value={i.id}>
-                {i.deviceName} ({i.sku}) — {i.quantity} left
+                {i.deviceName} (Reg No. {i.sku}) — {i.quantity} left
               </SelectItem>
             ))}
           </SelectContent>

@@ -51,7 +51,7 @@ export default function InventoryPage() {
       Description: i.description ?? "",
       Specifications: i.specifications ?? "",
       "Warranty Period": i.warrantyPeriod ?? "",
-      SKU: i.sku,
+      "Reg No.": i.sku,
       Supplier: i.supplier ?? "",
       Quantity: i.quantity,
       Unit: i.unit,
@@ -103,7 +103,7 @@ export default function InventoryPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onClear={() => setSearch("")}
-              placeholder="Search by device name, SKU, serial number, category…"
+              placeholder="Search by device name, Reg No., serial number, category…"
               className="md:max-w-sm"
             />
             <div className="flex items-center gap-2">

@@ -149,7 +149,7 @@ export default function ReportsPage() {
 
   const exportReport = () => {
     downloadCSV("inventory-report.csv", [
-      { Name: "Name", SKU: "SKU", Category: "Category", Department: "Department", "Sub-Department": "Sub-Department", Quantity: "Quantity", Status: "Status" },
+      { Name: "Name", SKU: "Reg No.", Category: "Category", Department: "Department", "Sub-Department": "Sub-Department", Quantity: "Quantity", Status: "Status" },
       ...scopeItems.map((i) => ({ Name: i.deviceName, SKU: i.sku, Category: i.category, Department: i.department, "Sub-Department": i.subDepartment ?? "", Quantity: i.quantity, Status: i.status })),
     ]);
     toast.success("Report exported as CSV");
@@ -272,7 +272,7 @@ export default function ReportsPage() {
                   <TableRow key={i.id}>
                     <TableCell>
                       <p className="text-sm font-medium">{i.deviceName}</p>
-                      <p className="text-muted-foreground font-mono text-xs">{i.sku}</p>
+                      <p className="text-muted-foreground font-mono text-xs">Reg No. {i.sku}</p>
                     </TableCell>
                     <TableCell className="text-xs">{i.category}</TableCell>
                     <TableCell className="text-right text-sm tabular-nums">{i.quantity.toLocaleString()}</TableCell>

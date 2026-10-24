@@ -47,7 +47,7 @@ const formSchema = z.object({
   warrantyPeriod: z.string().optional(),
   serialNumber: z.string().optional(),
   notes: z.string().optional(),
-  sku: z.string().min(2, "SKU is required"),
+  sku: z.string().min(2, "Reg No. is required"),
   supplier: z.string().optional(),
   quantity: z.coerce.number().min(0, "Quantity cannot be negative"),
   unit: z.string().min(1, "Unit is required"),
@@ -336,7 +336,7 @@ export function InventoryForm({
               name="sku"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>SKU</FormLabel>
+                  <FormLabel>Reg No.</FormLabel>
                   <FormControl>
                     <Input placeholder="e.g. IT-DEV-001" {...field} />
                   </FormControl>

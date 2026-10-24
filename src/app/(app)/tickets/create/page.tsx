@@ -435,7 +435,7 @@ export default function TicketCreatePage() {
                     <span>
                       {p.deviceName}{" "}
                       <span className="text-muted-foreground text-xs">
-                        ({p.sku})
+                        (Reg No. {p.sku})
                       </span>
                     </span>
                   </label>

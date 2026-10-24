@@ -84,7 +84,7 @@ export default function InventoryDetailPage({ params }: { params: Promise<{ id: 
               <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{item.deviceName}</h1>
               <StatusBadge status={item.status} />
             </div>
-            <p className="text-muted-foreground mt-0.5 font-mono text-xs">{item.sku}</p>
+            <p className="text-muted-foreground mt-0.5 font-mono text-xs">Reg No. {item.sku}</p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">

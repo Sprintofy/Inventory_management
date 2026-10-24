@@ -37,7 +37,7 @@ const allColumns = [
   { key: "deviceName", label: "Device Name" },
   { key: "brand", label: "Brand" },
   { key: "modelNumber", label: "Model" },
-  { key: "sku", label: "SKU" },
+  { key: "sku", label: "Reg No." },
   { key: "category", label: "Category" },
   { key: "quantity", label: "Quantity" },
   { key: "unit", label: "Unit" },

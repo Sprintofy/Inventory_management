@@ -74,7 +74,7 @@ export default function DepartmentDetailPage({ params }: { params: Promise<{ id:
           {can("reports.view") && (
             <>
               <Button variant="outline" onClick={() => {
-                downloadCSV(`${dept.name}-export-${new Date().toISOString().slice(0, 10)}.csv`, items.map((i) => ({ Name: i.deviceName, SKU: i.sku, Quantity: i.quantity })));
+                downloadCSV(`${dept.name}-export-${new Date().toISOString().slice(0, 10)}.csv`, items.map((i) => ({ Name: i.deviceName, "Reg No.": i.sku, Quantity: i.quantity })));
                 toast.success(`Exported ${items.length} items`);
               }}><FileDown className="size-4" /> Export</Button>
               <Button variant="outline" onClick={() => router.push(`/reports?dept=${encodeURIComponent(dept.name)}`)}>
@@ -183,7 +183,7 @@ export default function DepartmentDetailPage({ params }: { params: Promise<{ id:
                     </div>
                     <div>
                       <p className="text-sm font-medium">{i.deviceName}</p>
-                      <p className="text-muted-foreground font-mono text-xs">{i.sku} · {i.subDepartment ?? dept.name}</p>
+                      <p className="text-muted-foreground font-mono text-xs">Reg No. {i.sku} · {i.subDepartment ?? dept.name}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
