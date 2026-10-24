@@ -23,10 +23,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const blockedPaths = React.useMemo(() => {
     const blocked: string[] = [];
     // Scoped users (department login): dept inventory/stock/reports only.
-    // No tickets, no purchase orders, no suppliers, no admin areas.
+    // No purchase orders, no suppliers, no admin areas.
+    // Tickets ARE allowed for department-manager (they see their dept's tickets only).
     if (role === "user" || role === "department-manager" || role === "department-user") {
       blocked.push(
-        "/tickets",
         "/stock-in",
         "/stock-out",
         "/categories",

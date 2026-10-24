@@ -20,7 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useApp } from "@/store/app-store";
 import { uid, cn } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/PageHeader";
-import type { RequestPriority, TicketIssue } from "@/types";
+import type { RequestPriority, SubDepartment, TicketIssue } from "@/types";
 
 const ticketCategories = [
   "IT Support",
@@ -39,6 +39,7 @@ const schema = z.object({
   category: z.string().min(1, "Select a category"),
   department: z.string().min(1, "Select a department"),
   subDepartment: z.string().optional(),
+  subDepartment2: z.string().optional(),
   priority: z.string().min(1, "Select priority"),
 });
 type SV = z.output<typeof schema>;
@@ -70,9 +71,16 @@ export default function TicketCreatePage() {
       category: "General",
       department: "",
       subDepartment: "",
+      subDepartment2: "",
       priority: "medium",
     },
   });
+
+  const watchedCategory = form.watch("category");
+  const watchedDepartment = form.watch("department");
+  const watchedSubDepartment = form.watch("subDepartment");
+  const watchedSubDepartment2 = form.watch("subDepartment2");
+  const watchedPriority = form.watch("priority");
 
   const values = form.watch();
 
@@ -85,9 +93,18 @@ export default function TicketCreatePage() {
 
   const selectedDepartment = form.watch("department");
   const effectiveDept = isScopedUser ? activeDepartment : selectedDepartment;
-  const subOptions =
+
+  // Level 1 sub-departments of the selected department
+  const level1Options =
     effectiveDept && effectiveDept !== "all"
       ? subDepartmentsFor(effectiveDept)
+      : [];
+
+  // Level 2 sub-departments (children) of the selected level-1 sub-department
+  const level2Options: SubDepartment[] =
+    watchedSubDepartment
+      ? level1Options.find((s) => s.name === watchedSubDepartment)?.children ??
+        []
       : [];
 
   // Products in scope (stock-in items only)
@@ -175,6 +192,14 @@ export default function TicketCreatePage() {
         ? ` (${productIds.length} product${productIds.length === 1 ? "" : "s"})`
         : "";
 
+    // The last selected sub-department becomes the actual department.
+    // Priority: level 2 > level 1 > parent department.
+    const finalDepartment =
+      values.subDepartment2 ||
+      values.subDepartment ||
+      values.department ||
+      "";
+
     addTicket({
       title: `${values.title}${productSuffix}`,
       description: `${values.description}${
@@ -188,11 +213,8 @@ export default function TicketCreatePage() {
           : ""
       }`,
       category: values.category || "General",
-      department: dept,
-      subDepartment:
-        (isScopedUser
-          ? user?.subDepartment || values.subDepartment
-          : values.subDepartment) || undefined,
+      department: isScopedUser ? activeDepartment : finalDepartment,
+      subDepartment: undefined,
       priority: values.priority as RequestPriority,
       issues: ticketIssues,
       itemIds: productIds,
@@ -448,7 +470,7 @@ export default function TicketCreatePage() {
                 Category
               </label>
               <Select
-                value={values.category}
+                value={watchedCategory}
                 onValueChange={(v) => form.setValue("category", v)}
               >
                 <SelectTrigger className="w-full">
@@ -468,10 +490,11 @@ export default function TicketCreatePage() {
                 Department
               </label>
               <Select
-                value={values.department}
+                value={watchedDepartment}
                 onValueChange={(v) => {
                   form.setValue("department", v);
                   form.setValue("subDepartment", "");
+                  form.setValue("subDepartment2", "");
                 }}
               >
                 <SelectTrigger className="w-full">
@@ -503,26 +526,56 @@ export default function TicketCreatePage() {
           </p>
         )}
 
-        {/* Sub-department */}
-        {subOptions.length > 0 && !isScopedUser && (
+        {/* Level 1 Sub-department */}
+        {level1Options.length > 0 && !isScopedUser && (
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium text-muted-foreground">
-              Sub-department{" "}
+              Sub-department
               <span className="text-muted-foreground font-normal">
-                (routed destination)
+                (level 1)
               </span>
             </label>
             <Select
-              value={values.subDepartment || ""}
-              onValueChange={(v) => form.setValue("subDepartment", v)}
+              value={watchedSubDepartment || ""}
+              onValueChange={(v) => {
+                form.setValue("subDepartment", v || undefined);
+                form.setValue("subDepartment2", "");
+              }}
             >
               <SelectTrigger className="w-full">
-                <SelectValue
-                  placeholder={`Route to ${effectiveDept} sub-department`}
-                />
+                <SelectValue placeholder="Select sub-department" />
               </SelectTrigger>
               <SelectContent>
-                {subOptions.map((s) => (
+                <SelectItem value="__none__">None</SelectItem>
+                {level1Options.map((s) => (
+                  <SelectItem key={s.id} value={s.name}>
+                    {s.name} ({s.code})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {/* Level 2 Sub-department (children of level 1) */}
+        {level2Options.length > 0 && !isScopedUser && (
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-muted-foreground">
+              Sub-department
+              <span className="text-muted-foreground font-normal">
+                (level 2)
+              </span>
+            </label>
+            <Select
+              value={watchedSubDepartment2 || ""}
+              onValueChange={(v) => form.setValue("subDepartment2", v || undefined)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select sub-sub-department" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">None</SelectItem>
+                {level2Options.map((s) => (
                   <SelectItem key={s.id} value={s.name}>
                     {s.name} ({s.code})
                   </SelectItem>
@@ -538,7 +591,7 @@ export default function TicketCreatePage() {
             Priority
           </label>
           <Select
-            value={values.priority}
+            value={watchedPriority}
             onValueChange={(v) => form.setValue("priority", v)}
           >
             <SelectTrigger className="w-full">

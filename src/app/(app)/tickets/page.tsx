@@ -59,14 +59,21 @@ export default function TicketsPage() {
     return state.tickets.filter((t) => {
       if (statusFilter !== "all" && t.status !== statusFilter) return false;
       if (priorityFilter !== "all" && t.priority !== priorityFilter) return false;
-      if (activeDepartment !== "all" && t.department !== activeDepartment) return false;
-      if (user?.subDepartment && t.subDepartment && t.subDepartment !== user.subDepartment) return false;
+      // Department-scoped filtering: department-manager sees their dept + sub-depts tickets only
+      if (role === "department-manager") {
+        const userDept = user?.department;
+        if (userDept) {
+          const userDeptObj = state.departments.find((d) => d.name === userDept || d.id === userDept);
+          const allowedDepts = new Set([userDept, ...(userDeptObj?.subDepartments?.map((s) => s.name) ?? [])].filter(Boolean));
+          if (!allowedDepts.has(t.department) && !allowedDepts.has(t.subDepartment || "")) return false;
+        }
+      } else if (activeDepartment !== "all" && t.department !== activeDepartment) return false;
       if (term && !(t.title.toLowerCase().includes(term) || t.id.toLowerCase().includes(term) || t.description.toLowerCase().includes(term))) return false;
       if (dateFrom && new Date(t.createdAt) < new Date(dateFrom)) return false;
       if (dateTo && new Date(t.createdAt) > new Date(dateTo + "T23:59:59")) return false;
       return true;
     });
-  }, [state.tickets, statusFilter, priorityFilter, activeDepartment, search, user?.subDepartment, dateFrom, dateTo]);
+  }, [state.tickets, state.departments, statusFilter, priorityFilter, role, user?.department, search, dateFrom, dateTo]);
 
   const paged = tickets.slice((page - 1) * pageSize, page * pageSize);
 
@@ -161,7 +168,7 @@ export default function TicketsPage() {
                       <span className="text-muted-foreground"> ({counts.resolved} resolved)</span>
                     </span>
                   </TableCell>
-                  <TableCell><span className="bg-muted inline-flex rounded-md px-2 py-0.5 text-xs font-medium">{t.department}</span>{t.subDepartment && <span className="text-muted-foreground mt-0.5 block text-[11px]">{t.subDepartment}</span>}</TableCell>
+                  <TableCell><span className="bg-muted inline-flex rounded-md px-2 py-0.5 text-xs font-medium">{t.department}</span></TableCell>
                   <TableCell><span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${priorityClass[t.priority]}`}>{t.priority}</span></TableCell>
                   <TableCell className="text-muted-foreground text-xs" title={formatDate(t.createdAt)}>{timeAgo(t.createdAt)}</TableCell>
                   <TableCell><StatusBadge status={t.status} /></TableCell>

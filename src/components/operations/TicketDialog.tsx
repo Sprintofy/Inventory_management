@@ -33,7 +33,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { RequestPriority, TicketIssue } from "@/types";
+import type { RequestPriority, SubDepartment, TicketIssue } from "@/types";
 
 const ticketCategories = [
   "IT Support",
@@ -52,6 +52,7 @@ const schema = z.object({
   category: z.string().min(1, "Select a category"),
   department: z.string().min(1, "Select a department"),
   subDepartment: z.string().optional(),
+  subDepartment2: z.string().optional(),
   priority: z.string().min(1, "Select priority"),
   productId: z.string().optional(),
 });
@@ -98,6 +99,7 @@ export default function TicketCreateDialog({
       category: "General",
       department: "",
       subDepartment: "",
+      subDepartment2: "",
       priority: "medium",
       productId: "",
     },
@@ -106,6 +108,7 @@ export default function TicketCreateDialog({
   const watchedCategory = form.watch("category");
   const watchedDepartment = form.watch("department");
   const watchedSubDepartment = form.watch("subDepartment");
+  const watchedSubDepartment2 = form.watch("subDepartment2");
   const watchedPriority = form.watch("priority");
 
   const [issues, setIssues] = React.useState<IssueFormValues[]>([emptyIssue()]);
@@ -122,9 +125,18 @@ export default function TicketCreateDialog({
   }, [open, form]);
 
   const effectiveDept = isScopedUser ? activeDepartment : watchedDepartment;
-  const subOptions =
+
+  // Level 1 sub-departments of the selected department
+  const level1Options =
     effectiveDept && effectiveDept !== "all"
       ? subDepartmentsFor(effectiveDept)
+      : [];
+
+  // Level 2 sub-departments (children) of the selected level-1 sub-department
+  const level2Options: SubDepartment[] =
+    watchedSubDepartment
+      ? level1Options.find((s) => s.name === watchedSubDepartment)?.children ??
+        []
       : [];
 
   const productOptions = state.inventory ?? [];
@@ -172,7 +184,6 @@ export default function TicketCreateDialog({
 
     setIssuesError(null);
 
-    const dept = isScopedUser ? activeDepartment : values.department;
     const now = new Date().toISOString();
 
     const selectedProduct = values.productId
@@ -194,6 +205,14 @@ export default function TicketCreateDialog({
 
     const suffix = selectedProduct ? ` (${selectedProduct.deviceName})` : "";
 
+    // The last selected sub-department becomes the actual department.
+    // Priority: level 2 > level 1 > parent department.
+    const finalDepartment =
+      values.subDepartment2 ||
+      values.subDepartment ||
+      values.department ||
+      "";
+
     addTicket({
       title: `${values.title}${suffix}`,
       description: `${values.description}${
@@ -204,11 +223,8 @@ export default function TicketCreateDialog({
           : ""
       }`,
       category: values.category || "General",
-      department: dept,
-      subDepartment:
-        (isScopedUser
-          ? user?.subDepartment || values.subDepartment
-          : values.subDepartment) || undefined,
+      department: isScopedUser ? activeDepartment : finalDepartment,
+      subDepartment: undefined,
       priority: values.priority as RequestPriority,
       issues: ticketIssues,
       itemIds,
@@ -471,6 +487,7 @@ export default function TicketCreateDialog({
                           onValueChange={(v) => {
                             field.onChange(v);
                             form.setValue("subDepartment", "");
+                            form.setValue("subDepartment2", "");
                           }}
                         >
                           <SelectTrigger>
@@ -503,7 +520,8 @@ export default function TicketCreateDialog({
               </p>
             )}
 
-            {subOptions.length > 0 && !isScopedUser && (
+            {/* Level 1 Sub-department */}
+            {level1Options.length > 0 && !isScopedUser && (
               <FormField
                 control={form.control}
                 name="subDepartment"
@@ -512,7 +530,47 @@ export default function TicketCreateDialog({
                     <FormLabel>
                       Sub-department
                       <span className="font-normal text-muted-foreground">
-                        (routed destination)
+                        (level 1)
+                      </span>
+                    </FormLabel>
+                    <FormControl>
+                      <Select
+                        value={field.value || "__none__"}
+                        onValueChange={(v) => {
+                          field.onChange(v === "__none__" ? "" : v);
+                          form.setValue("subDepartment2", "");
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select sub-department" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">None</SelectItem>
+                          {level1Options.map((s) => (
+                            <SelectItem key={s.id} value={s.name}>
+                              {s.name} ({s.code})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {/* Level 2 Sub-department (children of level 1) */}
+            {level2Options.length > 0 && !isScopedUser && (
+              <FormField
+                control={form.control}
+                name="subDepartment2"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Sub-department
+                      <span className="font-normal text-muted-foreground">
+                        (level 2)
                       </span>
                     </FormLabel>
                     <FormControl>
@@ -523,13 +581,11 @@ export default function TicketCreateDialog({
                         }
                       >
                         <SelectTrigger>
-                          <SelectValue
-                            placeholder={`Route to ${effectiveDept} sub-department`}
-                          />
+                          <SelectValue placeholder="Select sub-sub-department" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="__none__">None</SelectItem>
-                          {subOptions.map((s) => (
+                          {level2Options.map((s) => (
                             <SelectItem key={s.id} value={s.name}>
                               {s.name} ({s.code})
                             </SelectItem>

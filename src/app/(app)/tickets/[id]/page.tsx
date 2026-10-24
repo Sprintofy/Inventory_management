@@ -183,7 +183,6 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                   ["Customer", ticket.customer ?? "—"],
                   ["Category", ticket.category],
                   ["Department", ticket.department],
-                  ["Sub-department", ticket.subDepartment ?? "—"],
                   ["Priority", ticket.priority],
                   ["Status", ticket.status],
                   ["Created By", ticket.createdBy],
