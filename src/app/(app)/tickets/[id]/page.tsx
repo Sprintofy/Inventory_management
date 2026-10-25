@@ -22,6 +22,8 @@ import { formatDate, formatDateTime } from "@/lib/utils";
 import { exportTicketsExcel } from "@/lib/excel";
 import { issueCounts } from "@/lib/ticket-utils";
 import type { RequestPriority, TicketIssue } from "@/types";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 const priorityClass: Record<RequestPriority, string> = {
   low: "bg-muted text-muted-foreground",
@@ -114,6 +116,70 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     router.push(`/tickets/${ticket!.id}/resolve/${issueId}`);
   };
 
+  const downloadTicketPDF = () => {
+    if (!ticket) return;
+
+    // Find the product/inventory item linked to this ticket
+    const itemId = ticket.itemIds?.[0];
+    const item = state.inventory.find((i) => i.id === itemId);
+    const productName = item?.deviceName || "N/A";
+    const regNo = item?.sku || "N/A";
+    const qty = item?.quantity || 1;
+    const deptName = item?.department || ticket.department || "";
+
+    // Find stock in / stock out records for this item
+    const stockInRecord = state.stockIn.find((r) => r.itemId === itemId);
+    const stockOutRecord = state.stockOut.find((r) => r.itemId === itemId);
+    const dateIn = stockInRecord?.date ? new Date(stockInRecord.date).toLocaleDateString() : "—";
+    const dateOut = stockOutRecord?.date ? new Date(stockOutRecord.date).toLocaleDateString() : "—";
+
+    // Get first issue for fault type and technician
+    const issue = ticket.issues?.[0];
+    const typeOfFault = issue?.title || ticket.title || "N/A";
+    const actionByTech = issue?.assignedTo || ticket.technicianId || "—";
+
+    const doc = new jsPDF("p", "mm", "a4");
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // Header
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("REPAIR TICKET RECEIPT", 14, 15);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Ticket #: ${ticket.id}`, 14, 22);
+    doc.text(`Date: ${new Date().toLocaleDateString()}`, 14, 27);
+
+    // Horizontal line
+    doc.setLineWidth(0.5);
+    doc.line(14, 30, pageWidth - 14, 30);
+
+    // Ticket details table
+    (doc as any).autoTable({
+      startY: 35,
+      head: [["Field", "Details"]],
+      body: [
+        ["Ticket ID", ticket.id],
+        ["Equipment / Product", productName],
+        ["Reg No.", regNo],
+        ["Quantity", qty.toString()],
+        ["Department / Section", deptName],
+        ["Date In (Stock In)", dateIn],
+        ["Date Out (Stock Out)", dateOut],
+        ["Type of Fault", typeOfFault],
+        ["Progress / Status", ticket.status],
+        ["Action by Technician", actionByTech],
+        ["Resolution", ticket.resolution || "—"],
+      ],
+      styles: { fontSize: 8, cellPadding: 3 },
+      columnStyles: { 0: { cellWidth: 40, fontStyle: "bold" }, 1: { cellWidth: 150 } },
+      margin: { left: 14, right: 14 },
+    });
+
+    doc.save(`ticket-${ticket.id}.pdf`);
+    toast.success("Ticket receipt downloaded as PDF");
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -134,6 +200,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
             <Button variant="outline" onClick={() => { exportTicketsExcel([ticket], state.movements); toast.success("Exported ticket to Excel"); }}>
               <FileDown className="size-4" /> Export
             </Button>
+            <Button onClick={downloadTicketPDF}><FileDown className="size-4" /> Download PDF</Button>
 
             <Button onClick={() => setCloseOpen(true)}><TicketCheck className="size-4" /> Close Ticket</Button>
           </div>
