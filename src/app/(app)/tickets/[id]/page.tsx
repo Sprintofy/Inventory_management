@@ -86,7 +86,8 @@ function IssueItem({
 }
 
 export default function TicketDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+  const { id: rawId } = use(params);
+  const id = decodeURIComponent(rawId);
   const { state, can, updateIssue, removeIssue, closeTicket } = useApp();
   const router = useRouter();
   const loading = useFakeLoading(300);
@@ -113,7 +114,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   }
 
   const markIssueResolved = (issueId: string) => {
-    router.push(`/tickets/${ticket!.id}/resolve/${issueId}`);
+    router.push(`/tickets/${encodeURIComponent(ticket!.id)}/resolve/${issueId}`);
   };
 
   const downloadTicketPDF = () => {

@@ -32,6 +32,8 @@ const priorityClass: Record<RequestPriority, string> = {
   critical: "bg-danger/10 text-danger",
 };
 
+const ticketUrl = (id: string) => `/tickets/${encodeURIComponent(id)}`;
+
 type StatusFilter = "all" | TicketStatus;
 
 const statusTabs: StatusFilter[] = ["all", "open", "in-progress", "partially-resolved", "resolved", "closed"];
@@ -155,7 +157,7 @@ export default function TicketsPage() {
             {!loading && paged.map((t) => {
               const counts = issueCounts(t.issues);
               return (
-                <TableRow key={t.id} className="cursor-pointer" onClick={() => router.push(`/tickets/${t.id}`)}>
+                <TableRow key={t.id} className="cursor-pointer" onClick={() => router.push(ticketUrl(t.id))}>
                   <TableCell className="font-mono text-xs font-medium">{t.id}</TableCell>
                   <TableCell className="max-w-64">
                     <p className="truncate text-sm font-medium">{t.title}</p>

@@ -15,7 +15,8 @@ import Link from "next/link";
 import type { Ticket, TicketIssue } from "@/types";
 
 export default function TicketResolvePage({ params }: { params: Promise<{ id: string; issueId: string }> }) {
-  const { id } = use(params);
+  const { id: rawId } = use(params);
+  const id = decodeURIComponent(rawId);
   const { issueId } = use(params);
   const { state, updateIssue } = useApp();
   const loading = useFakeLoading(300);
@@ -61,7 +62,7 @@ export default function TicketResolvePage({ params }: { params: Promise<{ id: st
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <Link href={`/tickets/${ticket.id}`}>
+          <Link href={`/tickets/${encodeURIComponent(ticket.id)}`}>
             <Button variant="outline" size="sm">
               <ArrowLeft className="size-4" /> Back to Ticket
             </Button>
@@ -119,7 +120,7 @@ export default function TicketResolvePage({ params }: { params: Promise<{ id: st
               {commentError && <p className="text-destructive mt-1 text-sm">{commentError}</p>}
             </div>
             <div className="flex flex-row gap-2">
-              <Link href={`/tickets/${ticket.id}`}>
+              <Link href={`/tickets/${encodeURIComponent(ticket.id)}`}>
                 <Button variant="outline">Cancel</Button>
               </Link>
               <Button type="button" onClick={resolveIssue} disabled={!comment.trim()}>
