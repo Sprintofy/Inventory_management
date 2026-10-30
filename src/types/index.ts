@@ -229,7 +229,7 @@ export interface StockInRecord {
   quantity: number;
   department: string;
   createdBy: string;
-  status: "received" | "issued" | "cancelled";
+  status: "pending" | "Sent" | "cancelled";
 }
 
 export interface Activity {

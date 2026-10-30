@@ -140,7 +140,7 @@ export default function StockOutPage({ params }: { params: Promise<{ id: string 
           </CardHeader>
           <CardContent className="px-5">
             <span className="text-sm font-medium">
-              {record.status === "issued" ? "Issued" : "Received"}
+              {record.status === "Sent" ? "Sent" : "Pending"}
             </span>
           </CardContent>
         </Card>

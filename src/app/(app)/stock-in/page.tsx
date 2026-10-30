@@ -98,6 +98,7 @@ export default function StockInPage() {
         QTY: r.quantity,
         DEPT: r.department,
         "DATE IN": formatDate(r.dateIn),
+        "DATE OUT": r.dateOut ? formatDate(r.dateOut) : "-",
       })),
     );
     toast.success(`Exported ${records.length} records to CSV`);
@@ -183,20 +184,21 @@ export default function StockInPage() {
               <TableHead>QTY</TableHead>
               <TableHead>DEPT</TableHead>
               <TableHead>DATE IN</TableHead>
+              <TableHead>DATE OUT</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading && (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={8} className="py-2">
+                <TableCell colSpan={9} className="py-2">
                   <Skeleton className="h-8 w-full" />
                 </TableCell>
               </TableRow>
             )}
             {!loading && paged.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="p-0">
+                <TableCell colSpan={9} className="p-0">
                   <EmptyState
                     icon={PackageMinus}
                     title="No stock-in records"
@@ -241,17 +243,22 @@ export default function StockInPage() {
                   <TableCell className="text-muted-foreground text-xs">
                     {formatDate(r.dateIn)}
                   </TableCell>
+                  <TableCell className="text-muted-foreground text-xs">
+                    {r.dateOut ? formatDate(r.dateOut) : "-"}
+                  </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleStockOut(r.id);
-                      }}
-                    >
-                      <PackageMinus className="size-3.5" /> Stock Out
-                    </Button>
+                    {r.status !== "Sent" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStockOut(r.id);
+                        }}
+                      >
+                        <PackageMinus className="size-3.5" /> Stock Out
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
