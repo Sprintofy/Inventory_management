@@ -54,6 +54,14 @@ export default function StockInPage() {
     [state.inventory],
   );
 
+  const skuByItemId = React.useMemo(() => {
+    const map = new Map<string, string>();
+    for (const i of state.inventory) map.set(i.id, i.sku);
+    return map;
+  }, [state.inventory]);
+
+  const regNoOf = (itemId: string) => skuByItemId.get(itemId) ?? "-";
+
   React.useEffect(() => {
     fetchStockIn(filters);
   }, [filters, fetchStockIn]);
@@ -83,17 +91,13 @@ export default function StockInPage() {
     downloadCSV(
       `stock-in-${new Date().toISOString().slice(0, 10)}.csv`,
       records.map((r) => ({
-        "Work Order Id": r.workOrderId,
-        "Job No": r.jobNo,
-        Date: r.dateIn,
-        Item: r.itemName,
-        Type: r.productType,
-        Quantity: r.quantity,
-        Department: r.department,
-        "Date Out": r.dateOut ?? "",
-        Remarks: r.remarks ?? "",
-        Status: r.status,
-        "Created By": r.createdBy,
+        "S/N": r.id,
+        "JOB NO": r.jobNo,
+        "EQPT NOMENCLATURE": r.itemName,
+        "REGD NO": regNoOf(r.itemId),
+        QTY: r.quantity,
+        DEPT: r.department,
+        "DATE IN": formatDate(r.dateIn),
       })),
     );
     toast.success(`Exported ${records.length} records to CSV`);
@@ -172,28 +176,27 @@ export default function StockInPage() {
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead>Job No</TableHead>
-              <TableHead>Work Order Id</TableHead>
-              <TableHead>Date In</TableHead>
-              <TableHead>Item</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Qty</TableHead>
-              <TableHead>Department</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>S/N</TableHead>
+              <TableHead>JOB NO</TableHead>
+              <TableHead>EQPT NOMENCLATURE</TableHead>
+              <TableHead>REGD NO</TableHead>
+              <TableHead>QTY</TableHead>
+              <TableHead>DEPT</TableHead>
+              <TableHead>DATE IN</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading && (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={9} className="py-2">
+                <TableCell colSpan={8} className="py-2">
                   <Skeleton className="h-8 w-full" />
                 </TableCell>
               </TableRow>
             )}
             {!loading && paged.length === 0 && (
               <TableRow>
-                <TableCell colSpan={9} className="p-0">
+                <TableCell colSpan={8} className="p-0">
                   <EmptyState
                     icon={PackageMinus}
                     title="No stock-in records"
@@ -218,30 +221,25 @@ export default function StockInPage() {
                   }}
                 >
                   <TableCell className="font-mono text-xs font-medium">
+                    {r.id}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-xs">
                     {r.jobNo}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-xs">
-                    {r.workOrderId}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-xs">
-                    {formatDate(r.dateIn)}
                   </TableCell>
                   <TableCell className="text-sm font-medium">
                     {r.itemName}
                   </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {r.productType}
+                  <TableCell className="text-muted-foreground text-xs">
+                    {regNoOf(r.itemId)}
                   </TableCell>
                   <TableCell className="text-sm font-semibold tabular-nums">
                     {formatNumber(r.quantity)}
                   </TableCell>
-                  <TableCell>
-                    <span className="bg-muted inline-flex rounded-md px-2 py-0.5 text-xs font-medium">
-                      {r.department}
-                    </span>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {r.department}
                   </TableCell>
-                  <TableCell>
-                    <StatusBadge status={r.status} />
+                  <TableCell className="text-muted-foreground text-xs">
+                    {formatDate(r.dateIn)}
                   </TableCell>
                   <TableCell className="text-right">
                     <Button
