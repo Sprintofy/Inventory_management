@@ -1,7 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { PackageMinus, PackagePlus, Plus, Trash2, Package, Clock } from "lucide-react";
+import {
+  PackageMinus,
+  PackagePlus,
+  Plus,
+  Trash2,
+  Package,
+  Clock,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +21,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { FormControl } from "@/components/ui/form";
 import { useApp } from "@/store/app-store";
 import type {
@@ -80,8 +93,8 @@ function ProductHistoryPanel({
   const outHistory = state.stockOutHistory.filter(
     (r: StockOutRecord) => r.itemId === itemId,
   );
-  const ticketHistory = (state.ticketHistory as Ticket[]).filter(
-    (t: Ticket) => t.itemIds.includes(itemId),
+  const ticketHistory = (state.ticketHistory as Ticket[]).filter((t: Ticket) =>
+    t.itemIds.includes(itemId),
   );
 
   // Build a unified date-keyed timeline: stock-in, stock-out, and tickets.
@@ -89,8 +102,13 @@ function ProductHistoryPanel({
     string,
     { in: StockInRecord[]; out: StockOutRecord[]; tickets: Ticket[] }
   > = {};
-  const add = (dateKey: string, kind: "in" | "out" | "tickets", record: any) => {
-    if (!timeline[dateKey]) timeline[dateKey] = { in: [], out: [], tickets: [] };
+  const add = (
+    dateKey: string,
+    kind: "in" | "out" | "tickets",
+    record: any,
+  ) => {
+    if (!timeline[dateKey])
+      timeline[dateKey] = { in: [], out: [], tickets: [] };
     timeline[dateKey][kind].push(record);
   };
   for (const r of inHistory) add(formatDate(r.date), "in", r);
@@ -144,10 +162,12 @@ function ProductHistoryPanel({
         <div className="space-y-3">
           {sortedDates.map((dateKey) => {
             const day = timeline[dateKey];
-            const total =
-              day.in.length + day.out.length + day.tickets.length;
+            const total = day.in.length + day.out.length + day.tickets.length;
             return (
-              <div key={dateKey} className="rounded-lg border bg-muted/30 p-2.5">
+              <div
+                key={dateKey}
+                className="rounded-lg border bg-muted/30 p-2.5"
+              >
                 {/* Date header */}
                 <div className="mb-1.5 flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -248,14 +268,9 @@ function ProductHistoryPanel({
                         </span>
                       </div>
                       {day.tickets.map((t) => (
-                        <div
-                          key={t.id}
-                          className="space-y-1"
-                        >
+                        <div key={t.id} className="space-y-1">
                           {/* Ticket row */}
-                          <div
-                            className="flex items-center justify-between text-xs bg-white/60 rounded p-1.5 border border-white/40"
-                          >
+                          <div className="flex items-center justify-between text-xs bg-white/60 rounded p-1.5 border border-white/40">
                             <div className="min-w-[90px]">
                               <div className="text-xs font-medium text-primary truncate">
                                 {t.title}
@@ -265,12 +280,16 @@ function ProductHistoryPanel({
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className={`text-[9px] font-medium ${statusColor(t.status)}`}>
-                                {t.status.charAt(0).toUpperCase() + t.status.slice(1)}
+                              <span
+                                className={`text-[9px] font-medium ${statusColor(t.status)}`}
+                              >
+                                {t.status.charAt(0).toUpperCase() +
+                                  t.status.slice(1)}
                               </span>
                               <div className="w-0.5 h-4 bg-muted" />
                               <div className="text-[9px] text-muted-foreground">
-                                {t.priority.charAt(0).toUpperCase() + t.priority.slice(1)}
+                                {t.priority.charAt(0).toUpperCase() +
+                                  t.priority.slice(1)}
                               </div>
                             </div>
                           </div>
@@ -303,9 +322,9 @@ function ProductHistoryPanel({
                           )}
                         </div>
                       ))}
-                </div>
+                    </div>
                   )}
-              </div>
+                </div>
               </div>
             );
           })}
@@ -333,13 +352,19 @@ export function StockInDialog({
   fullPage?: boolean;
 }) {
   const { state, visibleDepartments, stockIn, user } = useApp();
-  const [lines, setLines] = React.useState<StockLine[]>([{ itemId: "", quantity: 1 }]);
+  const [lines, setLines] = React.useState<StockLine[]>([
+    { itemId: "", quantity: 1 },
+  ]);
   const [note, setNote] = React.useState("");
   const [historyItemId, setHistoryItemId] = React.useState<string>("");
 
   React.useEffect(() => {
     if (open) {
-      setLines(presetItem ? [{ itemId: presetItem.id, quantity: 1 }] : [{ itemId: "", quantity: 1 }]);
+      setLines(
+        presetItem
+          ? [{ itemId: presetItem.id, quantity: 1 }]
+          : [{ itemId: "", quantity: 1 }],
+      );
       setNote("");
       setHistoryItemId("");
     }
@@ -352,15 +377,22 @@ export function StockInDialog({
 
   const options = React.useMemo(
     () =>
-      state.inventory.filter((i) => (visibleDepartments.length === 0 || visibleDepartments.includes(i.department))),
-    [state.inventory, visibleDepartments]
+      state.inventory.filter(
+        (i) =>
+          visibleDepartments.length === 0 ||
+          visibleDepartments.includes(i.department),
+      ),
+    [state.inventory, visibleDepartments],
   );
 
   const updateLine = (idx: number, patch: Partial<StockLine>) => {
-    setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
+    setLines((prev) =>
+      prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)),
+    );
   };
 
-  const valid = lines.length > 0 && lines.every((l) => l.itemId && l.quantity >= 1);
+  const valid =
+    lines.length > 0 && lines.every((l) => l.itemId && l.quantity >= 1);
 
   const onSubmit = () => {
     if (!valid) {
@@ -369,7 +401,12 @@ export function StockInDialog({
     }
     for (const l of lines) {
       const item = state.inventory.find((i) => i.id === l.itemId);
-      stockIn(l.itemId, l.quantity, item?.supplier ?? "Internal", note || undefined);
+      stockIn(
+        l.itemId,
+        l.quantity,
+        item?.supplier ?? "Internal",
+        note || undefined,
+      );
     }
     if (!fullPage) {
       onOpenChange(false);
@@ -386,14 +423,18 @@ export function StockInDialog({
           <div key={idx} className="flex items-end gap-2 rounded-lg border p-3">
             <div className="flex-1 space-y-1.5">
               <Label className="text-xs">Item {idx + 1}</Label>
-              <Select value={l.itemId} onValueChange={(v) => updateLine(idx, { itemId: v })}>
+              <Select
+                value={l.itemId}
+                onValueChange={(v) => updateLine(idx, { itemId: v })}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select item" />
                 </SelectTrigger>
                 <SelectContent>
                   {options.map((i) => (
                     <SelectItem key={i.id} value={i.id}>
-                      {i.deviceName} (Reg No. {i.sku}) — {formatNumber(i.quantity)} in stock
+                      {i.deviceName} (Reg No. {i.sku}) —{" "}
+                      {formatNumber(i.quantity)} in stock
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -412,7 +453,9 @@ export function StockInDialog({
                 min={1}
                 value={l.quantity}
                 onChange={(e) =>
-                  updateLine(idx, { quantity: Math.max(1, Number(e.target.value) || 1) })
+                  updateLine(idx, {
+                    quantity: Math.max(1, Number(e.target.value) || 1),
+                  })
                 }
               />
             </div>
@@ -421,7 +464,9 @@ export function StockInDialog({
                 type="button"
                 variant="ghost"
                 size="icon-sm"
-                onClick={() => setLines((prev) => prev.filter((_, i) => i !== idx))}
+                onClick={() =>
+                  setLines((prev) => prev.filter((_, i) => i !== idx))
+                }
                 aria-label="Remove row"
               >
                 <Trash2 className="size-4 text-destructive" />
@@ -434,7 +479,9 @@ export function StockInDialog({
         type="button"
         variant="outline"
         size="sm"
-        onClick={() => setLines((prev) => [...prev, { itemId: "", quantity: 1 }])}
+        onClick={() =>
+          setLines((prev) => [...prev, { itemId: "", quantity: 1 }])
+        }
       >
         <Plus className="size-3.5" /> Add another item
       </Button>
@@ -449,7 +496,9 @@ export function StockInDialog({
     </div>
   );
 
-  const selectedItem = historyItemId ? state.inventory.find((i) => i.id === historyItemId) : undefined;
+  const selectedItem = historyItemId
+    ? state.inventory.find((i) => i.id === historyItemId)
+    : undefined;
 
   if (fullPage) {
     return (
@@ -469,20 +518,33 @@ export function StockInDialog({
             </>
           }
         />
-        <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="space-y-6">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            onSubmit();
+          }}
+          className="space-y-6"
+        >
           {renderContent()}
           <div className="flex flex-row gap-2 pt-4">
             <Link href="/stock-in">
               <Button variant="outline">Cancel</Button>
             </Link>
-            <Button type="submit" disabled={!valid} className="bg-success hover:bg-success/90 text-white">
+            <Button
+              type="submit"
+              disabled={!valid}
+              className="bg-success hover:bg-success/90 text-white"
+            >
               Record Stock In ({lines.length})
             </Button>
           </div>
         </form>
         {selectedItem && (
           <Card className="border rounded-xl p-4">
-            <ProductHistoryPanel itemId={selectedItem.id} itemName={selectedItem.deviceName} />
+            <ProductHistoryPanel
+              itemId={selectedItem.id}
+              itemName={selectedItem.deviceName}
+            />
           </Card>
         )}
       </div>
@@ -503,9 +565,7 @@ export function StockInDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="col-span-7 space-y-3">
-          {renderContent()}
-        </div>
+        <div className="col-span-7 space-y-3">{renderContent()}</div>
 
         {selectedItem && (
           <div className="col-span-5 space-y-3">
@@ -521,7 +581,11 @@ export function StockInDialog({
         )}
 
         <DialogFooter className="col-span-full border-t pt-4">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
           <Button
@@ -554,7 +618,7 @@ export function StockOutDialog({
   fullPage?: boolean;
 }) {
   const router = useRouter();
-  const { state, visibleDepartments, stockOut, user } = useApp();
+  const { state, visibleDepartments, stockOut, user, fetchStockIn } = useApp();
   const [itemId, setItemId] = React.useState("");
   const [quantity, setQuantity] = React.useState(1);
   const [purpose, setPurpose] = React.useState("");
@@ -567,22 +631,55 @@ export function StockOutDialog({
       setQuantity(1);
       setPurpose("");
       setNote("");
-      setReference(`SO-${Date.now().toString().slice(-6)}`);
+      setReference("");
     }
   }, [open, presetItem]);
 
   const selectedItem = state.inventory.find((i) => i.id === itemId);
   const overAvailable = selectedItem && quantity > selectedItem.quantity;
   const closedItemIds = React.useMemo(
-    () => new Set(state.tickets.filter((t) => t.status === "closed").flatMap((t) => t.itemIds ?? [])),
-    [state.tickets]
+    () =>
+      new Set(
+        state.tickets
+          .filter((t) => t.status === "closed")
+          .flatMap((t) => t.itemIds ?? []),
+      ),
+    [state.tickets],
   );
   const options = state.inventory.filter(
     (i) =>
-      (visibleDepartments.length === 0 || visibleDepartments.includes(i.department)) &&
+      (visibleDepartments.length === 0 ||
+        visibleDepartments.includes(i.department)) &&
       i.quantity > 0 &&
       closedItemIds.has(i.id),
   );
+
+  const stockInRefs = React.useMemo(() => {
+    const byRef = new Map<
+      string,
+      { reference: string; itemName: string; quantity: number; supplier: string }
+    >();
+    for (const r of state.stockInRecords ?? []) {
+      if (r.status !== "received") continue;
+      if (
+        visibleDepartments.length > 0 &&
+        !visibleDepartments.includes(r.department)
+      )
+        continue;
+      const existing = byRef.get(r.reference);
+      if (existing) {
+        existing.quantity += r.quantity;
+      } else {
+        byRef.set(r.reference, {
+          reference: r.reference,
+          itemName: r.itemName,
+          quantity: r.quantity,
+          supplier: r.supplier ?? "Internal",
+        });
+      }
+    }
+    return Array.from(byRef.values());
+  }, [state.stockInRecords, visibleDepartments]);
 
   const onSubmit = () => {
     if (!itemId || quantity < 1 || purpose.trim().length < 2) {
@@ -593,7 +690,14 @@ export function StockOutDialog({
       toast.error(`Only ${selectedItem?.quantity} available`);
       return;
     }
-    stockOut(itemId, quantity, user?.name ?? "Department", purpose.trim(), note || undefined, reference);
+    stockOut(
+      itemId,
+      quantity,
+      user?.name ?? "Department",
+      purpose.trim(),
+      note || undefined,
+      reference,
+    );
     if (!fullPage) {
       onOpenChange(false);
     } else {
@@ -605,7 +709,23 @@ export function StockOutDialog({
     <div className="space-y-4">
       <div className="space-y-1.5">
         <Label className="text-xs">Reference</Label>
-        <Input value={reference} onChange={(e) => setReference(e.target.value)} />
+        <Select value={reference} onValueChange={setReference}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select Reference Stock In" />
+          </SelectTrigger>
+          <SelectContent>
+            {stockInRefs.map((r) => (
+              <SelectItem key={r.reference} value={r.reference}>
+                {r.reference} — {r.itemName} × {r.quantity} ({r.supplier})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {stockInRefs.length === 0 && (
+          <p className="text-muted-foreground text-[11px]">
+            No received stock-in records available to reference.
+          </p>
+        )}
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs">Item (closed tickets only)</Label>
@@ -623,7 +743,8 @@ export function StockOutDialog({
         </Select>
         {options.length === 0 && (
           <p className="text-muted-foreground text-[11px]">
-            No items with closed tickets — only items from closed tickets can be issued.
+            No items with closed tickets — only items from closed tickets can be
+            issued.
           </p>
         )}
       </div>
@@ -640,19 +761,35 @@ export function StockOutDialog({
             }
           />
           {selectedItem && (
-            <p className={overAvailable ? "text-destructive text-[11px] font-medium" : "text-muted-foreground text-[11px]"}>
-              {overAvailable ? `Only ${selectedItem.quantity} available` : `Available: ${formatNumber(selectedItem.quantity)}`}
+            <p
+              className={
+                overAvailable
+                  ? "text-destructive text-[11px] font-medium"
+                  : "text-muted-foreground text-[11px]"
+              }
+            >
+              {overAvailable
+                ? `Only ${selectedItem.quantity} available`
+                : `Available: ${formatNumber(selectedItem.quantity)}`}
             </p>
           )}
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Purpose</Label>
-          <Input placeholder="e.g. Project deployment" value={purpose} onChange={(e) => setPurpose(e.target.value)} />
+          <Input
+            placeholder="e.g. Project deployment"
+            value={purpose}
+            onChange={(e) => setPurpose(e.target.value)}
+          />
         </div>
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs">Note (optional)</Label>
-        <Input placeholder="Additional remarks" value={note} onChange={(e) => setNote(e.target.value)} />
+        <Input
+          placeholder="Additional remarks"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+        />
       </div>
     </div>
   );
@@ -675,7 +812,13 @@ export function StockOutDialog({
             </>
           }
         />
-        <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="space-y-6">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            onSubmit();
+          }}
+          className="space-y-6"
+        >
           {renderContent()}
           <div className="flex flex-row gap-2 pt-4">
             <Link href="/stock-out">
@@ -692,7 +835,10 @@ export function StockOutDialog({
         </form>
         {selectedItem && (
           <Card className="border rounded-xl p-4">
-            <ProductHistoryPanel itemId={selectedItem.id} itemName={selectedItem.deviceName} />
+            <ProductHistoryPanel
+              itemId={selectedItem.id}
+              itemName={selectedItem.deviceName}
+            />
           </Card>
         )}
       </div>
@@ -709,26 +855,32 @@ export function StockOutDialog({
             <PackageMinus className="text-primary size-5" /> Issue Stock
           </DialogTitle>
           <DialogDescription>
-            Issue inventory from your department. Stock quantity will be reduced.
+            Issue inventory from your department. Stock quantity will be
+            reduced.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="col-span-7 space-y-4">
-          {renderContent()}
-        </div>
+        <div className="col-span-7 space-y-4">{renderContent()}</div>
 
         {selectedItem && (
           <div className="col-span-5 space-y-4">
             <Card>
               <CardContent className="p-4">
-                <ProductHistoryPanel itemId={selectedItem.id} itemName={selectedItem.deviceName} />
+                <ProductHistoryPanel
+                  itemId={selectedItem.id}
+                  itemName={selectedItem.deviceName}
+                />
               </CardContent>
             </Card>
           </div>
         )}
 
         <DialogFooter className="col-span-full border-t pt-4">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
           <Button

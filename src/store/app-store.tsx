@@ -24,20 +24,31 @@ import type {
 } from "@/types";
 import { uid } from "@/lib/utils";
 import { ticketStatusFromIssues } from "@/lib/ticket-utils";
-import type { StockInFiltersState, StockOutFiltersState } from "@/components/inventory/InventoryFilters";
+import type {
+  StockInFiltersState,
+  StockOutFiltersState,
+} from "@/components/inventory/InventoryFilters";
 
 // The API mounts every route under /api (see Inventory_api/src/app.ts) and its
 // auth middleware only exempts /api/auth/login. A base URL without that prefix
 // makes every login attempt fail with 403 Forbidden, so normalise it here.
 const API_BASE = (() => {
-  const raw = (process.env.NEXT_PUBLIC_API_URL || "/api").trim().replace(/\/+$/, "");
+  const raw = (process.env.NEXT_PUBLIC_API_URL || "/api")
+    .trim()
+    .replace(/\/+$/, "");
   if (!raw) return "/api";
   return raw.endsWith("/api") ? raw : `${raw}/api`;
 })();
 const TOKEN_KEY = "inventoryos-token";
 
-async function apiFetch(path: string, options: RequestInit = {}, token?: string | null) {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
+async function apiFetch(
+  path: string,
+  options: RequestInit = {},
+  token?: string | null,
+) {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
   if (token) headers["authorization"] = token;
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
@@ -235,11 +246,15 @@ const emptyState = (user: User | null): AppState => ({
 function nestSubs(flat: Array<Record<string, unknown>>): SubDepartment[] {
   const byId = new Map<string, SubDepartment>();
   for (const s of flat) {
-    byId.set(s.id as string, { ...(s as unknown as SubDepartment), children: [] });
+    byId.set(s.id as string, {
+      ...(s as unknown as SubDepartment),
+      children: [],
+    });
   }
   const roots: SubDepartment[] = [];
   for (const s of byId.values()) {
-    const parentId = (s as unknown as Record<string, unknown>).parentSubDepartmentId as string | null;
+    const parentId = (s as unknown as Record<string, unknown>)
+      .parentSubDepartmentId as string | null;
     const parent = parentId ? byId.get(parentId) : undefined;
     if (parent) parent.children.push(s);
     else roots.push(s);
@@ -247,10 +262,15 @@ function nestSubs(flat: Array<Record<string, unknown>>): SubDepartment[] {
   return roots;
 }
 
-function buildDepartments(depts: Array<Record<string, unknown>>, subs: Array<Record<string, unknown>>): Department[] {
+function buildDepartments(
+  depts: Array<Record<string, unknown>>,
+  subs: Array<Record<string, unknown>>,
+): Department[] {
   return depts.map((d) => ({
     ...(d as object),
-    subDepartments: nestSubs(subs.filter((s) => s.departmentId === (d as { id?: string }).id)),
+    subDepartments: nestSubs(
+      subs.filter((s) => s.departmentId === (d as { id?: string }).id),
+    ),
   })) as Department[];
 }
 
@@ -290,7 +310,7 @@ interface AppContextValue {
   ) => void;
   updateStockInStatus: (id: string, status: StockInRecord["status"]) => void;
   updateStockOutStatus: (id: string, status: StockOutRecord["status"]) => void;
-  fetchStockIn: (filters: StockInFiltersState) => Promise<void>;
+  fetchStockIn: (filters: StockInFiltersState | any) => Promise<void>;
   fetchStockOut: (filters: StockOutFiltersState) => Promise<void>;
   fetchStockInHistory: (itemId: string) => Promise<void>;
   fetchStockOutHistory: (itemId: string) => Promise<void>;
@@ -399,7 +419,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const boot = React.useCallback(async () => {
     try {
-      const stored = typeof window !== "undefined" ? window.localStorage.getItem(TOKEN_KEY) : null;
+      const stored =
+        typeof window !== "undefined"
+          ? window.localStorage.getItem(TOKEN_KEY)
+          : null;
       if (!stored) {
         setReady(true);
         return;
@@ -408,7 +431,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const user = me as User;
       const data = await loadAll(stored);
       setToken(stored);
-      setState({ ...emptyState(user), ...data, user, stockInRecords: data.stockIn, stockOutRecords: data.stockOut, department: user.role === "super-admin" || user.role === "admin" ? "all" : user.department });
+      setState({
+        ...emptyState(user),
+        ...data,
+        user,
+        stockInRecords: data.stockIn,
+        stockOutRecords: data.stockOut,
+        department:
+          user.role === "super-admin" || user.role === "admin"
+            ? "all"
+            : user.department,
+      });
     } catch {
       try {
         window.localStorage.removeItem(TOKEN_KEY);
@@ -461,10 +494,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [visibleDepartments, role]);
 
   const activeDepartment = React.useMemo(() => {
-    if (
-      role === "super-admin" ||
-      role === "admin"
-    ) {
+    if (role === "super-admin" || role === "admin") {
       return "all";
     }
     if (
@@ -531,7 +561,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         user,
         stockInRecords: loaded.stockIn,
         stockOutRecords: loaded.stockOut,
-        department: user.role === "super-admin" || user.role === "admin" ? "all" : user.department,
+        department:
+          user.role === "super-admin" || user.role === "admin"
+            ? "all"
+            : user.department,
       });
       return true;
     },
@@ -560,7 +593,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     () =>
       setState((s) => ({
         ...s,
-        settings: { ...s.settings, sidebarCollapsed: !s.settings.sidebarCollapsed },
+        settings: {
+          ...s.settings,
+          sidebarCollapsed: !s.settings.sidebarCollapsed,
+        },
       })),
     [],
   );
@@ -572,7 +608,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const log = React.useCallback(
     (action: string, module: string, item: string, department?: string) => {
-      const dept = department ?? (activeDepartment === "all" ? "-" : activeDepartment);
+      const dept =
+        department ?? (activeDepartment === "all" ? "-" : activeDepartment);
       const record = {
         id: uid("ACT"),
         user: state.user?.name ?? "Admin",
@@ -582,8 +619,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         department: dept,
         date: new Date().toISOString(),
       };
-      setState((s) => ({ ...s, activities: [record as Activity, ...s.activities] }));
-      void authCall("/system/activities", { method: "POST", body: JSON.stringify(record) }).catch(() => undefined);
+      setState((s) => ({
+        ...s,
+        activities: [record as Activity, ...s.activities],
+      }));
+      void authCall("/system/activities", {
+        method: "POST",
+        body: JSON.stringify(record),
+      }).catch(() => undefined);
     },
     [state.user, activeDepartment, authCall],
   );
@@ -592,8 +635,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (item: InventoryItem) => {
       void (async () => {
         try {
-          const created = await authCall("/inventory/items", { method: "POST", body: JSON.stringify(item) });
-          setState((s) => ({ ...s, inventory: [created as InventoryItem, ...s.inventory] }));
+          const created = await authCall("/inventory/items", {
+            method: "POST",
+            body: JSON.stringify(item),
+          });
+          setState((s) => ({
+            ...s,
+            inventory: [created as InventoryItem, ...s.inventory],
+          }));
           toast.success("Inventory item added successfully");
         } catch (e) {
           fail(e, "Could not add item");
@@ -607,8 +656,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (item: InventoryItem) => {
       void (async () => {
         try {
-          const updated = await authCall(`/inventory/items/${item.id}`, { method: "PUT", body: JSON.stringify(item) });
-          setState((s) => ({ ...s, inventory: s.inventory.map((i) => (i.id === item.id ? (updated as InventoryItem) : i)) }));
+          const updated = await authCall(`/inventory/items/${item.id}`, {
+            method: "PUT",
+            body: JSON.stringify(item),
+          });
+          setState((s) => ({
+            ...s,
+            inventory: s.inventory.map((i) =>
+              i.id === item.id ? (updated as InventoryItem) : i,
+            ),
+          }));
           toast.success("Inventory item updated successfully");
         } catch (e) {
           fail(e, "Could not update item");
@@ -629,13 +686,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           });
           setState((s) => ({
             ...s,
-            inventory: s.inventory.map((i) => (i.id === itemId ? (data.item as InventoryItem) : i)),
-            transactions: [data.transaction as StockTransaction, ...s.transactions],
+            inventory: s.inventory.map((i) =>
+              i.id === itemId ? (data.item as InventoryItem) : i,
+            ),
+            transactions: [
+              data.transaction as StockTransaction,
+              ...s.transactions,
+            ],
             stockIn: [data.record as StockInRecord, ...s.stockIn],
             activities: [data.activity as Activity, ...s.activities],
           }));
           const item = state.inventory.find((i) => i.id === itemId);
-          toast.success(`Stock received — ${quantity} × ${item?.deviceName ?? data.item.deviceName}`);
+          toast.success(
+            `Stock received — ${quantity} × ${item?.deviceName ?? data.item.deviceName}`,
+          );
         } catch (e) {
           fail(e, "Could not record stock in");
         }
@@ -664,17 +728,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           const ref = reference || uid("SO");
           const data = await authCall("/inventory/stock-out", {
             method: "POST",
-            body: JSON.stringify({ itemId, quantity, recipient, purpose, note, ref }),
+            body: JSON.stringify({
+              itemId,
+              quantity,
+              recipient,
+              purpose,
+              note,
+              ref,
+            }),
           });
           setState((s) => ({
             ...s,
-            inventory: s.inventory.map((i) => (i.id === itemId ? (data.item as InventoryItem) : i)),
-            transactions: [data.transaction as StockTransaction, ...s.transactions],
+            inventory: s.inventory.map((i) =>
+              i.id === itemId ? (data.item as InventoryItem) : i,
+            ),
+            transactions: [
+              data.transaction as StockTransaction,
+              ...s.transactions,
+            ],
             stockOut: [data.record as StockOutRecord, ...s.stockOut],
-            stockOutRecords: [data.record as StockOutRecord, ...s.stockOutRecords],
+            stockOutRecords: [
+              data.record as StockOutRecord,
+              ...s.stockOutRecords,
+            ],
             activities: [data.activity as Activity, ...s.activities],
           }));
-          toast.success(`Stock issued — ${quantity} × ${item.deviceName} to ${recipient}`);
+          toast.success(
+            `Stock issued — ${quantity} × ${item.deviceName} to ${recipient}`,
+          );
         } catch (e) {
           fail(e, "Could not issue stock");
         }
@@ -687,8 +768,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (id: string, status: StockInRecord["status"]) => {
       void (async () => {
         try {
-          await authCall(`/inventory/stock-in/${id}/status`, { method: "PUT", body: JSON.stringify({ status }) });
-          setState((s) => ({ ...s, stockIn: s.stockIn.map((r) => (r.id === id ? { ...r, status } : r)) }));
+          await authCall(`/inventory/stock-in/${id}/status`, {
+            method: "PUT",
+            body: JSON.stringify({ status }),
+          });
+          setState((s) => ({
+            ...s,
+            stockIn: s.stockIn.map((r) => (r.id === id ? { ...r, status } : r)),
+          }));
           toast.success(`Stock in record ${status}`);
         } catch (e) {
           fail(e, "Could not update record");
@@ -702,8 +789,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (id: string, status: StockOutRecord["status"]) => {
       void (async () => {
         try {
-          await authCall(`/inventory/stock-out/${id}/status`, { method: "PUT", body: JSON.stringify({ status }) });
-          setState((s) => ({ ...s, stockOut: s.stockOut.map((r) => (r.id === id ? { ...r, status } : r)) }));
+          await authCall(`/inventory/stock-out/${id}/status`, {
+            method: "PUT",
+            body: JSON.stringify({ status }),
+          });
+          setState((s) => ({
+            ...s,
+            stockOut: s.stockOut.map((r) =>
+              r.id === id ? { ...r, status } : r,
+            ),
+          }));
           toast.success(`Stock out record ${status}`);
         } catch (e) {
           fail(e, "Could not update record");
@@ -719,8 +814,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const params = new URLSearchParams();
         if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
         if (filters.dateTo) params.set("dateTo", filters.dateTo);
-        if (filters.status && filters.status !== "all") params.set("status", filters.status);
-        if (filters.supplier && filters.supplier !== "all") params.set("supplier", filters.supplier);
+        if (filters.status && filters.status !== "all")
+          params.set("status", filters.status);
+        if (filters.supplier && filters.supplier !== "all")
+          params.set("supplier", filters.supplier);
         const data = await authCall(`/inventory/stock-in?${params.toString()}`);
         setState((s) => ({ ...s, stockInRecords: data.results || data }));
       } catch (e) {
@@ -736,8 +833,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const params = new URLSearchParams();
         if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
         if (filters.dateTo) params.set("dateTo", filters.dateTo);
-        if (filters.status && filters.status !== "all") params.set("status", filters.status);
-        const data = await authCall(`/inventory/stock-out?${params.toString()}`);
+        if (filters.status && filters.status !== "all")
+          params.set("status", filters.status);
+        const data = await authCall(
+          `/inventory/stock-out?${params.toString()}`,
+        );
         setState((s) => ({ ...s, stockOutRecords: data.results || data }));
       } catch (e) {
         fail(e, "Could not fetch stock out records");
@@ -749,7 +849,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const fetchStockInHistory = React.useCallback(
     async (itemId: string) => {
       try {
-        const data = await authCall(`/inventory/stock-in/history?itemId=${encodeURIComponent(itemId)}`);
+        const data = await authCall(
+          `/inventory/stock-in/history?itemId=${encodeURIComponent(itemId)}`,
+        );
         setState((s) => ({ ...s, stockInHistory: data.results || data }));
       } catch (e) {
         fail(e, "Could not fetch stock-in history");
@@ -761,7 +863,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const fetchStockOutHistory = React.useCallback(
     async (itemId: string) => {
       try {
-        const data = await authCall(`/inventory/stock-out/history?itemId=${encodeURIComponent(itemId)}`);
+        const data = await authCall(
+          `/inventory/stock-out/history?itemId=${encodeURIComponent(itemId)}`,
+        );
         setState((s) => ({ ...s, stockOutHistory: data.results || data }));
       } catch (e) {
         fail(e, "Could not fetch stock-out history");
@@ -773,7 +877,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const fetchTicketHistory = React.useCallback(
     async (itemId: string) => {
       try {
-        const data = await authCall(`/tickets/history?itemId=${encodeURIComponent(itemId)}`);
+        const data = await authCall(
+          `/tickets/history?itemId=${encodeURIComponent(itemId)}`,
+        );
         setState((s) => ({ ...s, ticketHistory: data.results || data }));
       } catch (e) {
         fail(e, "Could not fetch ticket history");
@@ -784,15 +890,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const addTransfer = React.useCallback(
     (
-      t: Omit<Transfer, "id" | "transferNo" | "status" | "requestedBy" | "date">,
+      t: Omit<
+        Transfer,
+        "id" | "transferNo" | "status" | "requestedBy" | "date"
+      >,
     ) => {
       void (async () => {
         try {
           const created = await authCall("/system/transfers", {
             method: "POST",
-            body: JSON.stringify({ ...t, id: uid("TRF"), transferNo: uid("TRF-2026"), status: "pending", requestedBy: state.user?.name ?? "Admin", date: new Date().toISOString() }),
+            body: JSON.stringify({
+              ...t,
+              id: uid("TRF"),
+              transferNo: uid("TRF-2026"),
+              status: "pending",
+              requestedBy: state.user?.name ?? "Admin",
+              date: new Date().toISOString(),
+            }),
           });
-          setState((s) => ({ ...s, transfers: [created as Transfer, ...s.transfers] }));
+          setState((s) => ({
+            ...s,
+            transfers: [created as Transfer, ...s.transfers],
+          }));
           toast.success("Transfer created successfully");
         } catch (e) {
           fail(e, "Could not create transfer");
@@ -808,12 +927,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         try {
           await authCall(`/system/transfers/${id}`, {
             method: "PUT",
-            body: JSON.stringify({ status, approvedBy: status === "pending" || status === "rejected" ? undefined : (state.user?.name ?? "Admin") }),
+            body: JSON.stringify({
+              status,
+              approvedBy:
+                status === "pending" || status === "rejected"
+                  ? undefined
+                  : (state.user?.name ?? "Admin"),
+            }),
           });
           setState((s) => ({
             ...s,
             transfers: s.transfers.map((x) =>
-              x.id === id ? { ...x, status, approvedBy: state.user?.name ?? x.approvedBy } : x,
+              x.id === id
+                ? { ...x, status, approvedBy: state.user?.name ?? x.approvedBy }
+                : x,
             ),
           }));
           toast.success(`Transfer ${status.replace("-", " ")}`);
@@ -831,9 +958,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         try {
           const created = await authCall("/system/requests", {
             method: "POST",
-            body: JSON.stringify({ ...r, id: uid("REQ-2026"), status: "pending", requestedBy: state.user?.name ?? "Admin", date: new Date().toISOString() }),
+            body: JSON.stringify({
+              ...r,
+              id: uid("REQ-2026"),
+              status: "pending",
+              requestedBy: state.user?.name ?? "Admin",
+              date: new Date().toISOString(),
+            }),
           });
-          setState((s) => ({ ...s, requests: [created as RequestRecord, ...s.requests] }));
+          setState((s) => ({
+            ...s,
+            requests: [created as RequestRecord, ...s.requests],
+          }));
           toast.success("Request submitted successfully");
         } catch (e) {
           fail(e, "Could not submit request");
@@ -847,8 +983,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (id: string, status: RequestRecord["status"]) => {
       void (async () => {
         try {
-          await authCall(`/system/requests/${id}`, { method: "PUT", body: JSON.stringify({ status }) });
-          setState((s) => ({ ...s, requests: s.requests.map((r) => (r.id === id ? { ...r, status } : r)) }));
+          await authCall(`/system/requests/${id}`, {
+            method: "PUT",
+            body: JSON.stringify({ status }),
+          });
+          setState((s) => ({
+            ...s,
+            requests: s.requests.map((r) =>
+              r.id === id ? { ...r, status } : r,
+            ),
+          }));
           toast.success(`Request ${status}`);
         } catch (e) {
           fail(e, "Could not update request");
@@ -871,10 +1015,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               status: "open",
               createdBy: state.user?.name ?? "Admin",
               createdAt: now,
-              issues: t.issues.map((iss: TicketIssue) => ({ ...iss, createdAt: iss.createdAt ?? now })),
+              issues: t.issues.map((iss: TicketIssue) => ({
+                ...iss,
+                createdAt: iss.createdAt ?? now,
+              })),
             }),
           });
-          setState((s) => ({ ...s, tickets: [created as Ticket, ...s.tickets] }));
+          setState((s) => ({
+            ...s,
+            tickets: [created as Ticket, ...s.tickets],
+          }));
           toast.success("Ticket generated successfully");
         } catch (e) {
           fail(e, "Could not generate ticket");
@@ -890,11 +1040,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         try {
           const created = await authCall(`/tickets/${id}/issues`, {
             method: "POST",
-            body: JSON.stringify({ ...issue, id: uid("ISS"), createdAt: new Date().toISOString() }),
+            body: JSON.stringify({
+              ...issue,
+              id: uid("ISS"),
+              createdAt: new Date().toISOString(),
+            }),
           });
           setState((s) => ({
             ...s,
-            tickets: s.tickets.map((t) => (t.id === id ? { ...t, issues: [...t.issues, created as TicketIssue] } : t)),
+            tickets: s.tickets.map((t) =>
+              t.id === id
+                ? { ...t, issues: [...t.issues, created as TicketIssue] }
+                : t,
+            ),
           }));
           toast.success("Issue added to ticket");
         } catch (e) {
@@ -919,17 +1077,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         !patch.resolvedAt
       )
         next.resolvedAt = issue.resolvedAt ?? now;
-      if (patch.status && (patch.status === "open" || patch.status === "in-progress"))
+      if (
+        patch.status &&
+        (patch.status === "open" || patch.status === "in-progress")
+      )
         next.resolvedAt = undefined;
-      await authCall(`/tickets/${ticketId}/issues/${issueId}`, { method: "PUT", body: JSON.stringify(next) });
-      const issues = t.issues.map((iss) => (iss.id === issueId ? { ...iss, ...next } : iss));
+      await authCall(`/tickets/${ticketId}/issues/${issueId}`, {
+        method: "PUT",
+        body: JSON.stringify(next),
+      });
+      const issues = t.issues.map((iss) =>
+        iss.id === issueId ? { ...iss, ...next } : iss,
+      );
       const status = ticketStatusFromIssues(issues, t.status);
       let updated: Ticket = { ...t, issues };
       if (status !== t.status) {
-        const saved = await authCall(`/tickets/${ticketId}`, { method: "PUT", body: JSON.stringify({ status }) });
+        const saved = await authCall(`/tickets/${ticketId}`, {
+          method: "PUT",
+          body: JSON.stringify({ status }),
+        });
         updated = saved as Ticket;
       }
-      setState((s) => ({ ...s, tickets: s.tickets.map((x) => (x.id === ticketId ? updated : x)) }));
+      setState((s) => ({
+        ...s,
+        tickets: s.tickets.map((x) => (x.id === ticketId ? updated : x)),
+      }));
       return updated;
     },
     [authCall, state.tickets],
@@ -941,7 +1113,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         try {
           await applyIssuePatch(ticketId, issueId, patch);
           toast.success(
-            patch.status ? `Issue marked ${patch.status.replace("-", " ")}` : "Issue updated",
+            patch.status
+              ? `Issue marked ${patch.status.replace("-", " ")}`
+              : "Issue updated",
           );
         } catch (e) {
           fail(e, "Could not update issue");
@@ -957,15 +1131,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         try {
           const t = state.tickets.find((x) => x.id === ticketId);
           if (!t) return;
-          await authCall(`/tickets/${ticketId}/issues/${issueId}`, { method: "DELETE" });
+          await authCall(`/tickets/${ticketId}/issues/${issueId}`, {
+            method: "DELETE",
+          });
           const issues = t.issues.filter((iss) => iss.id !== issueId);
           const status = ticketStatusFromIssues(issues, t.status);
           let updated: Ticket = { ...t, issues };
           if (status !== t.status) {
-            const saved = await authCall(`/tickets/${ticketId}`, { method: "PUT", body: JSON.stringify({ status }) });
+            const saved = await authCall(`/tickets/${ticketId}`, {
+              method: "PUT",
+              body: JSON.stringify({ status }),
+            });
             updated = saved as Ticket;
           }
-          setState((s) => ({ ...s, tickets: s.tickets.map((x) => (x.id === ticketId ? updated : x)) }));
+          setState((s) => ({
+            ...s,
+            tickets: s.tickets.map((x) => (x.id === ticketId ? updated : x)),
+          }));
           toast.success("Issue removed");
         } catch (e) {
           fail(e, "Could not remove issue");
@@ -979,9 +1161,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (id: string, patch: Partial<Ticket>) => {
       void (async () => {
         try {
-          const updated = await authCall(`/tickets/${id}`, { method: "PUT", body: JSON.stringify(patch) });
-          setState((s) => ({ ...s, tickets: s.tickets.map((t) => (t.id === id ? (updated as Ticket) : t)) }));
-          toast.success(`Ticket ${patch.status?.replace("-", " ") ?? "updated"}`);
+          const updated = await authCall(`/tickets/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(patch),
+          });
+          setState((s) => ({
+            ...s,
+            tickets: s.tickets.map((t) =>
+              t.id === id ? (updated as Ticket) : t,
+            ),
+          }));
+          toast.success(
+            `Ticket ${patch.status?.replace("-", " ") ?? "updated"}`,
+          );
         } catch (e) {
           fail(e, "Could not update ticket");
         }
@@ -1003,8 +1195,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             patch.completedAt = undefined;
             patch.submittedAt = undefined;
           }
-          const updated = await authCall(`/tickets/${id}`, { method: "PUT", body: JSON.stringify(patch) });
-          setState((s) => ({ ...s, tickets: s.tickets.map((x) => (x.id === id ? (updated as Ticket) : x)) }));
+          const updated = await authCall(`/tickets/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(patch),
+          });
+          setState((s) => ({
+            ...s,
+            tickets: s.tickets.map((x) =>
+              x.id === id ? (updated as Ticket) : x,
+            ),
+          }));
           toast.success("Ticket status updated");
         } catch (e) {
           fail(e, "Could not update ticket");
@@ -1018,8 +1218,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (id: string, remark: string) => {
       void (async () => {
         try {
-          await authCall(`/tickets/${id}/remark`, { method: "PUT", body: JSON.stringify({ remark }) });
-          setState((s) => ({ ...s, tickets: s.tickets.map((t) => (t.id === id ? { ...t, technicianRemark: remark } : t)) }));
+          await authCall(`/tickets/${id}/remark`, {
+            method: "PUT",
+            body: JSON.stringify({ remark }),
+          });
+          setState((s) => ({
+            ...s,
+            tickets: s.tickets.map((t) =>
+              t.id === id ? { ...t, technicianRemark: remark } : t,
+            ),
+          }));
           toast.success("Technician remark saved");
         } catch (e) {
           fail(e, "Could not save remark");
@@ -1030,22 +1238,37 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 
   const submitTicketSolution = React.useCallback(
-    (id: string, remark: string, issueResolutions: Record<string, string> = {}) => {
+    (
+      id: string,
+      remark: string,
+      issueResolutions: Record<string, string> = {},
+    ) => {
       void (async () => {
         try {
           const t = state.tickets.find((x) => x.id === id);
           if (!t) return;
-          const pending = t.issues.filter((i) => i.status === "open" || i.status === "in-progress");
-          const missing = pending.filter((i) => !(issueResolutions[i.id] ?? "").trim());
+          const pending = t.issues.filter(
+            (i) => i.status === "open" || i.status === "in-progress",
+          );
+          const missing = pending.filter(
+            (i) => !(issueResolutions[i.id] ?? "").trim(),
+          );
           if (missing.length > 0) {
-            toast.error(`Add a remark for every issue — ${missing.length} still missing`);
+            toast.error(
+              `Add a remark for every issue — ${missing.length} still missing`,
+            );
             return;
           }
           const updated = await authCall(`/tickets/${id}/submit`, {
             method: "POST",
             body: JSON.stringify({ remark, issueResolutions }),
           });
-          setState((s) => ({ ...s, tickets: s.tickets.map((x) => (x.id === id ? (updated as Ticket) : x)) }));
+          setState((s) => ({
+            ...s,
+            tickets: s.tickets.map((x) =>
+              x.id === id ? (updated as Ticket) : x,
+            ),
+          }));
           toast.success("Ticket submitted to Admin as resolved");
         } catch (e) {
           fail(e, "Could not submit ticket");
@@ -1065,8 +1288,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             toast.error("Assign a technician before re-issuing this ticket");
             return;
           }
-          const updated = await authCall(`/tickets/${id}/reissue`, { method: "POST", body: JSON.stringify({ note }) });
-          setState((s) => ({ ...s, tickets: s.tickets.map((x) => (x.id === id ? (updated as Ticket) : x)) }));
+          const updated = await authCall(`/tickets/${id}/reissue`, {
+            method: "POST",
+            body: JSON.stringify({ note }),
+          });
+          setState((s) => ({
+            ...s,
+            tickets: s.tickets.map((x) =>
+              x.id === id ? (updated as Ticket) : x,
+            ),
+          }));
           toast.success("Ticket re-issued to technician");
         } catch (e) {
           fail(e, "Could not re-issue ticket");
@@ -1084,9 +1315,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (!t) return;
           const updated = await authCall(`/tickets/${id}/close`, {
             method: "POST",
-            body: JSON.stringify({ resolution, resolvedIssueIds, closedBy: state.user?.name ?? "Admin" }),
+            body: JSON.stringify({
+              resolution,
+              resolvedIssueIds,
+              closedBy: state.user?.name ?? "Admin",
+            }),
           });
-          setState((s) => ({ ...s, tickets: s.tickets.map((x) => (x.id === id ? (updated as Ticket) : x)) }));
+          setState((s) => ({
+            ...s,
+            tickets: s.tickets.map((x) =>
+              x.id === id ? (updated as Ticket) : x,
+            ),
+          }));
           toast.success("Ticket closed successfully");
         } catch (e) {
           fail(e, "Could not close ticket");
@@ -1100,8 +1340,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (c: Category) => {
       void (async () => {
         try {
-          const created = await authCall("/catalog/categories", { method: "POST", body: JSON.stringify(c) });
-          setState((s) => ({ ...s, categories: [created as Category, ...s.categories] }));
+          const created = await authCall("/catalog/categories", {
+            method: "POST",
+            body: JSON.stringify(c),
+          });
+          setState((s) => ({
+            ...s,
+            categories: [created as Category, ...s.categories],
+          }));
           toast.success("Category added successfully");
         } catch (e) {
           fail(e, "Could not add category");
@@ -1115,8 +1361,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (c: Category) => {
       void (async () => {
         try {
-          await authCall(`/catalog/categories/${c.id}`, { method: "PUT", body: JSON.stringify(c) });
-          setState((s) => ({ ...s, categories: s.categories.map((x) => (x.id === c.id ? c : x)) }));
+          await authCall(`/catalog/categories/${c.id}`, {
+            method: "PUT",
+            body: JSON.stringify(c),
+          });
+          setState((s) => ({
+            ...s,
+            categories: s.categories.map((x) => (x.id === c.id ? c : x)),
+          }));
           toast.success("Category updated successfully");
         } catch (e) {
           fail(e, "Could not update category");
@@ -1131,7 +1383,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       void (async () => {
         try {
           await authCall(`/catalog/categories/${id}`, { method: "DELETE" });
-          setState((s) => ({ ...s, categories: s.categories.filter((c) => c.id !== id) }));
+          setState((s) => ({
+            ...s,
+            categories: s.categories.filter((c) => c.id !== id),
+          }));
           toast.success("Category deleted");
         } catch (e) {
           fail(e, "Could not delete category");
@@ -1145,7 +1400,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (u: User) => {
       void (async () => {
         try {
-          const created = await authCall("/users", { method: "POST", body: JSON.stringify(u) });
+          const created = await authCall("/users", {
+            method: "POST",
+            body: JSON.stringify(u),
+          });
           setState((s) => ({ ...s, users: [created as User, ...s.users] }));
           toast.success("User added successfully");
         } catch (e) {
@@ -1160,8 +1418,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (u: User) => {
       void (async () => {
         try {
-          const updated = await authCall(`/users/${u.id}`, { method: "PUT", body: JSON.stringify(u) });
-          setState((s) => ({ ...s, users: s.users.map((x) => (x.id === u.id ? (updated as User) : x)) }));
+          const updated = await authCall(`/users/${u.id}`, {
+            method: "PUT",
+            body: JSON.stringify(u),
+          });
+          setState((s) => ({
+            ...s,
+            users: s.users.map((x) => (x.id === u.id ? (updated as User) : x)),
+          }));
           toast.success("User updated successfully");
         } catch (e) {
           fail(e, "Could not update user");
@@ -1176,7 +1440,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       void (async () => {
         try {
           await authCall(`/users/${id}`, { method: "DELETE" });
-          setState((s) => ({ ...s, users: s.users.filter((u) => u.id !== id) }));
+          setState((s) => ({
+            ...s,
+            users: s.users.filter((u) => u.id !== id),
+          }));
           toast.success("User deleted");
         } catch (e) {
           fail(e, "Could not delete user");
@@ -1198,7 +1465,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (d: Department) => {
       void (async () => {
         try {
-          await authCall("/departments", { method: "POST", body: JSON.stringify({ ...d, users: d.users ?? 0 }) });
+          await authCall("/departments", {
+            method: "POST",
+            body: JSON.stringify({ ...d, users: d.users ?? 0 }),
+          });
           await refreshDepartments();
           toast.success("Department created successfully");
         } catch (e) {
@@ -1213,7 +1483,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (d: Department) => {
       void (async () => {
         try {
-          await authCall(`/departments/${d.id}`, { method: "PUT", body: JSON.stringify(d) });
+          await authCall(`/departments/${d.id}`, {
+            method: "PUT",
+            body: JSON.stringify(d),
+          });
           await refreshDepartments();
           toast.success("Department updated successfully");
         } catch (e) {
@@ -1229,7 +1502,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       void (async () => {
         try {
           await authCall(`/departments/${id}`, { method: "DELETE" });
-          setState((s) => ({ ...s, departments: s.departments.filter((d) => d.id !== id) }));
+          setState((s) => ({
+            ...s,
+            departments: s.departments.filter((d) => d.id !== id),
+          }));
           toast.success("Department deleted");
         } catch (e) {
           fail(e, "Could not delete department");
@@ -1249,7 +1525,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         try {
           await authCall("/departments/subs", {
             method: "POST",
-            body: JSON.stringify({ ...sub, id: uid("SUB"), departmentId, parentSubDepartmentId }),
+            body: JSON.stringify({
+              ...sub,
+              id: uid("SUB"),
+              departmentId,
+              parentSubDepartmentId,
+            }),
           });
           await refreshDepartments();
           toast.success("Sub-department added");
@@ -1269,7 +1550,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     ) => {
       void (async () => {
         try {
-          await authCall(`/departments/subs/${subDepartmentId}`, { method: "PUT", body: JSON.stringify(patch) });
+          await authCall(`/departments/subs/${subDepartmentId}`, {
+            method: "PUT",
+            body: JSON.stringify(patch),
+          });
           await refreshDepartments();
           toast.success("Sub-department updated");
           void departmentId;
@@ -1285,7 +1569,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (departmentId: string, subDepartmentId: string) => {
       void (async () => {
         try {
-          await authCall(`/departments/subs/${subDepartmentId}`, { method: "DELETE" });
+          await authCall(`/departments/subs/${subDepartmentId}`, {
+            method: "DELETE",
+          });
           await refreshDepartments();
           toast.success("Sub-department deleted");
           void departmentId;
@@ -1299,7 +1585,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const subDepartmentsFor = React.useCallback(
     (department: string) =>
-      state.departments.find((d) => d.name === department)?.subDepartments ?? [],
+      state.departments.find((d) => d.name === department)?.subDepartments ??
+      [],
     [state.departments],
   );
 
@@ -1307,8 +1594,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (t: Omit<Technician, "id">) => {
       void (async () => {
         try {
-          const created = await authCall("/technicians", { method: "POST", body: JSON.stringify({ ...t, id: uid("TECH") }) });
-          setState((s) => ({ ...s, technicians: [created as Technician, ...s.technicians] }));
+          const created = await authCall("/technicians", {
+            method: "POST",
+            body: JSON.stringify({ ...t, id: uid("TECH") }),
+          });
+          setState((s) => ({
+            ...s,
+            technicians: [created as Technician, ...s.technicians],
+          }));
           toast.success("Technician added successfully");
         } catch (e) {
           fail(e, "Could not add technician");
@@ -1322,8 +1615,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     (t: Technician) => {
       void (async () => {
         try {
-          const updated = await authCall(`/technicians/${t.id}`, { method: "PUT", body: JSON.stringify(t) });
-          setState((s) => ({ ...s, technicians: s.technicians.map((x) => (x.id === t.id ? (updated as Technician) : x)) }));
+          const updated = await authCall(`/technicians/${t.id}`, {
+            method: "PUT",
+            body: JSON.stringify(t),
+          });
+          setState((s) => ({
+            ...s,
+            technicians: s.technicians.map((x) =>
+              x.id === t.id ? (updated as Technician) : x,
+            ),
+          }));
           toast.success("Technician updated successfully");
         } catch (e) {
           fail(e, "Could not update technician");
@@ -1338,7 +1639,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       void (async () => {
         try {
           await authCall(`/technicians/${id}`, { method: "DELETE" });
-          setState((s) => ({ ...s, technicians: s.technicians.filter((t) => t.id !== id) }));
+          setState((s) => ({
+            ...s,
+            technicians: s.technicians.filter((t) => t.id !== id),
+          }));
           toast.success("Technician deleted");
         } catch (e) {
           fail(e, "Could not delete technician");
@@ -1349,8 +1653,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 
   const markNotificationsRead = React.useCallback(() => {
-    setState((s) => ({ ...s, notifications: s.notifications.map((n) => ({ ...n, read: true })) }));
-    void authCall("/system/notifications/read", { method: "PUT" }).catch(() => undefined);
+    setState((s) => ({
+      ...s,
+      notifications: s.notifications.map((n) => ({ ...n, read: true })),
+    }));
+    void authCall("/system/notifications/read", { method: "PUT" }).catch(
+      () => undefined,
+    );
   }, [authCall]);
 
   const value: AppContextValue = React.useMemo(
