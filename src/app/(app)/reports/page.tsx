@@ -100,56 +100,7 @@ export default function ReportsPage() {
     return base.filter((i) => names.includes(i.subDepartment ?? ""));
   }, [state.inventory, dept, subLevels, deptObj, topSubs]);
 
-  const ticketReportData = useMemo(() => {
-    const now = new Date();
-    const todayStr = now.toISOString().slice(0, 10);
-    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-
-    const filterByDate = (dateStr: string | undefined) => {
-      if (!dateStr || dateFilter === "all") return true;
-      if (dateFilter === "today") return dateStr === todayStr;
-      if (dateFilter === "week") return dateStr >= weekAgo;
-      if (dateFilter === "month") return dateStr >= monthAgo;
-      return true;
-    };
-
-    const ticketsData = state.tickets
-      .filter((t) => filterByDate(t.createdAt))
-      .map((ticket, idx) => {
-        const itemId = ticket.itemIds?.[0];
-        const item = state.inventory.find((i) => i.id === itemId);
-        const productName = item?.deviceName || "N/A";
-        const regNo = item?.sku || "N/A";
-        const qty = item?.quantity || 0;
-        const deptName = item?.department || ticket.department || "";
-
-        const stockInRecord = state.stockIn.find((r) => r.itemId === itemId);
-        const stockOutRecord = state.stockOut.find((r) => r.itemId === itemId);
-        const dateIn = stockInRecord?.date || "—";
-        const dateOut = stockOutRecord?.date || "—";
-
-        const issue = ticket.issues?.[0];
-        const typeOfFault = issue?.title || ticket.title || "N/A";
-        const actionByTech = issue?.assignedTo || ticket.technicianId || "—";
-
-        return {
-          sNo: idx + 1,
-          jobNo: ticket.id,
-          eqpt: productName,
-          regNo: regNo,
-          qty: qty,
-          secDept: deptName,
-          dateIn: dateIn,
-          dateOut: dateOut,
-          typeOfFault: typeOfFault,
-          progress: ticket.status || "open",
-          actionByTech: actionByTech,
-        };
-      });
-
-    return ticketsData;
-  }, [state.tickets, state.inventory, state.stockIn, state.stockOut, dateFilter]);
+  const ticketReportData = React.useMemo<any[]>(() => [], [dateFilter]);
 
   const byCategory = useMemo(() => {
     const acc: Record<string, number> = {};

@@ -39,8 +39,7 @@ const HEADER_FIELDS: Record<string, string> = {
   name: "deviceName",
   item: "deviceName",
   brand: "brand",
-  modelnumber: "modelNumber",
-  model: "modelNumber",
+  type: "type",
   sku: "sku",
   code: "sku",
   category: "category",
@@ -57,8 +56,6 @@ const HEADER_FIELDS: Record<string, string> = {
   qtyonhand: "quantity",
   unit: "unit",
   supplier: "supplier",
-  serialnumber: "serialNumber",
-  serialno: "serialNumber",
   notes: "notes",
   remarks: "notes",
 };
@@ -187,7 +184,7 @@ export function InventoryImportDialog({
           item: {
             deviceName: String(get("deviceName") ?? "").trim(),
             brand: String(get("brand") ?? "").trim() || "—",
-            modelNumber: String(get("modelNumber") ?? "").trim() || "—",
+            type: (String(get("type") ?? "").trim() || "C") as "W" | "C" | "NC",
             sku,
             category: String(get("category") ?? "").trim(),
             description: String(get("description") ?? "").trim() || undefined,
@@ -199,7 +196,6 @@ export function InventoryImportDialog({
             quantity: quantity ?? 0,
             unit: String(get("unit") ?? "").trim() || "unit",
             supplier: String(get("supplier") ?? "").trim() || undefined,
-            serialNumber: String(get("serialNumber") ?? "").trim() || undefined,
             notes: String(get("notes") ?? "").trim() || undefined,
           },
         };

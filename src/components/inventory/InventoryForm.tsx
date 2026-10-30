@@ -40,12 +40,11 @@ import Link from "next/link";
 const formSchema = z.object({
   deviceName: z.string().min(2, "Device name is required"),
   brand: z.string().min(2, "Brand is required"),
-  modelNumber: z.string().min(2, "Model number is required"),
+  type: z.enum(["W", "C", "NC"]),
   category: z.string().min(1, "Select a category"),
   description: z.string().optional(),
   specifications: z.string().optional(),
   warrantyPeriod: z.string().optional(),
-  serialNumber: z.string().optional(),
   notes: z.string().optional(),
   sku: z.string().min(2, "Reg No. is required"),
   supplier: z.string().optional(),
@@ -62,12 +61,11 @@ function emptyValues(department: string): FormValues {
   return {
     deviceName: "",
     brand: "",
-    modelNumber: "",
+    type: "C" as const,
     category: "",
     description: "",
     specifications: "",
     warrantyPeriod: "",
-    serialNumber: "",
     notes: "",
     sku: "",
     supplier: "",
@@ -83,12 +81,11 @@ function valuesOf(item: InventoryItem, tree: SubDepartment[]): FormValues {
   const base = {
     deviceName: item.deviceName,
     brand: item.brand,
-    modelNumber: item.modelNumber,
+    type: item.type,
     category: item.category,
     description: item.description ?? "",
     specifications: item.specifications ?? "",
     warrantyPeriod: item.warrantyPeriod ?? "",
-    serialNumber: item.serialNumber ?? "",
     notes: item.notes ?? "",
     sku: item.sku,
     supplier: item.supplier ?? "",
@@ -204,12 +201,11 @@ export function InventoryForm({
     const payload = {
       deviceName: values.deviceName.trim(),
       brand: values.brand.trim(),
-      modelNumber: values.modelNumber.trim(),
+      type: values.type,
       category: values.category,
       description: values.description?.trim() || undefined,
       specifications: values.specifications?.trim() || undefined,
       warrantyPeriod: values.warrantyPeriod?.trim() || undefined,
-      serialNumber: values.serialNumber?.trim() || undefined,
       notes: values.notes?.trim() || undefined,
       sku: values.sku.trim(),
       supplier: values.supplier?.trim() || undefined,
@@ -290,15 +286,24 @@ export function InventoryForm({
             />
             <FormField
               control={form.control}
-              name="modelNumber"
+              name="type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Model Number</FormLabel>
+                  <FormLabel>Type</FormLabel>
                   <FormControl>
-                    <Input
-                      placeholder="e.g. MacBook Pro 14 M3"
-                      {...field}
-                    />
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="W">W (Workshop)</SelectItem>
+                        <SelectItem value="C">C (Consumable)</SelectItem>
+                        <SelectItem value="NC">NC (Non-Consumable)</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -487,19 +492,6 @@ export function InventoryForm({
                       placeholder="Technical specifications"
                       {...field}
                     />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="serialNumber"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Serial Number (optional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. SN-MBP-1001" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -64,7 +64,7 @@ export function GlobalSearch() {
       add(
         "Inventory",
         departmentItems
-          .filter((i) => match(i.deviceName, i.sku, i.serialNumber, i.category))
+          .filter((i) => match(i.deviceName, i.sku, i.category))
           .slice(0, PER_TYPE_LIMIT)
           .map((i) => ({ id: i.id, type: "Inventory", label: i.deviceName, sublabel: `Reg No. ${i.sku} · ${i.department}`, href: `/inventory/${i.id}` })),
       );
@@ -73,30 +73,10 @@ export function GlobalSearch() {
     if (allowed("/stock-in")) {
       add(
         "Stock In",
-        state.stockIn
-          .filter((r) => deptOk(r.department) && match(r.reference, r.supplier, r.itemName))
+        state.stockInRecords
+          .filter((r) => deptOk(r.department) && match(r.workOrderId, r.itemName))
           .slice(0, PER_TYPE_LIMIT)
-          .map((r) => ({ id: r.id, type: "Stock In", label: r.reference, sublabel: `${r.itemName} · ${r.supplier}`, href: "/stock-in" })),
-      );
-    }
-
-    if (allowed("/stock-out")) {
-      add(
-        "Stock Out",
-        state.stockOut
-          .filter((r) => deptOk(r.department) && match(r.reference, r.itemName, r.recipient))
-          .slice(0, PER_TYPE_LIMIT)
-          .map((r) => ({ id: r.id, type: "Stock Out", label: r.reference, sublabel: `${r.itemName} · ${r.recipient}`, href: "/stock-out" })),
-      );
-    }
-
-    if (allowed("/tickets")) {
-      add(
-        "Tickets",
-        state.tickets
-          .filter((t) => deptOk(t.department) && match(t.id, t.title, t.customer, t.category))
-          .slice(0, PER_TYPE_LIMIT)
-          .map((t) => ({ id: t.id, type: "Tickets", label: t.title, sublabel: `${t.id} · ${t.department}`, href: `/tickets/${t.id}` })),
+          .map((r) => ({ id: String(r.id), type: "Stock In", label: r.workOrderId, sublabel: `${r.itemName} · ${r.jobNo}`, href: "/stock-in" })),
       );
     }
 

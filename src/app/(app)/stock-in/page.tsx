@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDownToLine, FileDown, FileUp, Plus } from "lucide-react";
+import { FileDown, FileUp, PackageMinus, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import {
@@ -26,7 +26,7 @@ import {
 } from "@/components/inventory/InventoryFilters";
 import { useApp } from "@/store/app-store";
 import { useFakeLoading } from "@/hooks/use-fake-loading";
-import { downloadCSV, formatDate } from "@/lib/utils";
+import { downloadCSV, formatDate, formatNumber } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 
 export default function StockInPage() {
@@ -45,11 +45,15 @@ export default function StockInPage() {
       : `${activeDepartment}${user?.subDepartment ? ` / ${user.subDepartment}` : ""}`;
 
   const suppliers = React.useMemo(
-    () => [...new Set(state.stockIn.map((r) => r.supplier))].sort(),
-    [state.stockIn],
+    () =>
+      [...new Set(
+        state.inventory
+          .map((i) => i.supplier)
+          .filter((s): s is string => !!s),
+      )].sort(),
+    [state.inventory],
   );
 
-  // Fetch server-filtered records whenever filters change
   React.useEffect(() => {
     fetchStockIn(filters);
   }, [filters, fetchStockIn]);
@@ -63,8 +67,8 @@ export default function StockInPage() {
         term &&
         !(
           r.itemName.toLowerCase().includes(term) ||
-          r.reference.toLowerCase().includes(term) ||
-          r.supplier.toLowerCase().includes(term) ||
+          r.workOrderId.toLowerCase().includes(term) ||
+          r.jobNo.toLowerCase().includes(term) ||
           r.createdBy.toLowerCase().includes(term)
         )
       )
@@ -75,37 +79,28 @@ export default function StockInPage() {
 
   const paged = records.slice((page - 1) * pageSize, page * pageSize);
 
-  const doImport = () =>
-    toast.success("Import: choose a CSV to bulk-add stock in records (demo)");
   const doExportCSV = () => {
     downloadCSV(
       `stock-in-${new Date().toISOString().slice(0, 10)}.csv`,
       records.map((r) => ({
-        Reference: r.reference,
-        Date: r.date,
+        "Work Order Id": r.workOrderId,
+        "Job No": r.jobNo,
+        Date: r.dateIn,
         Item: r.itemName,
+        Type: r.productType,
         Quantity: r.quantity,
         Department: r.department,
-        CreatedBy: r.createdBy,
+        "Date Out": r.dateOut ?? "",
+        Remarks: r.remarks ?? "",
         Status: r.status,
+        "Created By": r.createdBy,
       })),
     );
     toast.success(`Exported ${records.length} records to CSV`);
   };
-  const doExportExcel = () => {
-    downloadCSV(
-      `stock-in-${new Date().toISOString().slice(0, 10)}.csv`,
-      records.map((r) => ({
-        Reference: r.reference,
-        Date: r.date,
-        Item: r.itemName,
-        Quantity: r.quantity,
-        Department: r.department,
-        CreatedBy: r.createdBy,
-        Status: r.status,
-      })),
-    );
-    toast.success(`Exported ${records.length} records to Excel`);
+
+  const handleStockOut = (id: number | string) => {
+    router.push(`/stock-out/${id}`);
   };
 
   return (
@@ -116,14 +111,8 @@ export default function StockInPage() {
         breadcrumb={[{ label: "Stock In" }]}
         actions={
           <>
-            <Button variant="outline" onClick={doImport}>
-              <FileUp className="size-4" /> Import
-            </Button>
             <Button variant="outline" onClick={doExportCSV}>
               <FileDown className="size-4" /> Export
-            </Button>
-            <Button variant="outline" onClick={doExportExcel}>
-              <FileDown className="size-4" /> Export Excel
             </Button>
             <Button
               onClick={() => {
@@ -146,7 +135,7 @@ export default function StockInPage() {
                 setPage(1);
               }}
               onClear={() => setSearch("")}
-              placeholder="Search by item, reference, supplier…"
+              placeholder="Search by item, work order, job no…"
               className="md:max-w-sm"
             />
             <p className="text-muted-foreground text-sm tabular-nums">
@@ -183,31 +172,32 @@ export default function StockInPage() {
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead>ID</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Items</TableHead>
-              <TableHead>Quantity</TableHead>
+              <TableHead>Job No</TableHead>
+              <TableHead>Work Order Id</TableHead>
+              <TableHead>Date In</TableHead>
+              <TableHead>Item</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Qty</TableHead>
               <TableHead>Department</TableHead>
-              <TableHead>Created By</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading &&
-              Array.from({ length: 6 }).map((_, i) => (
-                <TableRow key={i} className="hover:bg-transparent">
-                  <TableCell colSpan={7} className="py-2">
-                    <Skeleton className="h-8 w-full" />
-                  </TableCell>
-                </TableRow>
-              ))}
+            {loading && (
+              <TableRow className="hover:bg-transparent">
+                <TableCell colSpan={9} className="py-2">
+                  <Skeleton className="h-8 w-full" />
+                </TableCell>
+              </TableRow>
+            )}
             {!loading && paged.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="p-0">
+                <TableCell colSpan={9} className="p-0">
                   <EmptyState
-                    icon={ArrowDownToLine}
-                    title="No stock in records"
-                    description="Record incoming inventory to get started."
+                    icon={PackageMinus}
+                    title="No stock-in records"
+                    description="Receive inventory to start tracking inbound stock."
                     action={{
                       label: "Record Stock In",
                       onClick: () => {
@@ -222,49 +212,63 @@ export default function StockInPage() {
               paged.map((r) => (
                 <TableRow
                   key={r.id}
-                  className="cursor-pointer"
+                  className="cursor-pointer hover:bg-muted"
                   onClick={() => {
-                    const item = state.inventory.find(
-                      (i) => i.deviceName === r.itemName,
-                    );
-                    if (item) router.push(`/inventory/${item.id}`);
+                    router.push(`/stock-out/${r.id}`);
                   }}
                 >
                   <TableCell className="font-mono text-xs font-medium">
-                    {r.id}
+                    {r.jobNo}
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs">
-                    {formatDate(r.date)}
+                    {r.workOrderId}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-xs">
+                    {formatDate(r.dateIn)}
                   </TableCell>
                   <TableCell className="text-sm font-medium">
                     {r.itemName}
                   </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {r.productType}
+                  </TableCell>
                   <TableCell className="text-sm font-semibold tabular-nums">
-                    +{r.quantity}
+                    {formatNumber(r.quantity)}
                   </TableCell>
                   <TableCell>
                     <span className="bg-muted inline-flex rounded-md px-2 py-0.5 text-xs font-medium">
                       {r.department}
                     </span>
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-xs">
-                    {r.createdBy}
-                  </TableCell>
                   <TableCell>
                     <StatusBadge status={r.status} />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStockOut(r.id);
+                      }}
+                    >
+                      <PackageMinus className="size-3.5" /> Stock Out
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
           </TableBody>
         </Table>
-        <div className="border-t px-4 py-3">
-          <Pagination
-            total={records.length}
-            page={page}
-            pageSize={pageSize}
-            onPageChange={setPage}
-          />
-        </div>
+        {paged.length > 0 && (
+          <div className="border-t px-4 py-3">
+            <Pagination
+              total={records.length}
+              page={page}
+              pageSize={pageSize}
+              onPageChange={setPage}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

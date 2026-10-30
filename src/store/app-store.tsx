@@ -11,19 +11,14 @@ import type {
   RequestRecord,
   Role,
   StockInRecord,
-  StockOutRecord,
   StockTransaction,
   SubDepartment,
   Supplier,
-  Ticket,
-  TicketIssue,
-  TicketStatus,
   Transfer,
   User,
   Technician,
 } from "@/types";
 import { uid } from "@/lib/utils";
-import { ticketStatusFromIssues } from "@/lib/ticket-utils";
 import type {
   StockInFiltersState,
   StockOutFiltersState,
@@ -179,17 +174,12 @@ interface AppState {
   inventory: InventoryItem[];
   transactions: StockTransaction[];
   requests: RequestRecord[];
-  tickets: Ticket[];
   suppliers: Supplier[];
   categories: Category[];
   transfers: Transfer[];
   stockIn: StockInRecord[];
-  stockOut: StockOutRecord[];
   stockInRecords: StockInRecord[];
-  stockOutRecords: StockOutRecord[];
   stockInHistory: StockInRecord[];
-  stockOutHistory: StockOutRecord[];
-  ticketHistory: Ticket[];
   users: User[];
   departments: Department[];
   activities: Activity[];
@@ -222,17 +212,12 @@ const emptyState = (user: User | null): AppState => ({
   inventory: [],
   transactions: [],
   requests: [],
-  tickets: [],
   suppliers: [],
   categories: [],
   transfers: [],
   stockIn: [],
-  stockOut: [],
   stockInRecords: [],
-  stockOutRecords: [],
   stockInHistory: [],
-  stockOutHistory: [],
-  ticketHistory: [],
   users: [],
   departments: [],
   activities: [],
@@ -296,25 +281,12 @@ interface AppContextValue {
   stockIn: (
     itemId: string,
     quantity: number,
-    supplier: string,
     note?: string,
-    reference?: string,
   ) => void;
-  stockOut: (
-    itemId: string,
-    quantity: number,
-    recipient: string,
-    purpose: string,
-    note?: string,
-    reference?: string,
-  ) => void;
+  stockOut: (id: string, remarks: string) => void;
   updateStockInStatus: (id: string, status: StockInRecord["status"]) => void;
-  updateStockOutStatus: (id: string, status: StockOutRecord["status"]) => void;
   fetchStockIn: (filters: StockInFiltersState | any) => Promise<void>;
-  fetchStockOut: (filters: StockOutFiltersState) => Promise<void>;
   fetchStockInHistory: (itemId: string) => Promise<void>;
-  fetchStockOutHistory: (itemId: string) => Promise<void>;
-  fetchTicketHistory: (itemId: string) => Promise<void>;
   addTransfer: (
     t: Omit<Transfer, "id" | "transferNo" | "status" | "requestedBy" | "date">,
   ) => void;
@@ -323,33 +295,6 @@ interface AppContextValue {
     r: Omit<RequestRecord, "id" | "status" | "requestedBy" | "date">,
   ) => void;
   updateRequest: (id: string, status: RequestRecord["status"]) => void;
-  addTicket: (
-    t: Omit<Ticket, "id" | "status" | "createdBy" | "createdAt">,
-  ) => void;
-  addTicketIssue: (
-    id: string,
-    issue: Omit<TicketIssue, "id" | "createdAt">,
-  ) => void;
-  updateIssue: (
-    ticketId: string,
-    issueId: string,
-    patch: Partial<TicketIssue>,
-  ) => void;
-  removeIssue: (ticketId: string, issueId: string) => void;
-  updateTicket: (id: string, patch: Partial<Ticket>) => void;
-  updateTicketStatus: (id: string, status: TicketStatus) => void;
-  updateTicketRemark: (id: string, remark: string) => void;
-  submitTicketSolution: (
-    id: string,
-    remark: string,
-    issueResolutions?: Record<string, string>,
-  ) => void;
-  reissueTicket: (id: string, note: string) => void;
-  closeTicket: (
-    id: string,
-    resolution: string,
-    resolvedIssueIds: string[],
-  ) => void;
   addCategory: (c: Category) => void;
   updateCategory: (c: Category) => void;
   deleteCategory: (id: string) => void;
@@ -407,9 +352,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       suppliers: b.suppliers,
       inventory: b.items,
       stockIn: b.stockIn,
-      stockOut: b.stockOut,
       transactions: b.transactions,
-      tickets: b.tickets,
       transfers: b.transfers,
       requests: b.requests,
       activities: b.activities,
@@ -436,7 +379,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ...data,
         user,
         stockInRecords: data.stockIn,
-        stockOutRecords: data.stockOut,
         department:
           user.role === "super-admin" || user.role === "admin"
             ? "all"
@@ -539,9 +481,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const login = React.useCallback(
     async (email: string, password: string) => {
-      // Errors are intentionally propagated so the login screen can show the
-      // real reason (bad password, API unreachable, DB down) instead of a
-      // blanket "Invalid credentials".
       const data = await apiFetch("/auth/login", {
         method: "POST",
         body: JSON.stringify({ email, password }),
@@ -560,7 +499,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ...loaded,
         user,
         stockInRecords: loaded.stockIn,
-        stockOutRecords: loaded.stockOut,
         department:
           user.role === "super-admin" || user.role === "admin"
             ? "all"
@@ -676,24 +614,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 
   const stockIn = React.useCallback(
-    (itemId: string, quantity: number, supplier: string, note?: string) => {
+    (itemId: string, quantity: number, note?: string) => {
       void (async () => {
         try {
-          const ref = uid("PO");
           const data = await authCall("/inventory/stock-in", {
             method: "POST",
-            body: JSON.stringify({ itemId, quantity, supplier, note, ref }),
+            body: JSON.stringify({ itemId, quantity, note }),
           });
           setState((s) => ({
             ...s,
             inventory: s.inventory.map((i) =>
-              i.id === itemId ? (data.item as InventoryItem) : i,
+              i.id === data.item.id ? (data.item as InventoryItem) : i,
             ),
             transactions: [
               data.transaction as StockTransaction,
               ...s.transactions,
             ],
             stockIn: [data.record as StockInRecord, ...s.stockIn],
+            stockInRecords: [
+              data.record as StockInRecord,
+              ...s.stockInRecords,
+            ],
             activities: [data.activity as Activity, ...s.activities],
           }));
           const item = state.inventory.find((i) => i.id === itemId);
@@ -709,53 +650,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 
   const stockOut = React.useCallback(
-    (
-      itemId: string,
-      quantity: number,
-      recipient: string,
-      purpose: string,
-      note?: string,
-      reference?: string,
-    ) => {
-      const item = state.inventory.find((i) => i.id === itemId);
-      if (!item) return;
-      if (quantity > item.quantity) {
-        toast.error(`Insufficient stock — only ${item.quantity} available`);
-        return;
-      }
+    (id: string, remarks: string) => {
       void (async () => {
         try {
-          const ref = reference || uid("SO");
           const data = await authCall("/inventory/stock-out", {
             method: "POST",
-            body: JSON.stringify({
-              itemId,
-              quantity,
-              recipient,
-              purpose,
-              note,
-              ref,
-            }),
+            body: JSON.stringify({ id, remarks }),
           });
           setState((s) => ({
             ...s,
             inventory: s.inventory.map((i) =>
-              i.id === itemId ? (data.item as InventoryItem) : i,
+              i.id === data.item.id ? (data.item as InventoryItem) : i,
             ),
             transactions: [
               data.transaction as StockTransaction,
               ...s.transactions,
             ],
-            stockOut: [data.record as StockOutRecord, ...s.stockOut],
-            stockOutRecords: [
-              data.record as StockOutRecord,
-              ...s.stockOutRecords,
-            ],
+            stockIn: s.stockIn.map((r) =>
+              r.id === data.record.id ? (data.record as StockInRecord) : r,
+            ),
+            stockInRecords: s.stockInRecords.map((r) =>
+              r.id === data.record.id ? (data.record as StockInRecord) : r,
+            ),
             activities: [data.activity as Activity, ...s.activities],
           }));
-          toast.success(
-            `Stock issued — ${quantity} × ${item.deviceName} to ${recipient}`,
-          );
+          toast.success(`Stock issued — ${data.record.itemName}`);
         } catch (e) {
           fail(e, "Could not issue stock");
         }
@@ -775,31 +694,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           setState((s) => ({
             ...s,
             stockIn: s.stockIn.map((r) => (r.id === id ? { ...r, status } : r)),
-          }));
-          toast.success(`Stock in record ${status}`);
-        } catch (e) {
-          fail(e, "Could not update record");
-        }
-      })();
-    },
-    [authCall, fail],
-  );
-
-  const updateStockOutStatus = React.useCallback(
-    (id: string, status: StockOutRecord["status"]) => {
-      void (async () => {
-        try {
-          await authCall(`/inventory/stock-out/${id}/status`, {
-            method: "PUT",
-            body: JSON.stringify({ status }),
-          });
-          setState((s) => ({
-            ...s,
-            stockOut: s.stockOut.map((r) =>
+            stockInRecords: s.stockInRecords.map((r) =>
               r.id === id ? { ...r, status } : r,
             ),
           }));
-          toast.success(`Stock out record ${status}`);
+          toast.success(`Stock in record ${status}`);
         } catch (e) {
           fail(e, "Could not update record");
         }
@@ -816,31 +715,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (filters.dateTo) params.set("dateTo", filters.dateTo);
         if (filters.status && filters.status !== "all")
           params.set("status", filters.status);
-        if (filters.supplier && filters.supplier !== "all")
-          params.set("supplier", filters.supplier);
         const data = await authCall(`/inventory/stock-in?${params.toString()}`);
         setState((s) => ({ ...s, stockInRecords: data.results || data }));
       } catch (e) {
         fail(e, "Could not fetch stock in records");
-      }
-    },
-    [authCall, fail],
-  );
-
-  const fetchStockOut = React.useCallback(
-    async (filters: StockOutFiltersState) => {
-      try {
-        const params = new URLSearchParams();
-        if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
-        if (filters.dateTo) params.set("dateTo", filters.dateTo);
-        if (filters.status && filters.status !== "all")
-          params.set("status", filters.status);
-        const data = await authCall(
-          `/inventory/stock-out?${params.toString()}`,
-        );
-        setState((s) => ({ ...s, stockOutRecords: data.results || data }));
-      } catch (e) {
-        fail(e, "Could not fetch stock out records");
       }
     },
     [authCall, fail],
@@ -855,34 +733,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setState((s) => ({ ...s, stockInHistory: data.results || data }));
       } catch (e) {
         fail(e, "Could not fetch stock-in history");
-      }
-    },
-    [authCall, fail],
-  );
-
-  const fetchStockOutHistory = React.useCallback(
-    async (itemId: string) => {
-      try {
-        const data = await authCall(
-          `/inventory/stock-out/history?itemId=${encodeURIComponent(itemId)}`,
-        );
-        setState((s) => ({ ...s, stockOutHistory: data.results || data }));
-      } catch (e) {
-        fail(e, "Could not fetch stock-out history");
-      }
-    },
-    [authCall, fail],
-  );
-
-  const fetchTicketHistory = React.useCallback(
-    async (itemId: string) => {
-      try {
-        const data = await authCall(
-          `/tickets/history?itemId=${encodeURIComponent(itemId)}`,
-        );
-        setState((s) => ({ ...s, ticketHistory: data.results || data }));
-      } catch (e) {
-        fail(e, "Could not fetch ticket history");
       }
     },
     [authCall, fail],
@@ -1000,340 +850,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       })();
     },
     [authCall, fail],
-  );
-
-  const addTicket = React.useCallback(
-    (t: Omit<Ticket, "id" | "status" | "createdBy" | "createdAt">) => {
-      void (async () => {
-        try {
-          const now = new Date().toISOString();
-          const created = await authCall("/tickets", {
-            method: "POST",
-            body: JSON.stringify({
-              ...t,
-              id: uid("TKT-2026"),
-              status: "open",
-              createdBy: state.user?.name ?? "Admin",
-              createdAt: now,
-              issues: t.issues.map((iss: TicketIssue) => ({
-                ...iss,
-                createdAt: iss.createdAt ?? now,
-              })),
-            }),
-          });
-          setState((s) => ({
-            ...s,
-            tickets: [created as Ticket, ...s.tickets],
-          }));
-          toast.success("Ticket generated successfully");
-        } catch (e) {
-          fail(e, "Could not generate ticket");
-        }
-      })();
-    },
-    [authCall, fail, state.user],
-  );
-
-  const addTicketIssue = React.useCallback(
-    (id: string, issue: Omit<TicketIssue, "id" | "createdAt">) => {
-      void (async () => {
-        try {
-          const created = await authCall(`/tickets/${id}/issues`, {
-            method: "POST",
-            body: JSON.stringify({
-              ...issue,
-              id: uid("ISS"),
-              createdAt: new Date().toISOString(),
-            }),
-          });
-          setState((s) => ({
-            ...s,
-            tickets: s.tickets.map((t) =>
-              t.id === id
-                ? { ...t, issues: [...t.issues, created as TicketIssue] }
-                : t,
-            ),
-          }));
-          toast.success("Issue added to ticket");
-        } catch (e) {
-          fail(e, "Could not add issue");
-        }
-      })();
-    },
-    [authCall, fail],
-  );
-
-  const applyIssuePatch = React.useCallback(
-    async (ticketId: string, issueId: string, patch: Partial<TicketIssue>) => {
-      const t = state.tickets.find((x) => x.id === ticketId);
-      if (!t) return;
-      const issue = t.issues.find((iss) => iss.id === issueId);
-      if (!issue) return;
-      const now = new Date().toISOString();
-      const next: Partial<TicketIssue> = { ...patch };
-      if (
-        patch.status &&
-        (patch.status === "resolved" || patch.status === "closed") &&
-        !patch.resolvedAt
-      )
-        next.resolvedAt = issue.resolvedAt ?? now;
-      if (
-        patch.status &&
-        (patch.status === "open" || patch.status === "in-progress")
-      )
-        next.resolvedAt = undefined;
-      await authCall(`/tickets/${ticketId}/issues/${issueId}`, {
-        method: "PUT",
-        body: JSON.stringify(next),
-      });
-      const issues = t.issues.map((iss) =>
-        iss.id === issueId ? { ...iss, ...next } : iss,
-      );
-      const status = ticketStatusFromIssues(issues, t.status);
-      let updated: Ticket = { ...t, issues };
-      if (status !== t.status) {
-        const saved = await authCall(`/tickets/${ticketId}`, {
-          method: "PUT",
-          body: JSON.stringify({ status }),
-        });
-        updated = saved as Ticket;
-      }
-      setState((s) => ({
-        ...s,
-        tickets: s.tickets.map((x) => (x.id === ticketId ? updated : x)),
-      }));
-      return updated;
-    },
-    [authCall, state.tickets],
-  );
-
-  const updateIssue = React.useCallback(
-    (ticketId: string, issueId: string, patch: Partial<TicketIssue>) => {
-      void (async () => {
-        try {
-          await applyIssuePatch(ticketId, issueId, patch);
-          toast.success(
-            patch.status
-              ? `Issue marked ${patch.status.replace("-", " ")}`
-              : "Issue updated",
-          );
-        } catch (e) {
-          fail(e, "Could not update issue");
-        }
-      })();
-    },
-    [applyIssuePatch, fail],
-  );
-
-  const removeIssue = React.useCallback(
-    (ticketId: string, issueId: string) => {
-      void (async () => {
-        try {
-          const t = state.tickets.find((x) => x.id === ticketId);
-          if (!t) return;
-          await authCall(`/tickets/${ticketId}/issues/${issueId}`, {
-            method: "DELETE",
-          });
-          const issues = t.issues.filter((iss) => iss.id !== issueId);
-          const status = ticketStatusFromIssues(issues, t.status);
-          let updated: Ticket = { ...t, issues };
-          if (status !== t.status) {
-            const saved = await authCall(`/tickets/${ticketId}`, {
-              method: "PUT",
-              body: JSON.stringify({ status }),
-            });
-            updated = saved as Ticket;
-          }
-          setState((s) => ({
-            ...s,
-            tickets: s.tickets.map((x) => (x.id === ticketId ? updated : x)),
-          }));
-          toast.success("Issue removed");
-        } catch (e) {
-          fail(e, "Could not remove issue");
-        }
-      })();
-    },
-    [authCall, fail, state.tickets],
-  );
-
-  const updateTicket = React.useCallback(
-    (id: string, patch: Partial<Ticket>) => {
-      void (async () => {
-        try {
-          const updated = await authCall(`/tickets/${id}`, {
-            method: "PUT",
-            body: JSON.stringify(patch),
-          });
-          setState((s) => ({
-            ...s,
-            tickets: s.tickets.map((t) =>
-              t.id === id ? (updated as Ticket) : t,
-            ),
-          }));
-          toast.success(
-            `Ticket ${patch.status?.replace("-", " ") ?? "updated"}`,
-          );
-        } catch (e) {
-          fail(e, "Could not update ticket");
-        }
-      })();
-    },
-    [authCall, fail],
-  );
-
-  const updateTicketStatus = React.useCallback(
-    (id: string, status: TicketStatus) => {
-      void (async () => {
-        try {
-          const t = state.tickets.find((x) => x.id === id);
-          if (!t) return;
-          const now = new Date().toISOString();
-          const patch: Partial<Ticket> = { status };
-          if (status === "work-completed") patch.completedAt = now;
-          if (status === "in-progress") {
-            patch.completedAt = undefined;
-            patch.submittedAt = undefined;
-          }
-          const updated = await authCall(`/tickets/${id}`, {
-            method: "PUT",
-            body: JSON.stringify(patch),
-          });
-          setState((s) => ({
-            ...s,
-            tickets: s.tickets.map((x) =>
-              x.id === id ? (updated as Ticket) : x,
-            ),
-          }));
-          toast.success("Ticket status updated");
-        } catch (e) {
-          fail(e, "Could not update ticket");
-        }
-      })();
-    },
-    [authCall, fail, state.tickets],
-  );
-
-  const updateTicketRemark = React.useCallback(
-    (id: string, remark: string) => {
-      void (async () => {
-        try {
-          await authCall(`/tickets/${id}/remark`, {
-            method: "PUT",
-            body: JSON.stringify({ remark }),
-          });
-          setState((s) => ({
-            ...s,
-            tickets: s.tickets.map((t) =>
-              t.id === id ? { ...t, technicianRemark: remark } : t,
-            ),
-          }));
-          toast.success("Technician remark saved");
-        } catch (e) {
-          fail(e, "Could not save remark");
-        }
-      })();
-    },
-    [authCall, fail],
-  );
-
-  const submitTicketSolution = React.useCallback(
-    (
-      id: string,
-      remark: string,
-      issueResolutions: Record<string, string> = {},
-    ) => {
-      void (async () => {
-        try {
-          const t = state.tickets.find((x) => x.id === id);
-          if (!t) return;
-          const pending = t.issues.filter(
-            (i) => i.status === "open" || i.status === "in-progress",
-          );
-          const missing = pending.filter(
-            (i) => !(issueResolutions[i.id] ?? "").trim(),
-          );
-          if (missing.length > 0) {
-            toast.error(
-              `Add a remark for every issue — ${missing.length} still missing`,
-            );
-            return;
-          }
-          const updated = await authCall(`/tickets/${id}/submit`, {
-            method: "POST",
-            body: JSON.stringify({ remark, issueResolutions }),
-          });
-          setState((s) => ({
-            ...s,
-            tickets: s.tickets.map((x) =>
-              x.id === id ? (updated as Ticket) : x,
-            ),
-          }));
-          toast.success("Ticket submitted to Admin as resolved");
-        } catch (e) {
-          fail(e, "Could not submit ticket");
-        }
-      })();
-    },
-    [authCall, fail, state.tickets, state.user],
-  );
-
-  const reissueTicket = React.useCallback(
-    (id: string, note: string) => {
-      void (async () => {
-        try {
-          const t = state.tickets.find((x) => x.id === id);
-          if (!t) return;
-          if (!t.technicianId) {
-            toast.error("Assign a technician before re-issuing this ticket");
-            return;
-          }
-          const updated = await authCall(`/tickets/${id}/reissue`, {
-            method: "POST",
-            body: JSON.stringify({ note }),
-          });
-          setState((s) => ({
-            ...s,
-            tickets: s.tickets.map((x) =>
-              x.id === id ? (updated as Ticket) : x,
-            ),
-          }));
-          toast.success("Ticket re-issued to technician");
-        } catch (e) {
-          fail(e, "Could not re-issue ticket");
-        }
-      })();
-    },
-    [authCall, fail, state.tickets],
-  );
-
-  const closeTicket = React.useCallback(
-    (id: string, resolution: string, resolvedIssueIds: string[]) => {
-      void (async () => {
-        try {
-          const t = state.tickets.find((x) => x.id === id);
-          if (!t) return;
-          const updated = await authCall(`/tickets/${id}/close`, {
-            method: "POST",
-            body: JSON.stringify({
-              resolution,
-              resolvedIssueIds,
-              closedBy: state.user?.name ?? "Admin",
-            }),
-          });
-          setState((s) => ({
-            ...s,
-            tickets: s.tickets.map((x) =>
-              x.id === id ? (updated as Ticket) : x,
-            ),
-          }));
-          toast.success("Ticket closed successfully");
-        } catch (e) {
-          fail(e, "Could not close ticket");
-        }
-      })();
-    },
-    [authCall, fail, state.tickets, state.user],
   );
 
   const addCategory = React.useCallback(
@@ -1685,26 +1201,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       stockIn,
       stockOut,
       updateStockInStatus,
-      updateStockOutStatus,
       fetchStockIn,
-      fetchStockOut,
       fetchStockInHistory,
-      fetchStockOutHistory,
-      fetchTicketHistory,
       addTransfer,
       updateTransfer,
       addRequest,
       updateRequest,
-      addTicket,
-      addTicketIssue,
-      updateIssue,
-      removeIssue,
-      updateTicket,
-      updateTicketStatus,
-      updateTicketRemark,
-      submitTicketSolution,
-      reissueTicket,
-      closeTicket,
       addCategory,
       updateCategory,
       deleteCategory,
@@ -1746,26 +1248,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       stockIn,
       stockOut,
       updateStockInStatus,
-      updateStockOutStatus,
       fetchStockIn,
-      fetchStockOut,
       fetchStockInHistory,
-      fetchStockOutHistory,
-      fetchTicketHistory,
       addTransfer,
       updateTransfer,
       addRequest,
       updateRequest,
-      addTicket,
-      addTicketIssue,
-      updateIssue,
-      removeIssue,
-      updateTicket,
-      updateTicketStatus,
-      updateTicketRemark,
-      submitTicketSolution,
-      reissueTicket,
-      closeTicket,
       addCategory,
       updateCategory,
       deleteCategory,
@@ -1806,6 +1294,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
 export function useApp() {
   const ctx = React.useContext(AppContext);
-  if (!ctx) throw new Error("useApp must be used within AppProvider");
+  if (!ctx) throw new Error("useApp must be used within an AppProvider");
   return ctx;
 }

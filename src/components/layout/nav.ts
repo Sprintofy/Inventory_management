@@ -3,8 +3,6 @@ import {
   LayoutDashboard,
   Package,
   PackagePlus,
-  PackageMinus,
-  Ticket,
   FolderTree,
   Building2,
   Users,
@@ -48,15 +46,11 @@ export const navGroups: NavGroup[] = [
       // Inventory shows counts for All (super-admin) or own dept (user).
       { title: "Inventory", href: "/inventory", icon: Package, roles: USER_SCOPED, keywords: ["stock", "items", "sku", "products"] },
       { title: "Stock In", href: "/stock-in", icon: PackagePlus, roles: ADMIN, keywords: ["stock", "inbound", "receive", "receipts", "goods"] },
-      { title: "Stock Out", href: "/stock-out", icon: PackageMinus, roles: ADMIN, keywords: ["stock", "outbound", "issue", "issued", "goods"] },
     ],
   },
   {
     label: "Operations",
-    items: [
-      // Tickets visible to admin and department-manager.
-      { title: "Tickets", href: "/tickets", icon: Ticket, roles: ["super-admin", "admin", "department-manager"], keywords: ["issue", "support", "complaint", "service"] },
-    ],
+    items: [],
   },
   {
     label: "Assets",

@@ -27,7 +27,6 @@ export default function InventoryPage() {
       if (term && !(
         (i.deviceName ?? '').toLowerCase().includes(term) ||
         (i.sku ?? '').toLowerCase().includes(term) ||
-        ((i.serialNumber ?? '').toLowerCase().includes(term)) ||
         (i.category ?? '').toLowerCase().includes(term)
       )) return false;
       if (filters.department !== "all" && i.department !== filters.department) return false;
@@ -44,9 +43,8 @@ export default function InventoryPage() {
       ID: i.id,
       "Device Name": i.deviceName,
       Brand: i.brand,
-      "Model Number": i.modelNumber,
+      Type: i.type,
       Category: i.category,
-      "Serial Number": i.serialNumber ?? "",
       Notes: i.notes ?? "",
       Description: i.description ?? "",
       Specifications: i.specifications ?? "",
@@ -103,7 +101,7 @@ export default function InventoryPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onClear={() => setSearch("")}
-              placeholder="Search by device name, Reg No., serial number, category…"
+              placeholder="Search by device name, Reg No., category…"
               className="md:max-w-sm"
             />
             <div className="flex items-center gap-2">

@@ -105,7 +105,7 @@ export default function DepartmentsPage() {
           {departments.map((d) => {
             const items = state.inventory.filter((i) => i.department === d.name);
             const low = items.filter((i) => i.quantity <= 10).length;
-            const openTickets = state.tickets.filter((t) => t.department === d.name && t.status !== "closed").length;
+            const openTickets = 0;
             const deptUsers = state.users.filter((u) => u.department === d.name).length;
             return (
               <Card key={d.id} className="group relative cursor-pointer py-5 transition-shadow hover:shadow-md" onClick={() => router.push(`/departments/${d.id}`)}>

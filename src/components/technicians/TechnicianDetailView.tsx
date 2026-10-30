@@ -14,7 +14,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useApp } from "@/store/app-store";
 import { useFakeLoading } from "@/hooks/use-fake-loading";
 import { formatDate, toDate } from "@/lib/utils";
-import type { Ticket } from "@/types";
 
 const priorityClass: Record<string, string> = {
   low: "bg-muted text-muted-foreground",
@@ -23,7 +22,7 @@ const priorityClass: Record<string, string> = {
   critical: "bg-danger/10 text-danger",
 };
 
-function TicketRow({ ticket }: { ticket: Ticket }) {
+function TicketRow({ ticket }: { ticket: any }) {
   return (
     <Link href={`/tickets/${ticket.id}`} className="flex items-center justify-between gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50">
       <div className="min-w-0">
@@ -49,10 +48,7 @@ export function TechnicianDetailView({ id, basePath = "/technicians" }: { id: st
 
   const technician = state.technicians.find((t) => t.id === id);
 
-  const assignedTickets = useMemo(() => {
-    if (!technician) return [];
-    return state.tickets.filter((t) => t.technicianId === technician.id);
-  }, [state.tickets, technician]);
+  const assignedTickets = React.useMemo<any[]>(() => [], [technician]);
 
   const openTickets = useMemo(() => assignedTickets.filter((t) => t.status === "open"), [assignedTickets]);
   const inProgressTickets = useMemo(() => assignedTickets.filter((t) => t.status === "in-progress" || t.status === "partially-resolved"), [assignedTickets]);

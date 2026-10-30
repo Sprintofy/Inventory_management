@@ -37,10 +37,7 @@ export default function DepartmentDetailPage({ params }: { params: Promise<{ id:
     () => state.inventory.filter((i) => i.department === dept?.name),
     [state.inventory, dept]
   );
-  const routedTickets = React.useMemo(
-    () => (dept ? state.tickets.filter((t) => t.department === dept.name) : []),
-    [state.tickets, dept]
-  );
+  const routedTickets = React.useMemo<any[]>(() => [], [dept]);
 
   if (!loading && !dept) {
     return (

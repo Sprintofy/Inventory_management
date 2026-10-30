@@ -47,10 +47,7 @@ export default function SubDepartmentDetailPage({ params }: { params: Promise<{ 
 
   const childHref = (s: SubDepartment) => `/departments/${dept?.id}/${[...(subPath ?? []), s.id].join("/")}`;
 
-  const routedTickets = React.useMemo(
-    () => (dept && node ? state.tickets.filter((t) => t.department === dept.name && t.subDepartment === node.name) : []),
-    [state.tickets, dept, node]
-  );
+  const routedTickets = React.useMemo<any[]>(() => [], [dept, node]);
 
   const scopeNames = React.useMemo(() => {
     const names: string[] = [];

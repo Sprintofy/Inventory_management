@@ -93,7 +93,7 @@ export function TechniciansView({ basePath = "/technicians" }: { basePath?: stri
     });
   }, [filtered, sortKey, sortDir]);
 
-  const workload = React.useMemo(() => getTechnicianWorkload(state.tickets), [state.tickets]);
+  const workload = React.useMemo(() => getTechnicianWorkload([]), []);
   const paged = sorted.slice((page - 1) * pageSize, page * pageSize);
 
   const toggleSort = (key: typeof sortKey) => {

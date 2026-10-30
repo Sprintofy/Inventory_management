@@ -36,7 +36,7 @@ interface InventoryTableProps {
 const allColumns = [
   { key: "deviceName", label: "Device Name" },
   { key: "brand", label: "Brand" },
-  { key: "modelNumber", label: "Model" },
+  { key: "type", label: "Type" },
   { key: "sku", label: "Reg No." },
   { key: "category", label: "Category" },
   { key: "quantity", label: "Quantity" },
@@ -158,8 +158,8 @@ export function InventoryTable({ items, onEdit }: InventoryTableProps) {
                     case "brand":
                       value = item.brand;
                       break;
-                    case "modelNumber":
-                      value = item.modelNumber;
+                    case "type":
+                      value = item.type;
                       break;
                     case "sku":
                       value = item.sku;

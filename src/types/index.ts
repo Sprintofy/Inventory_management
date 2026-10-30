@@ -24,78 +24,6 @@ export type TicketAssetStatus = "in" | "out" | "in-transit";
 
 export type MovementType = "check-in" | "check-out" | "transfer";
 
-export interface TicketIssue {
-  id: string;
-  assetId?: string;
-  title: string;
-  description?: string;
-  priority: RequestPriority;
-  status: IssueStatus;
-  assignedTo?: string;
-  createdAt: string;
-  resolvedAt?: string;
-  resolution?: string;
-}
-
-export interface TicketAsset {
-  id: string;
-  assetId: string;
-  serialNumber?: string;
-  itemType: string;
-  name: string;
-  currentLocation: string;
-  previousLocation?: string;
-  status: TicketAssetStatus;
-  checkInDate?: string;
-  checkOutDate?: string;
-  notes?: string;
-}
-
-export interface AssetMovement {
-  id: string;
-  ticketId: string;
-  assetId: string;
-  serialNumber?: string;
-  itemType: string;
-  itemName: string;
-  movementType: MovementType;
-  fromLocation: string;
-  toLocation: string;
-  performedBy: string;
-  date: string;
-  remarks?: string;
-}
-
-export interface Ticket {
-  id: string;
-  title: string;
-  description: string;
-  customer?: string;
-  category: string;
-  priority: RequestPriority;
-  department: string;
-  subDepartment?: string;
-  createdBy: string;
-  createdAt: string;
-  status: TicketStatus;
-  assets: TicketAsset[];
-  issues: TicketIssue[];
-  /** Inventory items this ticket was raised from (stock-in items only). */
-  itemIds: string[];
-  closedBy?: string;
-  closedAt?: string;
-  resolution?: string;
-  technicianId?: string;
-  technicianRemark?: string;
-  completedAt?: string;
-  /** When the technician last submitted the ticket back to the Admin as solved. */
-  submittedAt?: string;
-  /** How many times the Admin has sent this ticket back to the technician. */
-  reissueCount?: number;
-  /** Why the Admin re-issued the ticket the last time. */
-  lastReissueNote?: string;
-}
-
 export interface SubDepartment {
   id: string;
   departmentId: string;
@@ -123,12 +51,11 @@ export interface InventoryItem {
   id: string;
   deviceName: string;
   brand: string;
-  modelNumber: string;
+  type: "W" | "C" | "NC";
   category: string;
   description?: string;
   specifications?: string;
   warrantyPeriod?: string;
-  serialNumber?: string;
   notes?: string;
   sku: string;
   supplier?: string;
@@ -290,30 +217,19 @@ export interface Transfer {
 }
 
 export interface StockInRecord {
-  id: string;
-  reference: string;
-  date: string;
-  supplier: string;
+  id: number | string;
+  workOrderId: string;
+  jobNo: string;
+  dateIn: string;
+  dateOut: string | null;
+  remarks: string | null;
   itemId: string;
   itemName: string;
-  items: number;
+  productType: "W" | "C" | "NC";
   quantity: number;
   department: string;
   createdBy: string;
-  status: "received" | "pending" | "cancelled";
-}
-
-export interface StockOutRecord {
-  id: string;
-  reference: string;
-  itemId: string;
-  date: string;
-  itemName: string;
-  recipient: string;
-  department: string;
-  purpose: string;
-  quantity: number;
-  status: "issued" | "pending" | "cancelled";
+  status: "received" | "issued" | "cancelled";
 }
 
 export interface Activity {
