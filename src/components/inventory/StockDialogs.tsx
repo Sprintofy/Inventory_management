@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { PackagePlus, Clock, Trash2 } from "lucide-react";
+import { PackagePlus, Clock, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +27,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { formatDate, formatNumber } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/PageHeader";
 import Link from "next/link";
+import { InventoryForm } from "./InventoryForm";
 
 interface StockLine {
   itemId: string;
@@ -136,11 +137,16 @@ export function StockInDialog({
   onOpenChange: (o: boolean) => void;
   fullPage?: boolean;
 }) {
-  const { state, stockIn, visibleDepartments, user } = useApp();
+  const { state, stockIn, visibleDepartments } = useApp();
   const [itemId, setItemId] = React.useState("");
   const [quantity, setQuantity] = React.useState(1);
   const [note, setNote] = React.useState("");
   const [defect, setDefect] = React.useState("");
+  const [search, setSearch] = React.useState("");
+  const [createItemOpen, setCreateItemOpen] = React.useState(false);
+  const knownItemIds = React.useRef<Set<string>>(
+    new Set(state.inventory.map((i) => i.id)),
+  );
 
   React.useEffect(() => {
     if (open) {
@@ -148,17 +154,44 @@ export function StockInDialog({
       setQuantity(1);
       setNote("");
       setDefect("");
+      setSearch("");
+      setCreateItemOpen(false);
+      knownItemIds.current = new Set(state.inventory.map((i) => i.id));
     }
-  }, [open]);
+  }, [open, state.inventory]);
+
+  // Detect newly created inventory item from the create form and auto-select it
+  React.useEffect(() => {
+    if (!createItemOpen) {
+      const currentIds = new Set(state.inventory.map((i) => i.id));
+      const newItem = state.inventory.find(
+        (i) => !knownItemIds.current.has(i.id),
+      );
+      if (newItem) {
+        knownItemIds.current = currentIds;
+        setItemId(newItem.id);
+      }
+    }
+  }, [createItemOpen, state.inventory]);
 
   const selectedItem = state.inventory.find((i) => i.id === itemId);
   const overAvailable = selectedItem && quantity > selectedItem.quantity;
 
-  const options = state.inventory.filter(
-    (i) =>
-      visibleDepartments.length === 0 ||
-      visibleDepartments.includes(i.department),
-  );
+  const options = React.useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return state.inventory.filter((i) => {
+      if (
+        visibleDepartments.length > 0 &&
+        !visibleDepartments.includes(i.department)
+      )
+        return false;
+      if (!term) return true;
+      return (
+        i.deviceName.toLowerCase().includes(term) ||
+        i.sku.toLowerCase().includes(term)
+      );
+    });
+  }, [state.inventory, search, visibleDepartments]);
 
   const valid = !!itemId && quantity >= 1;
 
@@ -175,23 +208,61 @@ export function StockInDialog({
     }
   };
 
+  const handleCreateItem = () => {
+    setCreateItemOpen(true);
+  };
+
   const renderContent = () => (
     <div className="space-y-4">
       <div className="space-y-1.5">
         <Label className="text-xs">Product</Label>
-        <Select value={itemId} onValueChange={setItemId}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select product" />
-          </SelectTrigger>
-          <SelectContent>
-            {options.map((i) => (
-              <SelectItem key={i.id} value={i.id}>
-                {i.deviceName} (Reg No. {i.sku}) · Type {i.type} ·{" "}
-                {formatNumber(i.quantity)} in stock
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex flex-col gap-2">
+          <Select value={itemId} onValueChange={setItemId}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select product" />
+            </SelectTrigger>
+            <SelectContent>
+              <Input
+                placeholder="Search by device name or Reg No…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full text-sm border-b focus:border-b focus:ring-0 py-1"
+              />
+              {options.length === 0 && search.trim() !== "" ? (
+                <SelectItem value="" className="text-muted-foreground italic" disabled>
+                  No matching products
+                </SelectItem>
+              ) : (
+                options.map((i) => (
+                  <SelectItem key={i.id} value={i.id}>
+                    {i.deviceName} ({i.sku})
+                  </SelectItem>
+                ))
+              )}
+              {search.trim() === "" && (
+                <SelectItem value="" className="text-xs text-muted-foreground border-t pt-3" disabled>
+                  {options.length} product{options.length !== 1 ? "s" : ""}
+                  available
+                </SelectItem>
+              )}
+            </SelectContent>
+          </Select>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleCreateItem}
+            className="w-full"
+          >
+            <Plus className="size-3.5 mr-2" /> Create Inventory Item
+          </Button>
+        </div>
+        {selectedItem && (
+          <p className="text-muted-foreground text-[11px]">
+            Reg No. {selectedItem.sku} · Type {selectedItem.type} ·{" "}
+            {formatNumber(selectedItem.quantity)} in stock
+          </p>
+        )}
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
@@ -327,6 +398,11 @@ export function StockInDialog({
             />
           </Card>
         )}
+        <InventoryForm
+          open={createItemOpen}
+          onOpenChange={setCreateItemOpen}
+          fullPage={false}
+        />
       </div>
     );
   }
@@ -379,7 +455,16 @@ export function StockInDialog({
             Record Stock In
           </Button>
         </DialogFooter>
+
+        <InventoryForm
+          open={createItemOpen}
+          onOpenChange={setCreateItemOpen}
+        />
       </DialogContent>
     </Dialog>
   );
+}
+
+function wrapText(arg0: string, defect: number): any {
+  throw new Error("Function not implemented.");
 }
