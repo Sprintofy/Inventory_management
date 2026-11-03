@@ -131,7 +131,7 @@ export default function StockOutPage({
     doc.setFont("helvetica", "bold");
     doc.text("Job Card No:", margin, 40);
     doc.setFont("helvetica", "normal");
-    doc.text(record.workOrderId || "-", margin + 25, 40);
+    doc.text(record.jobNo || "-", margin + 25, 40);
     doc.line(margin + 25, 41, margin + 85, 41);
 
     doc.setFont("helvetica", "bold");
