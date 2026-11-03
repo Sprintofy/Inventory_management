@@ -24,6 +24,7 @@ export default function StockOutPage({ params }: { params: Promise<{ id: string 
   const [remarks, setRemarks] = React.useState(record?.remarks ?? "");
   const [technicianName, setTechnicianName] = React.useState(record?.technicianName ?? "");
   const [secIcName, setSecIcName] = React.useState(record?.secIcName ?? "");
+  const [defect, setDefect] = React.useState(record?.defect ?? "");
   const [submitting, setSubmitting] = React.useState(false);
   const [submitted, setSubmitted] = React.useState(false);
 
@@ -60,9 +61,13 @@ export default function StockOutPage({ params }: { params: Promise<{ id: string 
       toast.error("Name of Sec I/c is required before stocking out");
       return;
     }
+    if (!defect.trim()) {
+      toast.error("Defect is required before stocking out");
+      return;
+    }
     setSubmitting(true);
     try {
-      await stockOut(recordId, remarks.trim(), technicianName.trim(), secIcName.trim());
+      await stockOut(recordId, remarks.trim(), technicianName.trim(), secIcName.trim(), defect.trim());
       setSubmitted(true);
       toast.success("Stock issued successfully");
     } catch {
@@ -185,6 +190,16 @@ export default function StockOutPage({ params }: { params: Promise<{ id: string 
                   placeholder="Reason for issuing this stock…"
                   value={remarks}
                   onChange={(e) => setRemarks(e.target.value)}
+                  rows={3}
+                  className="w-full"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Defect</Label>
+                <Textarea
+                  placeholder="Defect description…"
+                  value={defect}
+                  onChange={(e) => setDefect(e.target.value)}
                   rows={3}
                   className="w-full"
                 />
