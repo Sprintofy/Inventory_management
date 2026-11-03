@@ -101,6 +101,15 @@ export default function StockOutPage({
   const generateJobCardPDF = () => {
     if (!record) return;
 
+    const formatDateDDMMYYYY = (dateStr?: string) => {
+      if (!dateStr) return "-";
+      const d = new Date(dateStr);
+      const day = d.getDate().toString().padStart(2, "0");
+      const month = (d.getMonth() + 1).toString().padStart(2, "0");
+      const year = d.getFullYear();
+      return `${day}-${month}-${year}`;
+    };
+
     const doc = new jsPDF({
       orientation: "portrait",
       unit: "mm",
@@ -129,7 +138,7 @@ export default function StockOutPage({
     doc.text("Date:", pageWidth - margin - 60, 40);
     doc.setFont("helvetica", "normal");
     doc.text(
-      record.dateIn || formatDate(new Date().toISOString()),
+      record.dateIn ? formatDateDDMMYYYY(record.dateIn) : "-",
       pageWidth - margin - 45,
       40,
     );
@@ -236,11 +245,7 @@ export default function StockOutPage({
     doc.setFont("helvetica", "bold");
     doc.text("Date Closed:", pageWidth - margin - 60, yPos);
     doc.setFont("helvetica", "normal");
-    doc.text(
-      record.dateOut ?? formatDate(new Date().toISOString()),
-      pageWidth - margin - 35,
-      yPos,
-    );
+    doc.text(record.dateOut ? formatDateDDMMYYYY(record.dateOut) : "-", pageWidth - margin - 35, yPos);
     doc.line(pageWidth - margin - 35, yPos + 1, pageWidth - margin, yPos + 1);
 
     // ===== Signatures =====
