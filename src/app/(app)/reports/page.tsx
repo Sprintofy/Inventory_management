@@ -12,11 +12,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useApp } from "@/store/app-store";
-import { downloadCSV } from "@/lib/utils";
+import { formatNumber } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from "recharts";
-import jsPDF from "jspdf";
-import "jspdf-autotable";
+import * as XLSX from "xlsx";
 
 const palette = ["#4f46e5", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6", "#f43f5e", "#6366f1", "#84cc16"];
 
@@ -39,21 +38,21 @@ export default function ReportsPage() {
       : activeDepartment,
   );
   const [reportView, setReportView] = React.useState<"inventory" | "tickets">("inventory");
-  const [dateFilter, setDateFilter] = React.useState<"today" | "week" | "month" | "all">("all");
+  const [dateFilter, setDateFilter] = React.useState<"today" | "week" | "month" | "year" | "all">("today");
 
   const scopeItems = useMemo(() => {
     const base =
       dept === "all"
-        ? state.inventory
-        : state.inventory.filter((i) => i.department === dept);
+        ? state.stockInRecords
+        : state.stockInRecords.filter((i) => i.department === dept);
     return base;
-  }, [state.inventory, dept]);
+  }, [state.stockInRecords, dept]);
 
   const ticketReportData = React.useMemo<any[]>(() => [], [dateFilter]);
 
   const byCategory = useMemo(() => {
     const acc: Record<string, number> = {};
-    for (const i of scopeItems) acc[i.category] = (acc[i.category] ?? 0) + 1;
+    for (const i of scopeItems) acc[i.productType] = (acc[i.productType] ?? 0) + 1;
     return Object.entries(acc)
       .map(([name, items]) => ({ name, items }))
       .sort((a, b) => b.items - a.items);
@@ -71,10 +70,10 @@ export default function ReportsPage() {
   const byScope = useMemo(() => {
     return state.departments.map((d) => ({
       name: d.name,
-      items: state.inventory.filter((i) => i.department === d.name).length,
+      items: state.stockInRecords.filter((i) => i.department === d.name).length,
       color: d.color,
     }));
-  }, [state.departments, state.inventory]);
+  }, [state.stockInRecords, state.departments]);
 
   const topItems = useMemo(
     () => [...scopeItems].sort((a, b) => b.quantity - a.quantity).slice(0, 8),
@@ -83,83 +82,94 @@ export default function ReportsPage() {
 
   const scopeLabel = dept === "all" ? "All Departments" : dept;
 
-  const exportInventoryCSV = () => {
-    downloadCSV("inventory-report.csv", [
-      { Name: "Name", "Reg No.": "Reg No.", Category: "Category", Department: "Department", Quantity: "Quantity", Status: "Status" },
-      ...scopeItems.map((i) => ({ Name: i.deviceName, "Reg No.": i.sku, Category: i.category, Department: i.department, Quantity: i.quantity, Status: i.status })),
-    ]);
-    toast.success("Inventory report exported as CSV");
+  const formatDateDDMMYYYY = (dateStr?: string) => {
+    if (!dateStr) return "-";
+    const d = new Date(dateStr);
+    const day = d.getDate().toString().padStart(2, "0");
+    const month = (d.getMonth() + 1).toString().padStart(2, "0");
+    const year = d.getFullYear();
+    return `${day}-${month}-${year}`;
   };
 
-  const exportTicketsCSV = () => {
-    downloadCSV("tickets-report.csv", [
-      { "S/N": "S/N", "JOB NO": "JOB NO", EQPT: "EQPT", "REGD NO": "REGD NO", QTY: "QTY", "SEC/DEPT": "SEC/DEPT", "DATE IN": "DATE IN", "DATE OUT": "DATE OUT", "TYPE OF FAULT": "TYPE OF FAULT", PROGRESS: "PROGRESS", "ACTION BY TEAM": "ACTION BY TEAM" },
-      ...ticketReportData.map((t) => ({ "S/N": t.sNo, "JOB NO": t.jobNo, EQPT: t.eqpt, "REGD NO": t.regNo, QTY: t.qty, "SEC/DEPT": t.secDept, "DATE IN": t.dateIn, "DATE OUT": t.dateOut, "TYPE OF FAULT": t.typeOfFault, PROGRESS: t.progress, "ACTION BY TEAM": t.actionByTech })),
-    ]);
-    toast.success("Ticket report exported as CSV");
-  };
+  const filteredStockIn = scopeItems.filter((i) => {
+    if (!i.dateIn) return true;
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10);
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const yearStart = new Date(now.getFullYear(), 0, 1);
+    const itemDate = i.dateIn.slice(0, 10);
+    if (dateFilter === "today") return itemDate === todayStr;
+    if (dateFilter === "week") return new Date(i.dateIn) >= weekAgo;
+    if (dateFilter === "month") return new Date(i.dateIn) >= monthStart;
+    if (dateFilter === "year") return new Date(i.dateIn) >= yearStart;
+    return true;
+  });
 
-  const exportTicketsPDF = () => {
-    if (ticketReportData.length === 0) {
-      toast.error("No ticket data to export");
-      return;
-    }
-
-    const doc = new jsPDF("l", "mm", "a4");
-    doc.setFontSize(10);
-    doc.text("Ticket Report", 14, 10);
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 16);
-
-    const columns = [
-      { header: "S/N", dataKey: "sNo", width: 12 },
-      { header: "JOB NO", dataKey: "jobNo", width: 25 },
-      { header: "EQPT", dataKey: "eqpt", width: 30 },
-      { header: "REGD NO", dataKey: "regNo", width: 25 },
-      { header: "QTY", dataKey: "qty", width: 12 },
-      { header: "SEC/DEPT", dataKey: "secDept", width: 30 },
-      { header: "DATE IN", dataKey: "dateIn", width: 22 },
-      { header: "DATE OUT", dataKey: "dateOut", width: 22 },
-      { header: "TYPE OF FAULT", dataKey: "typeOfFault", width: 35 },
-      { header: "PROGRESS", dataKey: "progress", width: 20 },
-      { header: "ACTION BY TEAM", dataKey: "actionByTech", width: 25 },
+  const exportInventoryExcel = () => {
+    const wsData: any[][] = [
+      ["S/N", "JOB NO", "EQPT NOMENCLATURE", "REGD NO", "QTY", "DEPT", "DATE IN", "DATE OUT", "TYPE OF FAULT", "PROGRESS", "ACTION BY TEAM"],
     ];
 
-    const rows = ticketReportData.map((t) => [
-      t.sNo,
-      t.jobNo,
-      t.eqpt,
-      t.regNo,
-      t.qty,
-      t.secDept,
-      t.dateIn,
-      t.dateOut,
-      t.typeOfFault,
-      t.progress,
-      t.actionByTech,
-    ]);
+    for (let i = 0; i < filteredStockIn.length; i++) {
+      const r = filteredStockIn[i];
+      wsData.push([
+        i + 1,
+        r.jobNo,
+        r.itemName,
+        r.itemId,
+        r.quantity,
+        r.department,
+        formatDateDDMMYYYY(r.dateIn),
+        r.dateOut ? formatDateDDMMYYYY(r.dateOut) : "-",
+        r.defect ?? "-",
+        r.status,
+        r.remarks ?? "-",
+      ]);
+    }
 
-    (doc as any).autoTable({
-      head: [columns.map((c) => c.header)],
-      body: rows,
-      startY: 22,
-      styles: { fontSize: 7, cellPadding: 2 },
-      columnStyles: {
-        0: { cellWidth: 12 },
-        1: { cellWidth: 25 },
-        2: { cellWidth: 30 },
-        3: { cellWidth: 25 },
-        4: { cellWidth: 12 },
-        5: { cellWidth: 30 },
-        6: { cellWidth: 22 },
-        7: { cellWidth: 22 },
-        8: { cellWidth: 35 },
-        9: { cellWidth: 20 },
-        10: { cellWidth: 25 },
-      },
-    });
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-    doc.save("tickets-report.pdf");
-    toast.success("Ticket report exported as PDF");
+    const lastRow = wsData.length;
+    for (let r = 1; r <= lastRow; r++) {
+      for (let c = 0; c < 11; c++) {
+        const colChar = String.fromCharCode(65 + c);
+        const cellRef = `${colChar}${r}`;
+        if (ws[cellRef]) {
+          ws[cellRef].s = {
+            font: { sz: 9 },
+            alignment: { horizontal: "center", vertical: "center", wrapText: true },
+            border: {
+              top: { style: "thin", color: "d1d5db" },
+              bottom: { style: "thin", color: "d1d5db" },
+              left: { style: "thin", color: "d1d5db" },
+              right: { style: "thin", color: "d1d5db" },
+            },
+          };
+        }
+      }
+    }
+
+    for (let c = 0; c < 11; c++) {
+      const colChar = String.fromCharCode(65 + c);
+      const cellRef = `${colChar}1`;
+      ws[cellRef].s = {
+        font: { sz: 10, bold: true, color: { rgb: "FFFFFF" } },
+        fill: { fgColor: { rgb: "1F2937" } },
+        alignment: { horizontal: "center", vertical: "center", wrapText: true },
+        border: {
+          top: { style: "thin", color: "d1d5db" },
+          bottom: { style: "thin", color: "d1d5db" },
+          left: { style: "thin", color: "d1d5db" },
+          right: { style: "thin", color: "d1d5db" },
+        },
+      };
+    }
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Stock In Report");
+    XLSX.writeFile(wb, `stock-in-report-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    toast.success("Stock In report exported as Excel");
   };
 
   const handleDeptChange = (d: string) => {
@@ -198,14 +208,14 @@ export default function ReportsPage() {
                 <SelectItem value="today">Today</SelectItem>
                 <SelectItem value="week">This Week</SelectItem>
                 <SelectItem value="month">This Month</SelectItem>
+                <SelectItem value="year">This Year</SelectItem>
               </SelectContent>
             </Select>
             {reportView === "inventory" ? (
-              <Button variant="outline" onClick={exportInventoryCSV}><FileDown className="size-4" /> Export CSV</Button>
+              <Button variant="outline" onClick={exportInventoryExcel}><FileDown className="size-4" /> Export Excel</Button>
             ) : (
               <>
-                <Button variant="outline" onClick={exportTicketsCSV}><FileDown className="size-4" /> Export CSV</Button>
-                <Button onClick={exportTicketsPDF}><FileDown className="size-4" /> Export PDF</Button>
+                <Button variant="outline" onClick={exportInventoryExcel}><FileDown className="size-4" /> Export Excel</Button>
               </>
             )}
           </div>
@@ -216,7 +226,7 @@ export default function ReportsPage() {
       {reportView === "inventory" && (
         <>
           <p className="text-muted-foreground text-sm">
-            Showing inventory for <span className="text-foreground font-medium">{scopeLabel}</span> · {scopeItems.length} item{scopeItems.length === 1 ? "" : "s"}
+            Showing inventory for <span className="text-foreground font-medium">{scopeLabel}</span> · {filteredStockIn.length} item{filteredStockIn.length === 1 ? "" : "s"}
           </p>
 
           <div className="grid gap-5 lg:grid-cols-2">
@@ -280,7 +290,7 @@ export default function ReportsPage() {
                   <TableHeader>
                     <TableRow className="hover:bg-transparent">
                       <TableHead>Item</TableHead>
-                      <TableHead>Category</TableHead>
+                      <TableHead>Product Type</TableHead>
                       <TableHead className="text-right">Quantity</TableHead>
                       <TableHead className="text-right">Department</TableHead>
                       <TableHead>Status</TableHead>
@@ -290,13 +300,13 @@ export default function ReportsPage() {
                     {topItems.map((i) => (
                       <TableRow key={i.id}>
                         <TableCell>
-                          <p className="text-sm font-medium">{i.deviceName}</p>
-                          <p className="text-muted-foreground font-mono text-xs">Reg No. {i.sku}</p>
+                          <p className="text-sm font-medium">{i.itemName}</p>
+                          <p className="text-muted-foreground font-mono text-xs">Reg No. {i.itemId}</p>
                         </TableCell>
-                        <TableCell className="text-xs">{i.category}</TableCell>
+                        <TableCell className="text-xs">{i.productType}</TableCell>
                         <TableCell className="text-right text-sm tabular-nums">{i.quantity.toLocaleString()}</TableCell>
                         <TableCell className="text-right text-sm tabular-nums">{i.department}</TableCell>
-                        <TableCell><StatusBadge status={i.status} /></TableCell>
+                        <TableCell><StatusBadge status={i.status as any} /></TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
