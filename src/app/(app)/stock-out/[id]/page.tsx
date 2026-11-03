@@ -413,7 +413,7 @@ export default function StockOutPage({
                 <ArrowLeft className="size-4 mr-2" /> Back to Stock In
               </Button>
             </Link>
-            {submitted && (
+            {(submitted || record.status === "Stock Out") && (
               <>
                 <Button
                   onClick={generateJobCardPDF}
