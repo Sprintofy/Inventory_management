@@ -97,6 +97,11 @@ export function InventoryForm({
 }: InventoryFormProps) {
   const { state, activeDepartment, addItem, updateItem, log } = useApp();
 
+  const existingSku = (sku: string, excludeId?: string) =>
+    state.inventory.some(
+      (i) => i.sku.trim().toLowerCase() === sku.trim().toLowerCase() && i.id !== excludeId,
+    );
+
   const departmentOptions = React.useMemo(
     () =>
       activeDepartment === "all"
@@ -142,6 +147,10 @@ export function InventoryForm({
     };
 
     if (item) {
+      if (existingSku(values.sku.trim(), item.id)) {
+        toast.error(`Reg No. "${values.sku.trim()}" already exists.`);
+        return;
+      }
       updateItem({
         ...item,
         ...payload,
@@ -152,6 +161,10 @@ export function InventoryForm({
       log("updated inventory", "Inventory", values.deviceName, "");
       toast.success("Inventory item updated successfully");
     } else {
+      if (existingSku(values.sku.trim())) {
+        toast.error(`Reg No. "${values.sku.trim()}" already exists.`);
+        return;
+      }
       addItem({
         ...payload,
         id: uid("INV"),
