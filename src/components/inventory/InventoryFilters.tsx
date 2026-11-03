@@ -14,7 +14,6 @@ import { useApp } from "@/store/app-store";
 export interface InventoryFiltersState {
   department: string;
   category: string;
-  supplier: string;
   dateFrom: string;
   dateTo: string;
 }
@@ -22,7 +21,6 @@ export interface InventoryFiltersState {
 export const emptyFilters: InventoryFiltersState = {
   department: "all",
   category: "all",
-  supplier: "all",
   dateFrom: "",
   dateTo: "",
 };
@@ -83,16 +81,6 @@ export function InventoryFilters({
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5 col-span-2">
-              <Label className="text-xs">Supplier</Label>
-              <Select value={filters.supplier} onValueChange={(v) => set({ supplier: v })}>
-                <SelectTrigger size="sm" className="w-full"><SelectValue placeholder="Select supplier" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  {state.suppliers.map((s) => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
           </div>
           <Separator />
           <div className="space-y-3">
@@ -112,14 +100,12 @@ export function InventoryFilters({
 
 // Stock In Filters
 export interface StockInFiltersState {
-  supplier: string;
   status: string;
   dateFrom: string;
   dateTo: string;
 }
 
 export const emptyStockInFilters: StockInFiltersState = {
-  supplier: "all",
   status: "all",
   dateFrom: "",
   dateTo: "",
@@ -128,11 +114,9 @@ export const emptyStockInFilters: StockInFiltersState = {
 export function StockInFilters({
   filters,
   onChange,
-  suppliers,
 }: {
   filters: StockInFiltersState;
   onChange: (f: StockInFiltersState) => void;
-  suppliers: string[];
 }) {
   const activeCount = Object.entries(filters).filter(([, v]) => v !== "all" && v !== "").length;
 
@@ -162,16 +146,6 @@ export function StockInFilters({
         </div>
         <div className="max-h-[60vh] space-y-4 overflow-y-auto p-4">
           <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Supplier</Label>
-              <Select value={filters.supplier} onValueChange={(v) => set({ supplier: v })}>
-                <SelectTrigger size="sm" className="w-full"><SelectValue placeholder="All Suppliers" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Suppliers</SelectItem>
-                  {suppliers.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Status</Label>
               <Select value={filters.status} onValueChange={(v) => set({ status: v })}>

@@ -40,6 +40,7 @@ const HEADER_FIELDS: Record<string, string> = {
   item: "deviceName",
   brand: "brand",
   type: "type",
+  cputype: "cpuType",
   sku: "sku",
   code: "sku",
   category: "category",
@@ -47,15 +48,11 @@ const HEADER_FIELDS: Record<string, string> = {
   itemdescription: "description",
   specifications: "specifications",
   spec: "specifications",
-  warrantyperiod: "warrantyPeriod",
-  warranty: "warrantyPeriod",
   department: "department",
-  subdepartment: "subDepartment",
   quantity: "quantity",
   qty: "quantity",
   qtyonhand: "quantity",
   unit: "unit",
-  supplier: "supplier",
   notes: "notes",
   remarks: "notes",
 };
@@ -185,17 +182,18 @@ export function InventoryImportDialog({
             deviceName: String(get("deviceName") ?? "").trim(),
             brand: String(get("brand") ?? "").trim() || "—",
             type: (String(get("type") ?? "").trim() || "C") as "W" | "C" | "NC",
+            cpuType: (String(get("cputype") ?? "").trim() || undefined) as
+              | "CAN"
+              | "NCAN"
+              | "SA"
+              | undefined,
             sku,
             category: String(get("category") ?? "").trim(),
             description: String(get("description") ?? "").trim() || undefined,
             specifications: String(get("specifications") ?? "").trim() || undefined,
-            warrantyPeriod: String(get("warrantyPeriod") ?? "").trim() || undefined,
             department: String(get("department") ?? "").trim(),
-            subDepartment:
-              String(get("subDepartment") ?? "").trim() || undefined,
             quantity: quantity ?? 0,
             unit: String(get("unit") ?? "").trim() || "unit",
-            supplier: String(get("supplier") ?? "").trim() || undefined,
             notes: String(get("notes") ?? "").trim() || undefined,
           },
         };

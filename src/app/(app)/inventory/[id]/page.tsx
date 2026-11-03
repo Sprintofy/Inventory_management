@@ -143,12 +143,10 @@ export default function InventoryDetailPage({ params }: { params: Promise<{ id: 
                     { k: "Device Name", v: item.deviceName },
                     { k: "Brand", v: item.brand },
                     { k: "Category", v: item.category },
-                    { k: "Sub Department", v: item.subDepartment ?? "—" },
                     { k: "Department", v: item.department },
-                    { k: "Supplier", v: item.supplier ?? "—" },
+                    { k: "CPU Type", v: item.cpuType ?? "—" },
                     { k: "Unit", v: item.unit },
                     { k: "Specifications", v: item.specifications ?? "—" },
-                    { k: "Warranty Period", v: item.warrantyPeriod ?? "—" },
                     { k: "Created", v: formatDate(item.createdAt) },
                     { k: "Last Updated", v: formatDate(item.lastUpdated) },
                   ].map((row) => (

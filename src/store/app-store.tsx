@@ -459,21 +459,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const departmentItems = React.useMemo(() => {
     if (activeDepartment === "all") return allItems;
-    const userSub = state.user?.subDepartment;
-    if (
-      userSub &&
-      (role === "user" ||
-        role === "department-manager" ||
-        role === "department-user")
-    ) {
-      return allItems.filter(
-        (i) =>
-          i.department === activeDepartment &&
-          (i.subDepartment ?? "") === userSub,
-      );
-    }
     return allItems.filter((i) => i.department === activeDepartment);
-  }, [allItems, activeDepartment, state.user, role]);
+  }, [allItems, activeDepartment]);
 
   const fail = React.useCallback((e: unknown, fallback: string) => {
     toast.error(e instanceof Error ? e.message : fallback);

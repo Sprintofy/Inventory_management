@@ -180,7 +180,7 @@ export default function DepartmentDetailPage({ params }: { params: Promise<{ id:
                     </div>
                     <div>
                       <p className="text-sm font-medium">{i.deviceName}</p>
-                      <p className="text-muted-foreground font-mono text-xs">Reg No. {i.sku} · {i.subDepartment ?? dept.name}</p>
+                      <p className="text-muted-foreground font-mono text-xs">Reg No. {i.sku} · {dept.name}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">

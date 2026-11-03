@@ -55,8 +55,7 @@ function ProductHistoryPanel({
       state.stockInHistory
         .filter((r: StockInRecord) => r.itemId === itemId)
         .sort(
-          (a, b) =>
-            new Date(b.dateIn).getTime() - new Date(a.dateIn).getTime(),
+          (a, b) => new Date(b.dateIn).getTime() - new Date(a.dateIn).getTime(),
         ),
     [state.stockInHistory, itemId],
   );
@@ -76,10 +75,7 @@ function ProductHistoryPanel({
       ) : (
         <div className="space-y-2">
           {history.map((r) => (
-            <div
-              key={r.id}
-              className="rounded-lg border bg-muted/30 p-2.5"
-            >
+            <div key={r.id} className="rounded-lg border bg-muted/30 p-2.5">
               <div className="flex items-center justify-between text-xs mb-1">
                 <span className="font-medium text-primary">
                   WO {r.workOrderId}
@@ -100,7 +96,7 @@ function ProductHistoryPanel({
                 <div>
                   <span className="text-muted-foreground block">Status</span>
                   <span className={`font-medium ${
-                    r.status === "issued" ? "text-destructive" : "text-success"
+                    r.status === "Sent" ? "text-destructive" : "text-success"
                   }`}>
                     {r.status}
                   </span>

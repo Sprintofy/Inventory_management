@@ -97,7 +97,7 @@ export default function ReportsPage() {
     const node = findNode(topSubs, deepest);
     if (!node) return base;
     const names = subtreeNames(node);
-    return base.filter((i) => names.includes(i.subDepartment ?? ""));
+    return base.filter((i) => names.includes(i.department));
   }, [state.inventory, dept, subLevels, deptObj, topSubs]);
 
   const ticketReportData = React.useMemo<any[]>(() => [], [dateFilter]);
@@ -131,11 +131,11 @@ export default function ReportsPage() {
       const names = subtreeNames(s);
       return {
         name: s.name,
-        items: scopeItems.filter((i) => names.includes(i.subDepartment ?? "")).length,
+        items: scopeItems.filter((i) => names.includes(i.department)).length,
         color: s.color,
       };
     });
-    const unassigned = scopeItems.filter((i) => !i.subDepartment).length;
+    const unassigned = scopeItems.filter((i) => false).length;
     if (unassigned > 0)
       rows.push({ name: "Department level", items: unassigned, color: "#94a3b8" });
     return rows;
@@ -155,8 +155,8 @@ export default function ReportsPage() {
 
   const exportInventoryCSV = () => {
     downloadCSV("inventory-report.csv", [
-      { Name: "Name", "Reg No.": "Reg No.", Category: "Category", Department: "Department", "Sub-Department": "Sub-Department", Quantity: "Quantity", Status: "Status" },
-      ...scopeItems.map((i) => ({ Name: i.deviceName, "Reg No.": i.sku, Category: i.category, Department: i.department, "Sub-Department": i.subDepartment ?? "", Quantity: i.quantity, Status: i.status })),
+      { Name: "Name", "Reg No.": "Reg No.", Category: "Category", Department: "Department", Quantity: "Quantity", Status: "Status" },
+      ...scopeItems.map((i) => ({ Name: i.deviceName, "Reg No.": i.sku, Category: i.category, Department: i.department, Quantity: i.quantity, Status: i.status })),
     ]);
     toast.success("Inventory report exported as CSV");
   };

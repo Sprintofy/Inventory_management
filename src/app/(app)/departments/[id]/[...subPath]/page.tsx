@@ -60,8 +60,8 @@ export default function SubDepartmentDetailPage({ params }: { params: Promise<{ 
   }, [node]);
 
   const nodeItems = React.useMemo(
-    () => (dept && node ? state.inventory.filter((i) => i.department === dept.name && scopeNames.includes(i.subDepartment ?? "")) : []),
-    [state.inventory, dept, node, scopeNames]
+    () => (dept && node ? state.inventory.filter((i) => i.department === dept.name) : []),
+    [state.inventory, dept, node]
   );
 
   if (!loading && (!dept || !node)) {
@@ -219,7 +219,7 @@ export default function SubDepartmentDetailPage({ params }: { params: Promise<{ 
                     </div>
                     <div>
                       <p className="text-sm font-medium">{i.deviceName}</p>
-                      <p className="text-muted-foreground font-mono text-xs">Reg No. {i.sku} · {i.subDepartment ?? dept.name}</p>
+                      <p className="text-muted-foreground font-mono text-xs">Reg No. {i.sku} · {dept.name}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">

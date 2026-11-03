@@ -55,17 +55,15 @@ export interface InventoryItem {
   category: string;
   description?: string;
   specifications?: string;
-  warrantyPeriod?: string;
   notes?: string;
   sku: string;
-  supplier?: string;
   quantity: number;
   unit: string;
   status: "active" | "inactive";
   lastUpdated: string;
   createdAt: string;
   department: string;
-  subDepartment?: string;
+  cpuType?: "CAN" | "NCAN" | "SA";
 }
 
 export interface User {

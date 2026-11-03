@@ -42,17 +42,7 @@ export default function StockInPage() {
   const scopeLabel =
     activeDepartment === "all"
       ? "All Departments"
-      : `${activeDepartment}${user?.subDepartment ? ` / ${user.subDepartment}` : ""}`;
-
-  const suppliers = React.useMemo(
-    () =>
-      [...new Set(
-        state.inventory
-          .map((i) => i.supplier)
-          .filter((s): s is string => !!s),
-      )].sort(),
-    [state.inventory],
-  );
+      : `${activeDepartment} stock only.`;
 
   const skuByItemId = React.useMemo(() => {
     const map = new Map<string, string>();
@@ -152,7 +142,6 @@ export default function StockInPage() {
             <StockInFilters
               filters={filters}
               onChange={setFilters}
-              suppliers={suppliers}
             />
             {(search ||
               Object.values(filters).some((v) => v !== "all" && v !== "")) && (

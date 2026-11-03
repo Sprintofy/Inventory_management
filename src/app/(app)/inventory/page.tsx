@@ -31,7 +31,6 @@ export default function InventoryPage() {
       )) return false;
       if (filters.department !== "all" && i.department !== filters.department) return false;
       if (filters.category !== "all" && i.category !== filters.category) return false;
-      if (filters.supplier !== "all" && i.supplier !== filters.supplier) return false;
       if (filters.dateFrom && new Date(i.lastUpdated) < new Date(filters.dateFrom)) return false;
       if (filters.dateTo && new Date(i.lastUpdated) > new Date(filters.dateTo + "T23:59:59")) return false;
       return true;
@@ -48,16 +47,14 @@ export default function InventoryPage() {
       Notes: i.notes ?? "",
       Description: i.description ?? "",
       Specifications: i.specifications ?? "",
-      "Warranty Period": i.warrantyPeriod ?? "",
+      "CPU Type": i.cpuType ?? "",
       "Reg No.": i.sku,
-      Supplier: i.supplier ?? "",
       Quantity: i.quantity,
       Unit: i.unit,
       Status: i.status,
       "Last Updated": formatDate(i.lastUpdated),
       "Created At": formatDate(i.createdAt),
       Department: i.department,
-      "Sub Department": i.subDepartment ?? "",
     }));
     downloadCSV(`inventory-export-${new Date().toISOString().slice(0, 10)}.csv`, rows);
     toast.success(`Exported ${rows.length} items to CSV`);
@@ -72,7 +69,7 @@ export default function InventoryPage() {
     <div className="space-y-5">
       <PageHeader
         title="Inventory"
-        description={activeDepartment === "all" ? "All departments stock." : `${activeDepartment}${user?.subDepartment ? ` / ${user.subDepartment}` : ""} stock only.`}
+        description={activeDepartment === "all" ? "All departments stock." : `${activeDepartment} stock only.`}
         breadcrumb={[{ label: "Inventory" }]}
         actions={
           <>
