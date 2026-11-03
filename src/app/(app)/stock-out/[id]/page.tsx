@@ -2,10 +2,24 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { PackageMinus, ArrowLeft, Clock, User, CheckCircle2, Download, FileText } from "lucide-react";
+import {
+  PackageMinus,
+  ArrowLeft,
+  Clock,
+  User,
+  CheckCircle2,
+  Download,
+  FileText,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,7 +29,11 @@ import { BackButton } from "@/components/ui/BackButton";
 import { PageHeader } from "@/components/ui/PageHeader";
 import jsPDF from "jspdf";
 
-export default function StockOutPage({ params }: { params: Promise<{ id: string }> }) {
+export default function StockOutPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id: recordId } = React.use(params);
 
   const { state, stockOut } = useApp();
@@ -23,9 +41,10 @@ export default function StockOutPage({ params }: { params: Promise<{ id: string 
   const record = state.stockInRecords.find((r) => String(r.id) === recordId);
 
   const [remarks, setRemarks] = React.useState(record?.remarks ?? "");
-  const [technicianName, setTechnicianName] = React.useState(record?.technicianName ?? "");
+  const [technicianName, setTechnicianName] = React.useState(
+    record?.technicianName ?? "",
+  );
   const [secIcName, setSecIcName] = React.useState(record?.secIcName ?? "");
-  const [defect, setDefect] = React.useState(record?.defect ?? "");
   const [submitting, setSubmitting] = React.useState(false);
   const [submitted, setSubmitted] = React.useState(false);
 
@@ -64,7 +83,12 @@ export default function StockOutPage({ params }: { params: Promise<{ id: string 
     }
     setSubmitting(true);
     try {
-      await stockOut(recordId, remarks.trim(), technicianName.trim(), secIcName.trim());
+      await stockOut(
+        recordId,
+        remarks.trim(),
+        technicianName.trim(),
+        secIcName.trim(),
+      );
       setSubmitted(true);
       toast.success("Stock issued successfully");
     } catch {
@@ -84,98 +108,178 @@ export default function StockOutPage({ params }: { params: Promise<{ id: string 
     }) as any;
 
     const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 15;
+    const contentWidth = pageWidth - margin * 2;
 
-    // Title
+    // ===== Title =====
     doc.setFontSize(18);
     doc.setFont("helvetica", "bold");
-    doc.text("JOB CARD", pageWidth / 2, 20, { align: "center" });
+    doc.text("JOB CARD", pageWidth / 2, 25, { align: "center" });
 
-    // Job Card Info
+    // ===== Job Card No & Date =====
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
-    doc.text("Work Order Id:", margin, 35);
+    doc.text("Job Card No:", margin, 40);
     doc.setFont("helvetica", "normal");
-    doc.text(record.workOrderId, margin + 35, 35);
+    doc.text(record.workOrderId || "-", margin + 25, 40);
+    doc.line(margin + 25, 41, margin + 85, 41);
 
     doc.setFont("helvetica", "bold");
-    doc.text("Date:", margin, 42);
+    doc.text("Date:", pageWidth - margin - 60, 40);
     doc.setFont("helvetica", "normal");
-    doc.text(record.dateIn, margin + 15, 42);
+    doc.text(
+      record.dateIn || formatDate(new Date().toISOString()),
+      pageWidth - margin - 45,
+      40,
+    );
+    doc.line(pageWidth - margin - 45, 41, pageWidth - margin, 41);
 
-    // Table header
-    const tableStartY = 55;
-    const colX: Record<string, number> = {
-      sNo: margin,
-      defect: margin + 15,
-      workDone: margin + 55,
-      spareUsed: margin + 110,
-      remarks: margin + 145,
+    // ===== Table =====
+    const tableTop = 55;
+    const headerHeight = 10;
+    const rowHeight = 10;
+    const dataRows = 12;
+    const tableHeight = headerHeight + rowHeight * dataRows;
+    const tableBottom = tableTop + tableHeight;
+
+    const colWidths = {
+      sNo: 18,
+      defect: 45,
+      workDone: 50,
+      spareUsed: 35,
+      remarks: 32,
     };
 
-    doc.setFontSize(9);
+    const colX = {
+      sNo: margin,
+      defect: margin + colWidths.sNo,
+      workDone: margin + colWidths.sNo + colWidths.defect,
+      spareUsed: margin + colWidths.sNo + colWidths.defect + colWidths.workDone,
+      remarks:
+        margin +
+        colWidths.sNo +
+        colWidths.defect +
+        colWidths.workDone +
+        colWidths.spareUsed,
+      end: margin + contentWidth,
+    };
+
+    // Header
+    doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
-    doc.text("S/No", colX.sNo, tableStartY);
-    doc.text("Defect", colX.defect, tableStartY);
-    doc.text("Work Done", colX.workDone, tableStartY);
-    doc.text("Spare Used", colX.spareUsed, tableStartY);
-    doc.text("Remarks", colX.remarks, tableStartY);
-
-    // Table row
-    doc.setFont("helvetica", "normal");
-    doc.text("1", colX.sNo, tableStartY + 10);
-    doc.text(record.defect ?? "-", colX.defect, tableStartY + 10);
-    doc.text(remarks || "-", colX.workDone, tableStartY + 10);
-    doc.text("-", colX.spareUsed, tableStartY + 10);
-    doc.text("S", colX.remarks, tableStartY + 10);
-
-    // Draw table borders
-    const tableTop = tableStartY - 5;
-    const tableBottom = tableStartY + 15;
-    doc.rect(margin, tableTop, pageWidth - margin * 2, tableBottom - tableTop);
-
-    // Vertical lines
-    doc.line(colX.defect - 5, tableTop, colX.defect - 5, tableBottom);
-    doc.line(colX.workDone - 5, tableTop, colX.workDone - 5, tableBottom);
-    doc.line(colX.spareUsed - 5, tableTop, colX.spareUsed - 5, tableBottom);
-    doc.line(colX.remarks - 5, tableTop, colX.remarks - 5, tableBottom);
-    doc.line(margin + pageWidth - margin * 2, tableTop, margin + pageWidth - margin * 2, tableBottom);
-
-    // Footer section
-    let yPos = tableBottom + 20;
-
-    doc.setFont("helvetica", "bold");
-    doc.text("Date Closed:", margin, yPos);
-    doc.setFont("helvetica", "normal");
-    doc.text(record.dateOut ?? formatDate(new Date().toISOString()), margin + 30, yPos);
-
-    yPos += 12;
-
-    doc.setFont("helvetica", "bold");
-    doc.text("Technician Signature:", margin, yPos);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Signature: ________________________`, margin, yPos + 6);
-    doc.text(`Name of Technician: ${technicianName || "-"}`, margin, yPos + 12);
-
-    yPos += 22;
-
-    doc.setFont("helvetica", "bold");
-    doc.text("Section In-Charge Signature:", margin, yPos);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Signature: ________________________`, margin, yPos + 6);
-    doc.text(`Name of Sec I/C: ${secIcName || "-"}`, margin, yPos + 12);
-
-    // Computer Maintenance Officer at bottom-right
-    const pageHeight = doc.internal.pageSize.getHeight();
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.text("Computer Maintenance Officer", pageWidth - margin - 50, pageHeight - 20, {
-      align: "right",
+    const headerY = tableTop + 7;
+    doc.text("S/No", colX.sNo + colWidths.sNo / 2, headerY, {
+      align: "center",
+    });
+    doc.text("Defect", colX.defect + colWidths.defect / 2, headerY, {
+      align: "center",
+    });
+    doc.text("Work Done", colX.workDone + colWidths.workDone / 2, headerY, {
+      align: "center",
+    });
+    doc.text("Spare Used", colX.spareUsed + colWidths.spareUsed / 2, headerY, {
+      align: "center",
+    });
+    doc.text("Remarks", colX.remarks + colWidths.remarks / 2, headerY, {
+      align: "center",
     });
 
-    // Save PDF
-    const fileName = `Job Card - ${record.jobNo}.pdf`;
-    doc.save(fileName);
+    // First data row
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    const padX = 2;
+    const firstRowY = tableTop + headerHeight + 6;
+    const wrapText = (text: string, maxW: number) =>
+      doc.splitTextToSize(text || "-", maxW - 4);
+
+    doc.text("1", colX.sNo + colWidths.sNo / 2, firstRowY, {
+      align: "center",
+    });
+    doc.text(
+      wrapText(record.defect ?? "-", colWidths.defect),
+      colX.defect + padX,
+      firstRowY,
+    );
+    doc.text(
+      wrapText(remarks || "-", colWidths.workDone),
+      colX.workDone + padX,
+      firstRowY,
+    );
+    doc.text("-", colX.spareUsed + colWidths.spareUsed / 2, firstRowY, {
+      align: "center",
+    });
+    doc.text("S", colX.remarks + colWidths.remarks / 2, firstRowY, {
+      align: "center",
+    });
+
+    // Table borders
+    doc.rect(margin, tableTop, contentWidth, tableHeight);
+    doc.line(
+      margin,
+      tableTop + headerHeight,
+      colX.end,
+      tableTop + headerHeight,
+    );
+    doc.line(colX.defect, tableTop, colX.defect, tableBottom);
+    doc.line(colX.workDone, tableTop, colX.workDone, tableBottom);
+    doc.line(colX.spareUsed, tableTop, colX.spareUsed, tableBottom);
+    doc.line(colX.remarks, tableTop, colX.remarks, tableBottom);
+    for (let i = 1; i < dataRows; i++) {
+      const y = tableTop + headerHeight + rowHeight * i;
+      doc.line(margin, y, colX.end, y);
+    }
+
+    // ===== Date Closed =====
+    let yPos = tableBottom + 12;
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("Date Closed:", pageWidth - margin - 60, yPos);
+    doc.setFont("helvetica", "normal");
+    doc.text(
+      record.dateOut ?? formatDate(new Date().toISOString()),
+      pageWidth - margin - 35,
+      yPos,
+    );
+    doc.line(pageWidth - margin - 35, yPos + 1, pageWidth - margin, yPos + 1);
+
+    // ===== Signatures =====
+    yPos += 25;
+    const leftColX = margin;
+    const rightColX = pageWidth / 2 + 10;
+
+    doc.setFont("helvetica", "bold");
+    doc.text("Signature:", leftColX, yPos);
+    doc.text("Signature:", rightColX, yPos);
+    doc.line(leftColX + 22, yPos + 1, leftColX + 75, yPos + 1);
+    doc.line(rightColX + 22, yPos + 1, rightColX + 75, yPos + 1);
+
+    yPos += 12;
+    doc.setFont("helvetica", "bold");
+    doc.text("Name of Technician:", leftColX, yPos);
+    doc.setFont("helvetica", "normal");
+    doc.text(technicianName || "-", leftColX + 42, yPos);
+    doc.line(leftColX + 42, yPos + 1, leftColX + 85, yPos + 1);
+
+    doc.setFont("helvetica", "bold");
+    doc.text("Name of Sec I/C:", rightColX, yPos);
+    doc.setFont("helvetica", "normal");
+    doc.text(secIcName || "-", rightColX + 35, yPos);
+    doc.line(rightColX + 35, yPos + 1, rightColX + 78, yPos + 1);
+
+    // ===== Computer Maintenance Officer =====
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text(
+      "Computer Maintenance Officer",
+      pageWidth - margin,
+      pageHeight - 25,
+      {
+        align: "right",
+      },
+    );
+
+    doc.save(`Job Card - ${record.jobNo}.pdf`);
   };
 
   const generateLogBookPDF = () => {
@@ -189,46 +293,103 @@ export default function StockOutPage({ params }: { params: Promise<{ id: string 
 
     const pageWidth = doc.internal.pageSize.getWidth();
     const margin = 15;
+    const contentWidth = pageWidth - margin * 2;
 
-    // Table header
-    const colX: Record<string, number> = {
-      sNo: margin,
-      defect: margin + 15,
-      workDone: margin + 55,
-      spareUsed: margin + 110,
-      remarks: margin + 145,
+    const tableTop = 15;
+    const headerHeight = 10;
+    const rowHeight = 10;
+    const dataRows = 12;
+    const tableHeight = headerHeight + rowHeight * dataRows;
+    const tableBottom = tableTop + tableHeight;
+
+    const colWidths = {
+      sNo: 18,
+      defect: 45,
+      workDone: 50,
+      spareUsed: 35,
+      remarks: 32,
     };
 
-    doc.setFontSize(9);
+    const colX = {
+      sNo: margin,
+      defect: margin + colWidths.sNo,
+      workDone: margin + colWidths.sNo + colWidths.defect,
+      spareUsed: margin + colWidths.sNo + colWidths.defect + colWidths.workDone,
+      remarks:
+        margin +
+        colWidths.sNo +
+        colWidths.defect +
+        colWidths.workDone +
+        colWidths.spareUsed,
+      end: margin + contentWidth,
+    };
+
+    // Header
+    doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
-    doc.text("S/No", colX.sNo, 20);
-    doc.text("Defect", colX.defect, 20);
-    doc.text("Work Done", colX.workDone, 20);
-    doc.text("Spare Used", colX.spareUsed, 20);
-    doc.text("Remarks", colX.remarks, 20);
+    const headerY = tableTop + 7;
+    doc.text("S/No", colX.sNo + colWidths.sNo / 2, headerY, {
+      align: "center",
+    });
+    doc.text("Defect", colX.defect + colWidths.defect / 2, headerY, {
+      align: "center",
+    });
+    doc.text("Work Done", colX.workDone + colWidths.workDone / 2, headerY, {
+      align: "center",
+    });
+    doc.text("Spare Used", colX.spareUsed + colWidths.spareUsed / 2, headerY, {
+      align: "center",
+    });
+    doc.text("Remarks", colX.remarks + colWidths.remarks / 2, headerY, {
+      align: "center",
+    });
 
-    // Table row
+    // First data row
     doc.setFont("helvetica", "normal");
-    doc.text("1", colX.sNo, 30);
-    doc.text(record.defect ?? "-", colX.defect, 30);
-    doc.text(remarks || "-", colX.workDone, 30);
-    doc.text("-", colX.spareUsed, 30);
-    doc.text("S", colX.remarks, 30);
+    doc.setFontSize(9);
+    const padX = 2;
+    const firstRowY = tableTop + headerHeight + 6;
+    const wrapText = (text: string, maxW: number) =>
+      doc.splitTextToSize(text || "-", maxW - 4);
 
-    // Draw table borders
-    const tableTop = 15;
-    const tableBottom = 35;
-    doc.rect(margin, tableTop, pageWidth - margin * 2, tableBottom - tableTop);
+    doc.text("1", colX.sNo + colWidths.sNo / 2, firstRowY, {
+      align: "center",
+    });
+    doc.text(
+      wrapText(record.defect ?? "-", colWidths.defect),
+      colX.defect + padX,
+      firstRowY,
+    );
+    doc.text(
+      wrapText(remarks || "-", colWidths.workDone),
+      colX.workDone + padX,
+      firstRowY,
+    );
+    doc.text("-", colX.spareUsed + colWidths.spareUsed / 2, firstRowY, {
+      align: "center",
+    });
+    doc.text("S", colX.remarks + colWidths.remarks / 2, firstRowY, {
+      align: "center",
+    });
 
-    // Vertical lines
-    doc.line(colX.defect - 5, tableTop, colX.defect - 5, tableBottom);
-    doc.line(colX.workDone - 5, tableTop, colX.workDone - 5, tableBottom);
-    doc.line(colX.spareUsed - 5, tableTop, colX.spareUsed - 5, tableBottom);
-    doc.line(colX.remarks - 5, tableTop, colX.remarks - 5, tableBottom);
-    doc.line(margin + pageWidth - margin * 2, tableTop, margin + pageWidth - margin * 2, tableBottom);
+    // Table borders
+    doc.rect(margin, tableTop, contentWidth, tableHeight);
+    doc.line(
+      margin,
+      tableTop + headerHeight,
+      colX.end,
+      tableTop + headerHeight,
+    );
+    doc.line(colX.defect, tableTop, colX.defect, tableBottom);
+    doc.line(colX.workDone, tableTop, colX.workDone, tableBottom);
+    doc.line(colX.spareUsed, tableTop, colX.spareUsed, tableBottom);
+    doc.line(colX.remarks, tableTop, colX.remarks, tableBottom);
+    for (let i = 1; i < dataRows; i++) {
+      const y = tableTop + headerHeight + rowHeight * i;
+      doc.line(margin, y, colX.end, y);
+    }
 
-    const fileName = `Job Card Log - ${record.jobNo}.pdf`;
-    doc.save(fileName);
+    doc.save(`Log Book Repairs - ${record.jobNo}.pdf`);
   };
 
   return (
@@ -272,10 +433,14 @@ export default function StockOutPage({ params }: { params: Promise<{ id: string 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="py-4">
           <CardHeader className="flex flex-row items-center justify-between py-3">
-            <CardTitle className="text-sm font-semibold">Work Order Id</CardTitle>
+            <CardTitle className="text-sm font-semibold">
+              Work Order Id
+            </CardTitle>
           </CardHeader>
           <CardContent className="px-5">
-            <p className="text-lg font-mono font-semibold">{record.workOrderId}</p>
+            <p className="text-lg font-mono font-semibold">
+              {record.workOrderId}
+            </p>
           </CardContent>
         </Card>
         <Card className="py-4">
@@ -328,9 +493,7 @@ export default function StockOutPage({ params }: { params: Promise<{ id: string 
             <CardTitle className="text-sm font-semibold">Defect</CardTitle>
           </CardHeader>
           <CardContent className="px-5">
-            <p className="text-lg font-semibold">
-              {record.defect ?? "-"}
-            </p>
+            <p className="text-lg font-semibold">{record.defect ?? "-"}</p>
           </CardContent>
         </Card>
         <Card className="py-4">
@@ -367,16 +530,6 @@ export default function StockOutPage({ params }: { params: Promise<{ id: string 
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Defect</Label>
-                <Textarea
-                  placeholder="Defect description…"
-                  value={defect}
-                  onChange={(e) => setDefect(e.target.value)}
-                  rows={3}
-                  className="w-full"
-                />
-              </div>
-              <div className="space-y-1.5">
                 <Label className="text-xs font-medium">Technician Name</Label>
                 <Input
                   placeholder="Technician name"
@@ -396,13 +549,22 @@ export default function StockOutPage({ params }: { params: Promise<{ id: string 
               </div>
               <Button
                 type="submit"
-                disabled={submitting || !remarks.trim() || !technicianName.trim() || !secIcName.trim() || !defect.trim()}
+                disabled={
+                  submitting ||
+                  !remarks.trim() ||
+                  !technicianName.trim() ||
+                  !secIcName.trim()
+                }
                 className="bg-success hover:bg-success/90 text-white w-full"
               >
                 {submitting ? (
-                  <><PackageMinus className="size-4 mr-2" /> Issuing…</>
+                  <>
+                    <PackageMinus className="size-4 mr-2" /> Issuing…
+                  </>
                 ) : (
-                  <><PackageMinus className="size-4 mr-2" /> Submit Stock Out</>
+                  <>
+                    <PackageMinus className="size-4 mr-2" /> Submit Stock Out
+                  </>
                 )}
               </Button>
             </form>
@@ -429,11 +591,15 @@ export default function StockOutPage({ params }: { params: Promise<{ id: string 
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium">Quantity</Label>
-                <p className="text-sm tabular-nums">{formatNumber(record.quantity)}</p>
+                <p className="text-sm tabular-nums">
+                  {formatNumber(record.quantity)}
+                </p>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium">Date Out</Label>
-                <p className="text-sm font-mono">{formatDate(new Date().toISOString())}</p>
+                <p className="text-sm font-mono">
+                  {formatDate(new Date().toISOString())}
+                </p>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium">Technician Name</Label>
@@ -453,7 +619,9 @@ export default function StockOutPage({ params }: { params: Promise<{ id: string 
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium">Status</Label>
-                <p className="text-sm font-semibold text-destructive">Stock Out</p>
+                <p className="text-sm font-semibold text-destructive">
+                  Stock Out
+                </p>
               </div>
             </div>
           </CardContent>
@@ -461,4 +629,7 @@ export default function StockOutPage({ params }: { params: Promise<{ id: string 
       )}
     </div>
   );
+}
+function wrapText(arg0: string, defect: number): any {
+  throw new Error("Function not implemented.");
 }
