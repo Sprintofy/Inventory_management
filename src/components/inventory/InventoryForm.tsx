@@ -42,8 +42,6 @@ const formSchema = z.object({
   brand: z.string().min(2, "Brand is required"),
   type: z.enum(["W", "C", "NC"]),
   category: z.string().min(1, "Select a category"),
-  description: z.string().optional(),
-  specifications: z.string().optional(),
   notes: z.string().optional(),
   sku: z.string().min(2, "Reg No. is required"),
   quantity: z.coerce.number().min(0, "Quantity cannot be negative"),
@@ -61,8 +59,6 @@ function emptyValues(department: string): FormValues {
     brand: "",
     type: "C" as const,
     category: "",
-    description: "",
-    specifications: "",
     notes: "",
     sku: "",
     quantity: 0,
@@ -79,8 +75,6 @@ function valuesOf(item: InventoryItem): FormValues {
     brand: item.brand,
     type: item.type,
     category: item.category,
-    description: item.description ?? "",
-    specifications: item.specifications ?? "",
     notes: item.notes ?? "",
     sku: item.sku,
     quantity: item.quantity,
@@ -143,8 +137,6 @@ export function InventoryForm({
       brand: values.brand.trim(),
       type: values.type,
       category: values.category,
-      description: values.description?.trim() || undefined,
-      specifications: values.specifications?.trim() || undefined,
       notes: values.notes?.trim() || undefined,
       sku: values.sku.trim(),
       quantity: values.quantity,
@@ -345,40 +337,6 @@ export function InventoryForm({
             Details
           </h2>
           <div className="grid gap-4 sm:grid-cols-2">
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem className="sm:col-span-2">
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      rows={2}
-                      placeholder="Short description of the item"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="specifications"
-              render={({ field }) => (
-                <FormItem className="sm:col-span-2">
-                  <FormLabel>Specifications</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      rows={3}
-                      placeholder="Technical specifications"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
             <FormField
               control={form.control}
               name="notes"

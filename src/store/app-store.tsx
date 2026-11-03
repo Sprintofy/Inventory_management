@@ -12,7 +12,6 @@ import type {
   Role,
   StockInRecord,
   StockTransaction,
-  SubDepartment,
   Supplier,
   Transfer,
   User,
@@ -228,35 +227,10 @@ const emptyState = (user: User | null): AppState => ({
   movements: [],
 });
 
-function nestSubs(flat: Array<Record<string, unknown>>): SubDepartment[] {
-  const byId = new Map<string, SubDepartment>();
-  for (const s of flat) {
-    byId.set(s.id as string, {
-      ...(s as unknown as SubDepartment),
-      children: [],
-    });
-  }
-  const roots: SubDepartment[] = [];
-  for (const s of byId.values()) {
-    const parentId = (s as unknown as Record<string, unknown>)
-      .parentSubDepartmentId as string | null;
-    const parent = parentId ? byId.get(parentId) : undefined;
-    if (parent) parent.children.push(s);
-    else roots.push(s);
-  }
-  return roots;
-}
-
 function buildDepartments(
   depts: Array<Record<string, unknown>>,
-  subs: Array<Record<string, unknown>>,
 ): Department[] {
-  return depts.map((d) => ({
-    ...(d as object),
-    subDepartments: nestSubs(
-      subs.filter((s) => s.departmentId === (d as { id?: string }).id),
-    ),
-  })) as Department[];
+  return depts.map((d) => (d as unknown as Department));
 }
 
 interface AppContextValue {
@@ -304,18 +278,6 @@ interface AppContextValue {
   addDepartment: (d: Department) => void;
   updateDepartment: (d: Department) => void;
   deleteDepartment: (id: string) => void;
-  addSubDepartment: (
-    departmentId: string,
-    parentSubDepartmentId: string | null,
-    sub: Omit<SubDepartment, "id">,
-  ) => void;
-  updateSubDepartment: (
-    departmentId: string,
-    subDepartmentId: string,
-    patch: Partial<SubDepartment>,
-  ) => void;
-  deleteSubDepartment: (departmentId: string, subDepartmentId: string) => void;
-  subDepartmentsFor: (department: string) => SubDepartment[];
   addTechnician: (t: Omit<Technician, "id">) => void;
   updateTechnician: (t: Technician) => void;
   deleteTechnician: (id: string) => void;
@@ -347,7 +309,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return {
       users: b.users,
       technicians: b.technicians,
-      departments: buildDepartments(b.departments, b.subs),
+      departments: buildDepartments(b.departments),
       categories: b.categories,
       suppliers: b.suppliers,
       inventory: b.items,
@@ -957,11 +919,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 
   const refreshDepartments = React.useCallback(async () => {
-    const [depts, subs] = await Promise.all([
-      authCall("/departments"),
-      authCall("/departments/subs/all"),
-    ]);
-    setState((s) => ({ ...s, departments: buildDepartments(depts, subs) }));
+    const depts = await authCall("/departments");
+    setState((s) => ({ ...s, departments: buildDepartments(depts) }));
   }, [authCall]);
 
   const addDepartment = React.useCallback(
@@ -1016,81 +975,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       })();
     },
     [authCall, fail],
-  );
-
-  const addSubDepartment = React.useCallback(
-    (
-      departmentId: string,
-      parentSubDepartmentId: string | null,
-      sub: Omit<SubDepartment, "id">,
-    ) => {
-      void (async () => {
-        try {
-          await authCall("/departments/subs", {
-            method: "POST",
-            body: JSON.stringify({
-              ...sub,
-              id: uid("SUB"),
-              departmentId,
-              parentSubDepartmentId,
-            }),
-          });
-          await refreshDepartments();
-          toast.success("Sub-department added");
-        } catch (e) {
-          fail(e, "Could not add sub-department");
-        }
-      })();
-    },
-    [authCall, fail, refreshDepartments],
-  );
-
-  const updateSubDepartment = React.useCallback(
-    (
-      departmentId: string,
-      subDepartmentId: string,
-      patch: Partial<SubDepartment>,
-    ) => {
-      void (async () => {
-        try {
-          await authCall(`/departments/subs/${subDepartmentId}`, {
-            method: "PUT",
-            body: JSON.stringify(patch),
-          });
-          await refreshDepartments();
-          toast.success("Sub-department updated");
-          void departmentId;
-        } catch (e) {
-          fail(e, "Could not update sub-department");
-        }
-      })();
-    },
-    [authCall, fail, refreshDepartments],
-  );
-
-  const deleteSubDepartment = React.useCallback(
-    (departmentId: string, subDepartmentId: string) => {
-      void (async () => {
-        try {
-          await authCall(`/departments/subs/${subDepartmentId}`, {
-            method: "DELETE",
-          });
-          await refreshDepartments();
-          toast.success("Sub-department deleted");
-          void departmentId;
-        } catch (e) {
-          fail(e, "Could not delete sub-department");
-        }
-      })();
-    },
-    [authCall, fail, refreshDepartments],
-  );
-
-  const subDepartmentsFor = React.useCallback(
-    (department: string) =>
-      state.departments.find((d) => d.name === department)?.subDepartments ??
-      [],
-    [state.departments],
   );
 
   const addTechnician = React.useCallback(
@@ -1203,10 +1087,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addDepartment,
       updateDepartment,
       deleteDepartment,
-      addSubDepartment,
-      updateSubDepartment,
-      deleteSubDepartment,
-      subDepartmentsFor,
       addTechnician,
       updateTechnician,
       deleteTechnician,
@@ -1250,10 +1130,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addDepartment,
       updateDepartment,
       deleteDepartment,
-      addSubDepartment,
-      updateSubDepartment,
-      deleteSubDepartment,
-      subDepartmentsFor,
       addTechnician,
       updateTechnician,
       deleteTechnician,

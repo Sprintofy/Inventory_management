@@ -13,28 +13,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useApp } from "@/store/app-store";
 import { downloadCSV } from "@/lib/utils";
-import type { SubDepartment } from "@/types";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from "recharts";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 
-const palette = ["#4f46e5", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6", "#6366f1", "#f43f5e", "#84cc16"];
-
-function findNode(subs: SubDepartment[], name: string): SubDepartment | null {
-  for (const s of subs) {
-    if (s.name === name) return s;
-    const found = findNode(s.children, name);
-    if (found) return found;
-  }
-  return null;
-}
-
-function subtreeNames(s: SubDepartment, out: string[] = []): string[] {
-  out.push(s.name);
-  s.children.forEach((c) => subtreeNames(c, out));
-  return out;
-}
+const palette = ["#4f46e5", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6", "#f43f5e", "#6366f1", "#84cc16"];
 
 const HISTOGRAM_BINS = [
   { name: "Out of stock (0)", test: (q: number) => q <= 0 },
@@ -44,7 +28,7 @@ const HISTOGRAM_BINS = [
 ];
 
 export default function ReportsPage() {
-  const { state, visibleDepartments, activeDepartment, role, subDepartmentsFor } = useApp();
+  const { state, visibleDepartments, activeDepartment, role } = useApp();
   const searchParams = useSearchParams();
   const isGlobal = role === "super-admin" || role === "admin";
 
@@ -54,51 +38,16 @@ export default function ReportsPage() {
       ? (urlDept && [...visibleDepartments, "all"].includes(urlDept) ? urlDept : activeDepartment)
       : activeDepartment,
   );
-  const [subLevels, setSubLevels] = React.useState<string[]>(() => {
-    const sub = searchParams.get("sub");
-    return sub ? [sub] : [];
-  });
-
   const [reportView, setReportView] = React.useState<"inventory" | "tickets">("inventory");
   const [dateFilter, setDateFilter] = React.useState<"today" | "week" | "month" | "all">("all");
-
-  const deptObj = dept !== "all" ? state.departments.find((d) => d.name === dept) : null;
-  const topSubs = useMemo(
-    () => (deptObj ? subDepartmentsFor(deptObj.name) : []),
-    [deptObj, subDepartmentsFor],
-  );
-
-  const levelChain = useMemo(() => {
-    const chain: { options: SubDepartment[]; value: string }[] = [];
-    let pool = topSubs;
-    chain.push({ options: pool, value: subLevels[0] ?? "" });
-    for (let k = 0; k < subLevels.length; k++) {
-      const node = subLevels[k] ? findNode(pool, subLevels[k]) : null;
-      if (!node || node.children.length === 0) break;
-      pool = node.children;
-      chain.push({ options: pool, value: subLevels[k + 1] ?? "" });
-    }
-    return chain;
-  }, [topSubs, subLevels]);
-
-  const setLevel = (k: number, v: string) => {
-    const next = [...subLevels].slice(0, k);
-    if (v) next[k] = v;
-    setSubLevels(next);
-  };
 
   const scopeItems = useMemo(() => {
     const base =
       dept === "all"
         ? state.inventory
         : state.inventory.filter((i) => i.department === dept);
-    const deepest = [...subLevels].reverse().find((v) => v.trim() !== "");
-    if (!deepest || !deptObj) return base;
-    const node = findNode(topSubs, deepest);
-    if (!node) return base;
-    const names = subtreeNames(node);
-    return base.filter((i) => names.includes(i.department));
-  }, [state.inventory, dept, subLevels, deptObj, topSubs]);
+    return base;
+  }, [state.inventory, dept]);
 
   const ticketReportData = React.useMemo<any[]>(() => [], [dateFilter]);
 
@@ -120,38 +69,19 @@ export default function ReportsPage() {
   );
 
   const byScope = useMemo(() => {
-    if (dept === "all") {
-      return state.departments.map((d) => ({
-        name: d.name,
-        items: state.inventory.filter((i) => i.department === d.name).length,
-        color: d.color,
-      }));
-    }
-    const rows = topSubs.map((s) => {
-      const names = subtreeNames(s);
-      return {
-        name: s.name,
-        items: scopeItems.filter((i) => names.includes(i.department)).length,
-        color: s.color,
-      };
-    });
-    const unassigned = scopeItems.filter((i) => false).length;
-    if (unassigned > 0)
-      rows.push({ name: "Department level", items: unassigned, color: "#94a3b8" });
-    return rows;
-  }, [dept, state.departments, state.inventory, topSubs, scopeItems]);
+    return state.departments.map((d) => ({
+      name: d.name,
+      items: state.inventory.filter((i) => i.department === d.name).length,
+      color: d.color,
+    }));
+  }, [state.departments, state.inventory]);
 
   const topItems = useMemo(
     () => [...scopeItems].sort((a, b) => b.quantity - a.quantity).slice(0, 8),
     [scopeItems],
   );
 
-  const scopeLabel =
-    dept === "all"
-      ? "All Departments"
-      : [...subLevels].reverse().find((v) => v.trim() !== "")
-        ? `${dept} / ${[...subLevels].reverse().find((v) => v.trim() !== "")}`
-        : dept;
+  const scopeLabel = dept === "all" ? "All Departments" : dept;
 
   const exportInventoryCSV = () => {
     downloadCSV("inventory-report.csv", [
@@ -234,14 +164,13 @@ export default function ReportsPage() {
 
   const handleDeptChange = (d: string) => {
     setDept(d);
-    setSubLevels([]);
   };
 
   return (
     <div className="space-y-5">
       <PageHeader
         title="Reports"
-        description={isGlobal ? "Department inventory reports with sub-level filtering." : "Your department's inventory report with sub-level filtering."}
+        description={isGlobal ? "Department inventory reports." : "Your department's inventory report."}
         breadcrumb={[{ label: "Reports" }]}
         actions={
           <div className="flex flex-wrap items-center gap-3">
@@ -256,18 +185,6 @@ export default function ReportsPage() {
             ) : (
               <span className="bg-muted rounded-md px-3 py-1.5 text-sm font-medium">{dept}</span>
             )}
-            {dept !== "all" && levelChain.map((level, k) => (
-              <Select key={k} value={level.value || "__all"} onValueChange={(v) => setLevel(k, v === "__all" ? "" : v)}>
-                <SelectTrigger className="w-44"><SelectValue placeholder={k === 0 ? "All sub-departments" : `All layer ${k + 1}`} /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all">{k === 0 ? "All sub-departments" : `All layer ${k + 1}`}</SelectItem>
-                  {level.value && !level.options.some((s) => s.name === level.value) && (
-                    <SelectItem value={level.value}>{level.value} (kept)</SelectItem>
-                  )}
-                  {level.options.map((s) => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            ))}
             <Tabs value={reportView} onValueChange={(v) => setReportView(v as "inventory" | "tickets")} className="h-auto border-none">
               <TabsList className="px-2 bg-muted border-none rounded-md">
                 <TabsTrigger value="inventory">Inventory Report</TabsTrigger>
@@ -338,7 +255,7 @@ export default function ReportsPage() {
 
           <div className="grid gap-5 lg:grid-cols-2">
             <Card>
-              <CardHeader><CardTitle className="text-base">{dept === "all" ? "Items by Department" : "Items by Sub-department"}</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-base">Items by Department</CardTitle></CardHeader>
               <CardContent className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={byScope} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>

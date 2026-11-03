@@ -24,18 +24,6 @@ export type TicketAssetStatus = "in" | "out" | "in-transit";
 
 export type MovementType = "check-in" | "check-out" | "transfer";
 
-export interface SubDepartment {
-  id: string;
-  departmentId: string;
-  name: string;
-  code: string;
-  manager: string;
-  users: number;
-  status: "active" | "inactive";
-  color: string;
-  children: SubDepartment[];
-}
-
 export interface Department {
   id: string;
   name: string;
@@ -44,7 +32,6 @@ export interface Department {
   users: number;
   status: "active" | "inactive";
   color: string;
-  subDepartments: SubDepartment[];
 }
 
 export interface InventoryItem {
@@ -53,8 +40,6 @@ export interface InventoryItem {
   brand: string;
   type: "W" | "C" | "NC";
   category: string;
-  description?: string;
-  specifications?: string;
   notes?: string;
   sku: string;
   quantity: number;

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, type Resolver } from "react-hook-form";
 import { z } from "zod";
-import { Building2, FileDown, Layers, MoreHorizontal, Pencil, Plus, Trash2, Users as UsersIcon } from "lucide-react";
+import { Building2, FileDown, MoreHorizontal, Pencil, Plus, Trash2, Users as UsersIcon } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,8 +22,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useApp } from "@/store/app-store";
 import { useFakeLoading } from "@/hooks/use-fake-loading";
 import { formatNumber, uid, downloadCSV } from "@/lib/utils";
-import { SubDepartmentDialog } from "@/components/departments/SubDepartmentDialog";
-import type { Department, SubDepartment } from "@/types";
+import type { Department } from "@/types";
 
 const schema = z.object({
   name: z.string().min(2, "Department name is required"),
@@ -36,14 +35,12 @@ type SV = z.output<typeof schema>;
 const palette = ["#4f46e5", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6", "#f43f5e", "#6366f1", "#84cc16"];
 
 export default function DepartmentsPage() {
-  const { state, addDepartment, updateDepartment, deleteDepartment, deleteSubDepartment, can } = useApp();
+  const { state, addDepartment, updateDepartment, deleteDepartment, can } = useApp();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Department | null>(null);
   const [deleting, setDeleting] = React.useState<Department | null>(null);
-  const [subDialog, setSubDialog] = React.useState<{ open: boolean; parent: Department | null; sub: SubDepartment | null }>({ open: false, parent: null, sub: null });
-  const [deletingSub, setDeletingSub] = React.useState<{ parent: Department; sub: SubDepartment } | null>(null);
   const loading = useFakeLoading();
 
   const form = useForm<SV>({
@@ -55,23 +52,13 @@ export default function DepartmentsPage() {
     if (dialogOpen) form.reset(editing ? { name: editing.name, code: editing.code, manager: editing.manager, status: editing.status } : { name: "", code: "", manager: "", status: "active" });
   }, [dialogOpen, editing, form]);
 
-  React.useEffect(() => {
-    const deptId = searchParams.get("addSub");
-    if (deptId) {
-      const parent = state.departments.find((d) => d.id === deptId);
-      if (parent) setSubDialog({ open: true, parent, sub: null });
-      router.replace("/departments", { scroll: false });
-    }
-  }, [searchParams, state.departments, router]);
-  // eslint-disable-line react-hooks/set-state-in-effect
-
   const departments = state.departments;
 
   const onSubmit = (values: SV) => {
     if (editing) {
       updateDepartment({ ...editing, name: values.name, code: values.code, manager: values.manager, status: values.status as Department["status"] });
     } else {
-      addDepartment({ id: uid("DEP"), name: values.name, code: values.code, manager: values.manager, users: 0, status: values.status as Department["status"], color: palette[state.departments.length % palette.length], subDepartments: [] });
+      addDepartment({ id: uid("DEP"), name: values.name, code: values.code, manager: values.manager, users: 0, status: values.status as Department["status"], color: palette[state.departments.length % palette.length] });
     }
     setDialogOpen(false);
     setEditing(null);
@@ -86,7 +73,7 @@ export default function DepartmentsPage() {
         actions={
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => {
-              downloadCSV(`departments-${new Date().toISOString().slice(0, 10)}.csv`, departments.map((d) => ({ Name: d.name, Code: d.code, Manager: d.manager, SubDepartments: d.subDepartments.length, Items: state.inventory.filter((i) => i.department === d.name).length })));
+              downloadCSV(`departments-${new Date().toISOString().slice(0, 10)}.csv`, departments.map((d) => ({ Name: d.name, Code: d.code, Manager: d.manager, Items: state.inventory.filter((i) => i.department === d.name).length })));
               toast.success(`Exported ${departments.length} departments`);
             }}><FileDown className="size-4" /> Export</Button>
             {can("departments.manage") ? <Button onClick={() => { setEditing(null); setDialogOpen(true); }}><Plus className="size-4" /> Add Department</Button> : undefined}
@@ -136,44 +123,6 @@ export default function DepartmentsPage() {
                     </div>
                   </div>
                   <p className="text-muted-foreground mt-3 text-xs">Manager: <span className="text-foreground font-medium">{d.manager}</span></p>
-                  <div className="mt-3">
-                    <div className="flex items-center justify-between">
-                      <p className="text-muted-foreground flex items-center gap-1 text-xs font-medium"><Layers className="size-3" /> Sub-departments ({d.subDepartments.length})</p>
-                      {can("departments.manage") && (
-                        <Button variant="ghost" size="sm" className="h-6 px-1.5 text-xs" onClick={(e) => { e.stopPropagation(); setSubDialog({ open: true, parent: d, sub: null }); }}>
-                          <Plus className="size-3" /> Add
-                        </Button>
-                      )}
-                    </div>
-                    {d.subDepartments.length === 0 ? (
-                      <p className="text-muted-foreground mt-1 text-xs">No sub-departments yet.</p>
-                    ) : (
-                      <div className="mt-1.5 flex flex-wrap gap-1.5" onClick={(e) => e.stopPropagation()}>
-                        {d.subDepartments.map((s) => (
-                          <span
-                            key={s.id}
-                            onClick={() => router.push(`/departments/${d.id}/${s.id}`)}
-                            className={`inline-flex cursor-pointer items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium hover:bg-accent ${s.status === "active" ? "bg-muted" : "bg-muted opacity-60"}`}
-                            title={`Open ${s.name}`}
-                          >
-                            {s.name}
-                            {s.children.length > 0 && <span className="text-muted-foreground">({s.children.length})</span>}
-                            {can("departments.manage") && (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <button className="text-muted-foreground hover:text-foreground" aria-label={`Manage ${s.name}`} onClick={(e) => e.stopPropagation()}><MoreHorizontal className="size-3" /></button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="start" className="w-40">
-                                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSubDialog({ open: true, parent: d, sub: s }); }}><Pencil className="size-3.5" /> Edit</DropdownMenuItem>
-                                  <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={(e) => { e.stopPropagation(); setDeletingSub({ parent: d, sub: s }); }}><Trash2 className="size-3.5" /> Delete</DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            )}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
                   <div className="mt-4 grid grid-cols-4 gap-2 border-t pt-3 text-center">
                     <div><p className="text-sm font-semibold">{formatNumber(items.length)}</p><p className="text-muted-foreground text-[10px]">Items</p></div>
                     <div><p className="text-sm font-semibold">{openTickets}</p><p className="text-muted-foreground text-[10px]">Tickets</p></div>
@@ -245,28 +194,7 @@ export default function DepartmentsPage() {
           if (deleting) {
             deleteDepartment(deleting.id);
             toast.success("Department deleted");
-          }
-        }}
-      />
-
-      <SubDepartmentDialog
-        open={subDialog.open}
-        onOpenChange={(o) => !o && setSubDialog({ open: false, parent: null, sub: null })}
-        department={subDialog.parent}
-        parentSub={null}
-        editing={subDialog.sub}
-      />
-
-      <ConfirmDialog
-        open={deletingSub !== null}
-        onOpenChange={(o) => !o && setDeletingSub(null)}
-        title="Delete this sub-department?"
-        description={deletingSub ? `"${deletingSub.sub.name}" will be removed from ${deletingSub.parent.name}.` : undefined}
-        confirmLabel="Delete"
-        onConfirm={() => {
-          if (deletingSub) {
-            deleteSubDepartment(deletingSub.parent.id, deletingSub.sub.id);
-            toast.success("Sub-department deleted");
+            setDeleting(null);
           }
         }}
       />

@@ -45,8 +45,6 @@ export default function InventoryPage() {
       Type: i.type,
       Category: i.category,
       Notes: i.notes ?? "",
-      Description: i.description ?? "",
-      Specifications: i.specifications ?? "",
       "CPU Type": i.cpuType ?? "",
       "Reg No.": i.sku,
       Quantity: i.quantity,

@@ -23,7 +23,7 @@ import { useRouter } from "next/navigation";
 import { useApp } from "@/store/app-store";
 import { useFakeLoadingOn } from "@/hooks/use-fake-loading";
 import { uid, formatISO } from "@/lib/utils";
-import type { SubDepartment, User } from "@/types";
+import type { User } from "@/types";
 
 const schema = z.object({
   name: z.string().min(2, "Name is required"),
@@ -54,14 +54,6 @@ export default function UsersPage() {
   });
 
   const deptName = form.watch("department");
-  const subOptions = React.useMemo(() => {
-    const d = state.departments.find((x) => x.name === deptName);
-    if (!d) return [] as SubDepartment[];
-    const out: SubDepartment[] = [];
-    const walk = (subs: SubDepartment[]) => subs.forEach((s) => { out.push(s); walk(s.children); });
-    walk(d.subDepartments);
-    return out;
-  }, [deptName, state.departments]);
 
   React.useEffect(() => {
     if (dialogOpen) form.reset(editing ? { name: editing.name, email: editing.email, password: "", department: editing.department, subDepartment: editing.subDepartment ?? "", post: editing.post ?? "" } : { name: "", email: "", password: "password", department: "", subDepartment: "", post: "" });
@@ -198,13 +190,7 @@ export default function UsersPage() {
                 )} />
                 <FormField control={form.control} name="department" render={({ field }) => (
                   <FormItem><FormLabel>Department</FormLabel>
-                    <FormControl><Select value={field.value} onValueChange={(v) => { field.onChange(v); form.setValue("subDepartment", ""); }}><SelectTrigger className="w-full"><SelectValue placeholder="Select" /></SelectTrigger><SelectContent>{state.departments.map((d) => <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>)}</SelectContent></Select></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={form.control} name="subDepartment" render={({ field }) => (
-                  <FormItem><FormLabel>Sub-department</FormLabel>
-                    <FormControl><Select value={field.value ?? ""} onValueChange={field.onChange}><SelectTrigger className="w-full"><SelectValue placeholder="Optional" /></SelectTrigger><SelectContent>{subOptions.length === 0 ? <SelectItem value="__none" disabled>No sub-departments</SelectItem> : subOptions.map((s) => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}</SelectContent></Select></FormControl>
+                    <FormControl><Select value={field.value} onValueChange={field.onChange}><SelectTrigger className="w-full"><SelectValue placeholder="Select" /></SelectTrigger><SelectContent>{state.departments.map((d) => <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>)}</SelectContent></Select></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />

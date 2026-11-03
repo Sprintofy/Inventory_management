@@ -146,7 +146,6 @@ export default function InventoryDetailPage({ params }: { params: Promise<{ id: 
                     { k: "Department", v: item.department },
                     { k: "CPU Type", v: item.cpuType ?? "—" },
                     { k: "Unit", v: item.unit },
-                    { k: "Specifications", v: item.specifications ?? "—" },
                     { k: "Created", v: formatDate(item.createdAt) },
                     { k: "Last Updated", v: formatDate(item.lastUpdated) },
                   ].map((row) => (
@@ -155,12 +154,6 @@ export default function InventoryDetailPage({ params }: { params: Promise<{ id: 
                       <dd className="text-right text-sm font-medium">{row.v}</dd>
                     </div>
                   ))}
-                  {item.description && (
-                    <div className="mt-5">
-                      <h4 className="text-sm font-semibold">Description</h4>
-                      <p className="text-muted-foreground mt-1.5 text-sm">{item.description}</p>
-                    </div>
-                  )}
                   {item.notes && (
                     <div className="mt-4">
                       <h4 className="text-sm font-semibold">Notes</h4>
