@@ -513,7 +513,7 @@ export default function StockOutPage({
         </Card>
       </div>
 
-      {!submitted ? (
+      {!submitted && record.status !== "Stock Out" ? (
         <Card>
           <CardHeader>
             <CardTitle>Issue Stock</CardTitle>
