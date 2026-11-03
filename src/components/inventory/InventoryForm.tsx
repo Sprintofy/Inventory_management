@@ -45,7 +45,6 @@ const formSchema = z.object({
   notes: z.string().optional(),
   sku: z.string().min(2, "Reg No. is required"),
   quantity: z.coerce.number().min(0, "Quantity cannot be negative"),
-  unit: z.string().min(1, "Unit is required"),
   status: z.enum(["active", "inactive"]),
   department: z.string().min(1, "Department is required"),
   cpuType: z.enum(["CAN", "NCAN", "SA"]).optional(),
@@ -62,7 +61,6 @@ function emptyValues(department: string): FormValues {
     notes: "",
     sku: "",
     quantity: 0,
-    unit: "unit",
     status: "active" as const,
     department,
     cpuType: undefined,
@@ -78,7 +76,6 @@ function valuesOf(item: InventoryItem): FormValues {
     notes: item.notes ?? "",
     sku: item.sku,
     quantity: item.quantity,
-    unit: item.unit,
     status: item.status,
     department: item.department,
     cpuType: item.cpuType,
@@ -140,7 +137,6 @@ export function InventoryForm({
       notes: values.notes?.trim() || undefined,
       sku: values.sku.trim(),
       quantity: values.quantity,
-      unit: values.unit,
       department: values.department,
       cpuType: values.cpuType,
     };
@@ -371,47 +367,6 @@ export function InventoryForm({
                   <FormLabel>Quantity</FormLabel>
                   <FormControl>
                     <Input type="number" min={0} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="unit"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Unit</FormLabel>
-                  <FormControl>
-                    <Select
-                      value={field.value}
-                      onValueChange={field.onChange}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select unit" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {[
-                          "unit",
-                          "box",
-                          "pack",
-                          "set",
-                          "pair",
-                          "roll",
-                          "drum",
-                          "ream",
-                          "coil",
-                          "kit",
-                          "can",
-                          "sheet",
-                        ].map((u) => (
-                          <SelectItem key={u} value={u}>
-                            {u}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
                   </FormControl>
                   <FormMessage />
                 </FormItem>

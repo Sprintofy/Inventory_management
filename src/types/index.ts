@@ -43,7 +43,6 @@ export interface InventoryItem {
   notes?: string;
   sku: string;
   quantity: number;
-  unit: string;
   status: "active" | "inactive";
   lastUpdated: string;
   createdAt: string;

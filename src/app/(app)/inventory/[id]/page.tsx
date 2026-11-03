@@ -94,7 +94,7 @@ export default function InventoryDetailPage({ params }: { params: Promise<{ id: 
               <Package className="text-primary size-4" />
             </div>
             <p className="mt-2 text-2xl font-semibold tabular-nums">
-              {formatNumber(item.quantity)} <span className="text-muted-foreground text-sm font-normal">{item.unit}s</span>
+              {formatNumber(item.quantity)} units
             </p>
           </CardContent>
         </Card>
@@ -145,7 +145,6 @@ export default function InventoryDetailPage({ params }: { params: Promise<{ id: 
                     { k: "Category", v: item.category },
                     { k: "Department", v: item.department },
                     { k: "CPU Type", v: item.cpuType ?? "—" },
-                    { k: "Unit", v: item.unit },
                     { k: "Created", v: formatDate(item.createdAt) },
                     { k: "Last Updated", v: formatDate(item.lastUpdated) },
                   ].map((row) => (

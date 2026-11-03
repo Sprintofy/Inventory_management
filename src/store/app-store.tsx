@@ -155,7 +155,6 @@ export interface Settings {
   orgName: string;
   defaultCurrency: string;
   timezone: string;
-  defaultUnit: string;
   defaultReorderLevel: number;
   lowStockThreshold: number;
   notifyLowStock: boolean;
@@ -193,7 +192,6 @@ const defaultSettings: Settings = {
   orgName: "Acme Manufacturing Pvt. Ltd.",
   defaultCurrency: "INR",
   timezone: "Asia/Kolkata",
-  defaultUnit: "unit",
   defaultReorderLevel: 10,
   lowStockThreshold: 10,
   notifyLowStock: true,

@@ -48,7 +48,6 @@ export default function InventoryPage() {
       "CPU Type": i.cpuType ?? "",
       "Reg No.": i.sku,
       Quantity: i.quantity,
-      Unit: i.unit,
       Status: i.status,
       "Last Updated": formatDate(i.lastUpdated),
       "Created At": formatDate(i.createdAt),

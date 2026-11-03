@@ -41,7 +41,6 @@ const allColumns = [
   { key: "sku", label: "Reg No." },
   { key: "category", label: "Category" },
   { key: "quantity", label: "Quantity" },
-  { key: "unit", label: "Unit" },
   { key: "status", label: "Status" },
   { key: "updated", label: "Last Updated" },
   { key: "actions", label: "Actions" },
@@ -173,9 +172,6 @@ export function InventoryTable({ items, onEdit }: InventoryTableProps) {
                       break;
                     case "quantity":
                       value = String(item.quantity);
-                      break;
-                    case "unit":
-                      value = item.unit;
                       break;
                     case "status":
                       value = item.status;

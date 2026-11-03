@@ -48,7 +48,6 @@ const HEADER_FIELDS: Record<string, string> = {
   quantity: "quantity",
   qty: "quantity",
   qtyonhand: "quantity",
-  unit: "unit",
   notes: "notes",
   remarks: "notes",
 };
@@ -187,7 +186,6 @@ export function InventoryImportDialog({
             category: String(get("category") ?? "").trim(),
             department: String(get("department") ?? "").trim(),
             quantity: quantity ?? 0,
-            unit: String(get("unit") ?? "").trim() || "unit",
             notes: String(get("notes") ?? "").trim() || undefined,
           },
         };
