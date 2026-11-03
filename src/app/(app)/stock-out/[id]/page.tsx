@@ -603,7 +603,7 @@ export default function StockOutPage({
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium">Date Out</Label>
                 <p className="text-sm font-mono">
-                  {formatDate(new Date().toISOString())}
+                  {formatDate(record.dateOut)}
                 </p>
               </div>
               <div className="space-y-1.5">
