@@ -52,6 +52,14 @@ export default function StockOutPage({ params }: { params: Promise<{ id: string 
       toast.error("Remarks are required before stocking out");
       return;
     }
+    if (!technicianName.trim()) {
+      toast.error("Technician Name is required before stocking out");
+      return;
+    }
+    if (!secIcName.trim()) {
+      toast.error("Name of Sec I/c is required before stocking out");
+      return;
+    }
     setSubmitting(true);
     try {
       await stockOut(recordId, remarks.trim(), technicianName.trim(), secIcName.trim());
@@ -160,62 +168,60 @@ export default function StockOutPage({ params }: { params: Promise<{ id: string 
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Issue Stock</CardTitle>
-          <CardDescription>
-            Enter remarks and details for this stock-out. The date out will be
-            recorded automatically on submit.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Remarks</Label>
-              <Textarea
-                placeholder="Reason for issuing this stock…"
-                value={remarks}
-                onChange={(e) => setRemarks(e.target.value)}
-                rows={3}
-                className="w-full"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Technician Name</Label>
-              <Input
-                placeholder="Technician name"
-                value={technicianName}
-                onChange={(e) => setTechnicianName(e.target.value)}
-                className="w-full"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Name of Sec I/c</Label>
-              <Input
-                placeholder="Name of Section In-charge"
-                value={secIcName}
-                onChange={(e) => setSecIcName(e.target.value)}
-                className="w-full"
-              />
-            </div>
-            <Button
-              type="submit"
-              disabled={submitting || submitted || !remarks.trim() || !technicianName.trim() || !secIcName.trim()}
-              className="bg-success hover:bg-success/90 text-white w-full"
-            >
-              {submitted ? (
-                <><CheckCircle2 className="size-4 mr-2" /> Stocked Out</>
-              ) : submitting ? (
-                <><PackageMinus className="size-4 mr-2" /> Issuing…</>
-              ) : (
-                <><PackageMinus className="size-4 mr-2" /> Submit Stock Out</>
-              )}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      {submitted && (
+      {!submitted ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Issue Stock</CardTitle>
+            <CardDescription>
+              Enter remarks and details for this stock-out. The date out will be
+              recorded automatically on submit.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Remarks</Label>
+                <Textarea
+                  placeholder="Reason for issuing this stock…"
+                  value={remarks}
+                  onChange={(e) => setRemarks(e.target.value)}
+                  rows={3}
+                  className="w-full"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Technician Name</Label>
+                <Input
+                  placeholder="Technician name"
+                  value={technicianName}
+                  onChange={(e) => setTechnicianName(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Name of Sec I/c</Label>
+                <Input
+                  placeholder="Name of Section In-charge"
+                  value={secIcName}
+                  onChange={(e) => setSecIcName(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={submitting || !remarks.trim() || !technicianName.trim() || !secIcName.trim()}
+                className="bg-success hover:bg-success/90 text-white w-full"
+              >
+                {submitting ? (
+                  <><PackageMinus className="size-4 mr-2" /> Issuing…</>
+                ) : (
+                  <><PackageMinus className="size-4 mr-2" /> Submit Stock Out</>
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      ) : (
         <Card>
           <CardHeader>
             <CardTitle>Stock Out Details</CardTitle>
