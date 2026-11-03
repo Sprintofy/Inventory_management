@@ -206,13 +206,15 @@ export interface StockInRecord {
   dateOut: string | null;
   remarks: string | null;
   defect: string | null;
+  technicianName: string | null;
+  secIcName: string | null;
   itemId: string;
   itemName: string;
   productType: "W" | "C" | "NC";
   quantity: number;
   department: string;
   createdBy: string;
-  status: "pending" | "Sent" | "cancelled";
+  status: "pending" | "Stock Out" | "cancelled";
 }
 
 export interface Activity {

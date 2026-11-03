@@ -236,7 +236,7 @@ export default function StockInPage() {
                     {r.dateOut ? formatDate(r.dateOut) : "-"}
                   </TableCell>
                   <TableCell className="text-right">
-                    {r.status !== "Sent" && (
+                    {r.status !== "Stock Out" && (
                       <Button
                         size="sm"
                         variant="outline"

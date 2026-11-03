@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { PackageMinus, ArrowLeft, Clock } from "lucide-react";
+import { PackageMinus, ArrowLeft, Clock, User, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +22,10 @@ export default function StockOutPage({ params }: { params: Promise<{ id: string 
   const record = state.stockInRecords.find((r) => String(r.id) === recordId);
 
   const [remarks, setRemarks] = React.useState(record?.remarks ?? "");
+  const [technicianName, setTechnicianName] = React.useState(record?.technicianName ?? "");
+  const [secIcName, setSecIcName] = React.useState(record?.secIcName ?? "");
   const [submitting, setSubmitting] = React.useState(false);
+  const [submitted, setSubmitted] = React.useState(false);
 
   if (!record) {
     return (
@@ -51,7 +54,8 @@ export default function StockOutPage({ params }: { params: Promise<{ id: string 
     }
     setSubmitting(true);
     try {
-      stockOut(recordId, remarks.trim());
+      await stockOut(recordId, remarks.trim(), technicianName.trim(), secIcName.trim());
+      setSubmitted(true);
       toast.success("Stock issued successfully");
     } catch {
       // toast handled by store
@@ -136,11 +140,21 @@ export default function StockOutPage({ params }: { params: Promise<{ id: string 
         </Card>
         <Card className="py-4">
           <CardHeader className="flex flex-row items-center justify-between py-3">
+            <CardTitle className="text-sm font-semibold">Defect</CardTitle>
+          </CardHeader>
+          <CardContent className="px-5">
+            <p className="text-lg font-semibold">
+              {record.defect ?? "-"}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="py-4">
+          <CardHeader className="flex flex-row items-center justify-between py-3">
             <CardTitle className="text-sm font-semibold">Status</CardTitle>
           </CardHeader>
           <CardContent className="px-5">
             <span className="text-sm font-medium">
-              {record.status === "Sent" ? "Sent" : "Pending"}
+              {record.status === "Stock Out" ? "Stock Out" : "Pending"}
             </span>
           </CardContent>
         </Card>
@@ -150,8 +164,8 @@ export default function StockOutPage({ params }: { params: Promise<{ id: string 
         <CardHeader>
           <CardTitle>Issue Stock</CardTitle>
           <CardDescription>
-            Enter remarks for this stock-out. The date out will be recorded
-            automatically on submit.
+            Enter remarks and details for this stock-out. The date out will be
+            recorded automatically on submit.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -166,16 +180,92 @@ export default function StockOutPage({ params }: { params: Promise<{ id: string 
                 className="w-full"
               />
             </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Technician Name</Label>
+              <Input
+                placeholder="Technician name"
+                value={technicianName}
+                onChange={(e) => setTechnicianName(e.target.value)}
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Name of Sec I/c</Label>
+              <Input
+                placeholder="Name of Section In-charge"
+                value={secIcName}
+                onChange={(e) => setSecIcName(e.target.value)}
+                className="w-full"
+              />
+            </div>
             <Button
               type="submit"
-              disabled={submitting || !remarks.trim()}
+              disabled={submitting || submitted || !remarks.trim() || !technicianName.trim() || !secIcName.trim()}
               className="bg-success hover:bg-success/90 text-white w-full"
             >
-              {submitting ? "Issuing…" : <><PackageMinus className="size-4 mr-2" /> Submit Stock Out</>}
+              {submitted ? (
+                <><CheckCircle2 className="size-4 mr-2" /> Stocked Out</>
+              ) : submitting ? (
+                <><PackageMinus className="size-4 mr-2" /> Issuing…</>
+              ) : (
+                <><PackageMinus className="size-4 mr-2" /> Submit Stock Out</>
+              )}
             </Button>
           </form>
         </CardContent>
       </Card>
+
+      {submitted && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Stock Out Details</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Work Order Id</Label>
+                <p className="text-sm font-mono">{record.workOrderId}</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Job No</Label>
+                <p className="text-sm font-mono">{record.jobNo}</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Item</Label>
+                <p className="text-sm">{record.itemName}</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Quantity</Label>
+                <p className="text-sm tabular-nums">{formatNumber(record.quantity)}</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Date Out</Label>
+                <p className="text-sm font-mono">{formatDate(new Date().toISOString())}</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Technician Name</Label>
+                <p className="text-sm">{technicianName}</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Name of Sec I/c</Label>
+                <p className="text-sm">{secIcName}</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Defect</Label>
+                <p className="text-sm">{record.defect ?? "-"}</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Resolve Remarks</Label>
+                <p className="text-sm">{remarks}</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Status</Label>
+                <p className="text-sm font-semibold text-destructive">Stock Out</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

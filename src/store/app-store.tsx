@@ -256,7 +256,12 @@ interface AppContextValue {
     note?: string,
     defect?: string,
   ) => void;
-  stockOut: (id: string, remarks: string) => void;
+  stockOut: (
+    id: string,
+    remarks: string,
+    technicianName?: string,
+    secIcName?: string,
+  ) => void;
   updateStockInStatus: (id: string, status: StockInRecord["status"]) => void;
   fetchStockIn: (filters: StockInFiltersState | any) => Promise<void>;
   fetchStockInHistory: (itemId: string) => Promise<void>;
@@ -598,12 +603,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 
   const stockOut = React.useCallback(
-    (id: string, remarks: string) => {
+    (
+      id: string,
+      remarks: string,
+      technicianName?: string,
+      secIcName?: string,
+    ) => {
       void (async () => {
         try {
           const data = await authCall("/inventory/stock-out", {
             method: "POST",
-            body: JSON.stringify({ id, remarks }),
+            body: JSON.stringify({ id, remarks, technicianName, secIcName }),
           });
           setState((s) => ({
             ...s,

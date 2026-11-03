@@ -96,7 +96,7 @@ function ProductHistoryPanel({
                 <div>
                   <span className="text-muted-foreground block">Status</span>
                   <span className={`font-medium ${
-                    r.status === "Sent" ? "text-destructive" : "text-success"
+                    r.status === "Stock Out" ? "text-destructive" : "text-success"
                   }`}>
                     {r.status}
                   </span>
