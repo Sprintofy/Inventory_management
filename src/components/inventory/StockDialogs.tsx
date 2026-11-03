@@ -140,12 +140,14 @@ export function StockInDialog({
   const [itemId, setItemId] = React.useState("");
   const [quantity, setQuantity] = React.useState(1);
   const [note, setNote] = React.useState("");
+  const [defect, setDefect] = React.useState("");
 
   React.useEffect(() => {
     if (open) {
       setItemId("");
       setQuantity(1);
       setNote("");
+      setDefect("");
     }
   }, [open]);
 
@@ -165,7 +167,7 @@ export function StockInDialog({
       toast.error("Select a product and quantity");
       return;
     }
-    stockIn(itemId, quantity, note || undefined);
+    stockIn(itemId, quantity, note || undefined, defect || undefined);
     if (!fullPage) {
       onOpenChange(false);
     } else {
@@ -216,6 +218,14 @@ export function StockInDialog({
             onChange={(e) => setNote(e.target.value)}
           />
         </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Defect</Label>
+          <Input
+            placeholder="Defect description (alphanumeric)"
+            value={defect}
+            onChange={(e) => setDefect(e.target.value)}
+          />
+        </div>
       </div>
 
       {/* Auto-generated fields (read-only) */}
@@ -252,6 +262,14 @@ export function StockInDialog({
                 className="bg-muted/50"
                 readOnly
                 value={selectedItem.type}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">CPU Type</Label>
+              <Input
+                className="bg-muted/50"
+                readOnly
+                value={selectedItem.cpuType ?? "-"}
               />
             </div>
           </div>

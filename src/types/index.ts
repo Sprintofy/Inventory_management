@@ -205,6 +205,7 @@ export interface StockInRecord {
   dateIn: string;
   dateOut: string | null;
   remarks: string | null;
+  defect: string | null;
   itemId: string;
   itemName: string;
   productType: "W" | "C" | "NC";
