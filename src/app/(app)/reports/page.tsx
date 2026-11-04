@@ -80,6 +80,15 @@ export default function ReportsPage() {
     [scopeItems],
   );
 
+  // Build SKU lookup from inventory items so REGD NO shows the actual SKU
+  const skuByItemId = React.useMemo(() => {
+    const map = new Map<string, string>();
+    for (const i of state.inventory) map.set(i.id, i.sku);
+    return map;
+  }, [state.inventory]);
+
+  const regNoOf = (itemId: string) => skuByItemId.get(itemId) ?? "-";
+
   const scopeLabel = dept === "all" ? "All Departments" : dept;
 
   const formatDateDDMMYYYY = (dateStr?: string) => {
@@ -117,7 +126,7 @@ export default function ReportsPage() {
         i + 1,
         r.jobNo,
         r.itemName,
-        r.itemId,
+        regNoOf(r.itemId),
         r.quantity,
         r.department,
         formatDateDDMMYYYY(r.dateIn),
