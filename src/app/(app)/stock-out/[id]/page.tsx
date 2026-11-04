@@ -326,11 +326,11 @@ export default function StockOutPage({
     });
     doc.line(pageWidth - margin - 55, y + 1, pageWidth - margin, y + 1);
 
-    // ── Row 2: Stock In Date (left) · Item Register No / SKU (right) ──
+    // ── Row 2: Date (left) · Register No (right) ──
     y += 14;
     doc.setFont("helvetica", "bold");
-    doc.text("Stock In Date:", margin, y);
-    doc.text("Item Register No. (SKU):", pageWidth - margin, y, {
+    doc.text("Date:", margin, y);
+    doc.text("Register No:", pageWidth - margin, y, {
       align: "right",
     });
 
@@ -338,16 +338,18 @@ export default function StockOutPage({
     doc.setFont("helvetica", "normal");
     doc.text(fmtDate(record.dateIn), margin, y);
     doc.line(margin, y + 1, margin + 55, y + 1);
-    doc.text(record.productType || "-", pageWidth - margin, y, {
+
+    const sku = state.inventory.find((i) => i.id === record.itemId)?.sku || "-";
+    doc.text(sku, pageWidth - margin, y, {
       align: "right",
     });
     doc.line(pageWidth - margin - 55, y + 1, pageWidth - margin, y + 1);
 
-    // ── Center: Remark (of Defect) ──
+    // ── Center: Remarks ──
     y += 30;
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
-    doc.text("Remark (of Defect)", pageWidth / 2, y, { align: "center" });
+    doc.text("Remarks", pageWidth / 2, y, { align: "center" });
 
     y += 10;
     doc.setFont("helvetica", "normal");
