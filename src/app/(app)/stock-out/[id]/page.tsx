@@ -245,7 +245,11 @@ export default function StockOutPage({
     doc.setFont("helvetica", "bold");
     doc.text("Date Closed:", pageWidth - margin - 60, yPos);
     doc.setFont("helvetica", "normal");
-    doc.text(record.dateOut ? formatDateDDMMYYYY(record.dateOut) : "-", pageWidth - margin - 35, yPos);
+    doc.text(
+      record.dateOut ? formatDateDDMMYYYY(record.dateOut) : "-",
+      pageWidth - margin - 35,
+      yPos,
+    );
     doc.line(pageWidth - margin - 35, yPos + 1, pageWidth - margin, yPos + 1);
 
     // ===== Signatures =====
@@ -298,101 +302,68 @@ export default function StockOutPage({
 
     const pageWidth = doc.internal.pageSize.getWidth();
     const margin = 15;
-    const contentWidth = pageWidth - margin * 2;
 
-    const tableTop = 15;
-    const headerHeight = 10;
-    const rowHeight = 10;
-    const dataRows = 12;
-    const tableHeight = headerHeight + rowHeight * dataRows;
-    const tableBottom = tableTop + tableHeight;
-
-    const colWidths = {
-      sNo: 18,
-      defect: 45,
-      workDone: 50,
-      spareUsed: 35,
-      remarks: 32,
+    const fmtDate = (dateStr?: string) => {
+      if (!dateStr) return "-";
+      const d = new Date(dateStr);
+      return `${d.getDate().toString().padStart(2, "0")}-${(d.getMonth() + 1).toString().padStart(2, "0")}-${d.getFullYear()}`;
     };
 
-    const colX = {
-      sNo: margin,
-      defect: margin + colWidths.sNo,
-      workDone: margin + colWidths.sNo + colWidths.defect,
-      spareUsed: margin + colWidths.sNo + colWidths.defect + colWidths.workDone,
-      remarks:
-        margin +
-        colWidths.sNo +
-        colWidths.defect +
-        colWidths.workDone +
-        colWidths.spareUsed,
-      end: margin + contentWidth,
-    };
+    let y = 20;
 
-    // Header
+    // ── Row 1: Job No (left) · Item Name (right) ──
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
-    const headerY = tableTop + 7;
-    doc.text("S/No", colX.sNo + colWidths.sNo / 2, headerY, {
-      align: "center",
-    });
-    doc.text("Defect", colX.defect + colWidths.defect / 2, headerY, {
-      align: "center",
-    });
-    doc.text("Work Done", colX.workDone + colWidths.workDone / 2, headerY, {
-      align: "center",
-    });
-    doc.text("Spare Used", colX.spareUsed + colWidths.spareUsed / 2, headerY, {
-      align: "center",
-    });
-    doc.text("Remarks", colX.remarks + colWidths.remarks / 2, headerY, {
-      align: "center",
-    });
+    doc.text("Job No:", margin, y);
+    doc.text("Item Name:", pageWidth - margin, y, { align: "right" });
 
-    // First data row
+    y += 6;
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    const padX = 2;
-    const firstRowY = tableTop + headerHeight + 6;
-    const wrapText = (text: string, maxW: number) =>
-      doc.splitTextToSize(text || "-", maxW - 4);
+    doc.text(record.jobNo || "-", margin, y);
+    doc.line(margin, y + 1, margin + 55, y + 1);
+    doc.text(record.itemName || "-", pageWidth - margin, y, {
+      align: "right",
+    });
+    doc.line(pageWidth - margin - 55, y + 1, pageWidth - margin, y + 1);
 
-    doc.text("1", colX.sNo + colWidths.sNo / 2, firstRowY, {
-      align: "center",
-    });
-    doc.text(
-      wrapText(record.defect ?? "-", colWidths.defect),
-      colX.defect + padX,
-      firstRowY,
-    );
-    doc.text(
-      wrapText(remarks || "-", colWidths.workDone),
-      colX.workDone + padX,
-      firstRowY,
-    );
-    doc.text("-", colX.spareUsed + colWidths.spareUsed / 2, firstRowY, {
-      align: "center",
-    });
-    doc.text("S", colX.remarks + colWidths.remarks / 2, firstRowY, {
-      align: "center",
+    // ── Row 2: Stock In Date (left) · Item Register No / SKU (right) ──
+    y += 14;
+    doc.setFont("helvetica", "bold");
+    doc.text("Stock In Date:", margin, y);
+    doc.text("Item Register No. (SKU):", pageWidth - margin, y, {
+      align: "right",
     });
 
-    // Table borders
-    doc.rect(margin, tableTop, contentWidth, tableHeight);
-    doc.line(
-      margin,
-      tableTop + headerHeight,
-      colX.end,
-      tableTop + headerHeight,
+    y += 6;
+    doc.setFont("helvetica", "normal");
+    doc.text(fmtDate(record.dateIn), margin, y);
+    doc.line(margin, y + 1, margin + 55, y + 1);
+    doc.text(record.productType || "-", pageWidth - margin, y, {
+      align: "right",
+    });
+    doc.line(pageWidth - margin - 55, y + 1, pageWidth - margin, y + 1);
+
+    // ── Center: Remark (of Defect) ──
+    y += 30;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("Remark (of Defect)", pageWidth / 2, y, { align: "center" });
+
+    y += 10;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    const lines = doc.splitTextToSize(
+      record.defect || "-",
+      pageWidth - margin * 2,
     );
-    doc.line(colX.defect, tableTop, colX.defect, tableBottom);
-    doc.line(colX.workDone, tableTop, colX.workDone, tableBottom);
-    doc.line(colX.spareUsed, tableTop, colX.spareUsed, tableBottom);
-    doc.line(colX.remarks, tableTop, colX.remarks, tableBottom);
-    for (let i = 1; i < dataRows; i++) {
-      const y = tableTop + headerHeight + rowHeight * i;
-      doc.line(margin, y, colX.end, y);
-    }
+    doc.text(lines, pageWidth / 2, y, { align: "center" });
+
+    // ── Hence line ──
+    y += lines.length * 6 + 10;
+    doc.setFont("helvetica", "bold");
+    doc.text("Hence, equipment enteneded as 'S'", pageWidth / 2, y, {
+      align: "center",
+    });
 
     doc.save(`Log Book Repairs - ${record.jobNo}.pdf`);
   };
