@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, type Resolver } from "react-hook-form";
 import { z } from "zod";
-import { Building2, FileDown, MoreHorizontal, Pencil, Plus, Trash2, Users as UsersIcon } from "lucide-react";
+import { Building2, FileDown, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -58,7 +58,7 @@ export default function DepartmentsPage() {
     if (editing) {
       updateDepartment({ ...editing, name: values.name, code: values.code, manager: values.manager, status: values.status as Department["status"] });
     } else {
-      addDepartment({ id: uid("DEP"), name: values.name, code: values.code, manager: values.manager, users: 0, status: values.status as Department["status"], color: palette[state.departments.length % palette.length] });
+      addDepartment({ id: uid("DEP"), name: values.name, code: values.code, manager: values.manager, status: values.status as Department["status"], color: palette[state.departments.length % palette.length] });
     }
     setDialogOpen(false);
     setEditing(null);
@@ -93,7 +93,6 @@ export default function DepartmentsPage() {
             const items = state.inventory.filter((i) => i.department === d.name);
             const low = items.filter((i) => i.quantity <= 10).length;
             const openTickets = 0;
-            const deptUsers = state.users.filter((u) => u.department === d.name).length;
             return (
               <Card key={d.id} className="group relative cursor-pointer py-5 transition-shadow hover:shadow-md" onClick={() => router.push(`/departments/${d.id}`)}>
                 <CardContent className="px-5">
@@ -123,10 +122,9 @@ export default function DepartmentsPage() {
                     </div>
                   </div>
                   <p className="text-muted-foreground mt-3 text-xs">Manager: <span className="text-foreground font-medium">{d.manager}</span></p>
-                  <div className="mt-4 grid grid-cols-4 gap-2 border-t pt-3 text-center">
+                  <div className="mt-4 grid grid-cols-3 gap-2 border-t pt-3 text-center">
                     <div><p className="text-sm font-semibold">{formatNumber(items.length)}</p><p className="text-muted-foreground text-[10px]">Items</p></div>
                     <div><p className="text-sm font-semibold">{openTickets}</p><p className="text-muted-foreground text-[10px]">Tickets</p></div>
-                    <div><p className="text-sm font-semibold">{Math.max(deptUsers, d.users)}</p><p className="text-muted-foreground text-[10px]"><UsersIcon className="mr-0.5 inline size-2.5" />Users</p></div>
                     <div><p className={low > 0 ? "text-warning text-sm font-semibold" : "text-sm font-semibold"}>{low}</p><p className="text-muted-foreground text-[10px]">Low Stock</p></div>
                   </div>
                 </CardContent>
@@ -140,7 +138,7 @@ export default function DepartmentsPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{editing ? "Edit Department" : "Add Department"}</DialogTitle>
-            <DialogDescription>Departments own inventory and users.</DialogDescription>
+            <DialogDescription>Departments own inventory.</DialogDescription>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -154,17 +152,8 @@ export default function DepartmentsPage() {
                 <FormField control={form.control} name="manager" render={({ field }) => (
                   <FormItem><FormLabel>Manager</FormLabel>
                     <FormControl>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger className="w-full"><SelectValue placeholder="Assign a manager" /></SelectTrigger>
-                        <SelectContent>
-                          {editing && !state.users.some((u) => u.name === editing.manager) && (
-                            <SelectItem value={editing.manager}>{editing.manager} (current)</SelectItem>
-                          )}
-                          {state.users.map((u) => <SelectItem key={u.id} value={u.name}>{u.name} · {u.department}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
+                      <Input placeholder="e.g. John Doe" {...field} />
                     </FormControl>
-                    {editing && <p className="text-muted-foreground text-xs">Currently assigned: <span className="font-medium text-foreground">{editing.manager}</span> — pick another user to reassign.</p>}
                     <FormMessage />
                   </FormItem>
                 )} />

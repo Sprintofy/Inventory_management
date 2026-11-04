@@ -5,7 +5,6 @@ import {
   PackagePlus,
   FolderTree,
   Building2,
-  Users,
   BarChart3,
   ScrollText,
   User,
@@ -62,7 +61,6 @@ export const navGroups: NavGroup[] = [
     label: "Organization",
     items: [
       { title: "Departments", href: "/departments", icon: Building2, roles: DEPT_ROLES, keywords: ["department", "dept", "team", "division"] },
-      { title: "Users", href: "/users", icon: Users, roles: ADMIN, keywords: ["user", "people", "staff", "employee", "account"] },
     ],
   },
   {

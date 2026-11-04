@@ -31,7 +31,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         "/stock-out",
         "/categories",
         "/departments",
-        "/users",
         "/activity",
       );
     }
@@ -42,7 +41,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         "/stock-out",
         "/tickets",
         "/departments",
-        "/users",
         "/activity",
       );
     }

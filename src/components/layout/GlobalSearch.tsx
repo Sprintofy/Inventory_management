@@ -80,16 +80,6 @@ export function GlobalSearch() {
       );
     }
 
-    if (allowed("/users")) {
-      add(
-        "Users",
-        state.users
-          .filter((u) => match(u.name, u.email, u.department, u.role))
-          .slice(0, PER_TYPE_LIMIT)
-          .map((u) => ({ id: u.id, type: "Users", label: u.name, sublabel: `${u.email} · ${u.department}`, href: `/users/${u.id}` })),
-      );
-    }
-
     if (allowed("/departments")) {
       add(
         "Departments",

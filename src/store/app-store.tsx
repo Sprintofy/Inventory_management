@@ -69,7 +69,6 @@ export type Permission =
   | "categories.manage"
   | "locations.manage"
   | "departments.manage"
-  | "users.manage"
   | "reports.view"
   | "activity.view"
   | "settings.manage"
@@ -93,7 +92,6 @@ const rolePermissions: Record<Role, Permission[]> = {
     "categories.manage",
     "locations.manage",
     "departments.manage",
-    "users.manage",
     "reports.view",
     "activity.view",
     "settings.manage",
@@ -116,7 +114,6 @@ const rolePermissions: Record<Role, Permission[]> = {
     "categories.manage",
     "locations.manage",
     "departments.manage",
-    "users.manage",
     "reports.view",
     "activity.view",
     "settings.manage",
@@ -178,7 +175,6 @@ interface AppState {
   stockIn: StockInRecord[];
   stockInRecords: StockInRecord[];
   stockInHistory: StockInRecord[];
-  users: User[];
   departments: Department[];
   activities: Activity[];
   notifications: NotificationItem[];
@@ -215,7 +211,6 @@ const emptyState = (user: User | null): AppState => ({
   stockIn: [],
   stockInRecords: [],
   stockInHistory: [],
-  users: [],
   departments: [],
   activities: [],
   notifications: [],
@@ -277,9 +272,6 @@ interface AppContextValue {
   addCategory: (c: Category) => void;
   updateCategory: (c: Category) => void;
   deleteCategory: (id: string) => void;
-  addUser: (u: User) => void;
-  updateUser: (u: User) => void;
-  deleteUser: (id: string) => void;
   addDepartment: (d: Department) => void;
   updateDepartment: (d: Department) => void;
   deleteDepartment: (id: string) => void;
@@ -312,7 +304,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const loadAll = React.useCallback(async (t: string) => {
     const b = await apiFetch("/system/bootstrap", {}, t);
     return {
-      users: b.users,
       technicians: b.technicians,
       departments: buildDepartments(b.departments),
       categories: b.categories,
@@ -872,63 +863,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [authCall, fail],
   );
 
-  const addUser = React.useCallback(
-    (u: User) => {
-      void (async () => {
-        try {
-          const created = await authCall("/users", {
-            method: "POST",
-            body: JSON.stringify(u),
-          });
-          setState((s) => ({ ...s, users: [created as User, ...s.users] }));
-          toast.success("User added successfully");
-        } catch (e) {
-          fail(e, "Could not add user");
-        }
-      })();
-    },
-    [authCall, fail],
-  );
-
-  const updateUser = React.useCallback(
-    (u: User) => {
-      void (async () => {
-        try {
-          const updated = await authCall(`/users/${u.id}`, {
-            method: "PUT",
-            body: JSON.stringify(u),
-          });
-          setState((s) => ({
-            ...s,
-            users: s.users.map((x) => (x.id === u.id ? (updated as User) : x)),
-          }));
-          toast.success("User updated successfully");
-        } catch (e) {
-          fail(e, "Could not update user");
-        }
-      })();
-    },
-    [authCall, fail],
-  );
-
-  const deleteUser = React.useCallback(
-    (id: string) => {
-      void (async () => {
-        try {
-          await authCall(`/users/${id}`, { method: "DELETE" });
-          setState((s) => ({
-            ...s,
-            users: s.users.filter((u) => u.id !== id),
-          }));
-          toast.success("User deleted");
-        } catch (e) {
-          fail(e, "Could not delete user");
-        }
-      })();
-    },
-    [authCall, fail],
-  );
-
   const refreshDepartments = React.useCallback(async () => {
     const depts = await authCall("/departments");
     setState((s) => ({ ...s, departments: buildDepartments(depts) }));
@@ -940,7 +874,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         try {
           await authCall("/departments", {
             method: "POST",
-            body: JSON.stringify({ ...d, users: d.users ?? 0 }),
+            body: JSON.stringify(d),
           });
           await refreshDepartments();
           toast.success("Department created successfully");
@@ -1092,9 +1026,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addCategory,
       updateCategory,
       deleteCategory,
-      addUser,
-      updateUser,
-      deleteUser,
       addDepartment,
       updateDepartment,
       deleteDepartment,
@@ -1135,9 +1066,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addCategory,
       updateCategory,
       deleteCategory,
-      addUser,
-      updateUser,
-      deleteUser,
       addDepartment,
       updateDepartment,
       deleteDepartment,

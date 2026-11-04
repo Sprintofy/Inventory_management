@@ -3,7 +3,7 @@
 import * as React from "react";
 import { use, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BarChart3, Building2, ChevronRight, FileDown, MoreHorizontal, Package, Pencil, Plus, Ticket as TicketIcon, Trash2, User } from "lucide-react";
+import { BarChart3, Building2, ChevronRight, FileDown, MoreHorizontal, Package, Pencil, Plus, Ticket as TicketIcon, Trash2 } from "lucide-react";
 import { BackButton } from "@/components/ui/BackButton";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,6 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { AssignManagerDialog } from "@/components/departments/AssignManagerDialog";
 import { useApp } from "@/store/app-store";
 import { useFakeLoading } from "@/hooks/use-fake-loading";
 import { downloadCSV, formatDate } from "@/lib/utils";
@@ -34,7 +33,6 @@ export default function DepartmentDetailPage({ params }: { params: Promise<{ id:
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
-  const [managerOpen, setManagerOpen] = useState(false);
 
   if (!loading && !dept) {
     return (
@@ -73,7 +71,7 @@ export default function DepartmentDetailPage({ params }: { params: Promise<{ id:
             </>
           )}
           {can("departments.manage") && (
-            <Button variant="outline" onClick={() => setManagerOpen(true)}><User className="size-4" /> Assign Manager</Button>
+            <></>
           )}
         </div>
       </div>
@@ -167,18 +165,6 @@ export default function DepartmentDetailPage({ params }: { params: Promise<{ id:
             router.push("/departments");
             setDeleting(null);
           }
-        }}
-      />
-
-      <AssignManagerDialog
-        open={managerOpen}
-        onOpenChange={setManagerOpen}
-        title={`Assign Manager — ${dept.name}`}
-        description="Pick a user as this department's manager. The current manager is shown below."
-        current={dept.manager}
-        onSave={(manager) => {
-          updateDepartment({ ...dept, manager });
-          toast.success(`Manager assigned — ${manager}`);
         }}
       />
     </div>

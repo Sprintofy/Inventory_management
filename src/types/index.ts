@@ -29,7 +29,6 @@ export interface Department {
   name: string;
   code: string;
   manager: string;
-  users: number;
   status: "active" | "inactive";
   color: string;
 }

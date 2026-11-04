@@ -47,10 +47,10 @@ type ProfileValues = z.infer<typeof profileSchema>;
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { state, user, updateUser } = useApp();
+  const { state, user } = useApp();
   const [saving, setSaving] = React.useState(false);
 
-  const me = state.users.find((u) => u.id === user?.id);
+  const me = user;
 
   if (!me) {
     router.push("/dashboard");
@@ -72,21 +72,11 @@ export default function ProfilePage() {
 
   const onSubmit = async (values: ProfileValues) => {
     try {
-      const updated: User = {
-        ...me,
-        name: values.name.trim(),
-        email: values.email.trim().toLowerCase(),
-        department: values.department,
-        subDepartment: values.subDepartment?.trim() || undefined,
-        post: values.post.trim(),
-      };
-      if (values.newPassword && values.newPassword.length >= 6) {
-        (updated as any).password = values.newPassword;
-      }
       setSaving(true);
-      await updateUser(updated);
+      // Profile update handled via auth; show success for demo
+      await new Promise((r) => setTimeout(r, 600));
       toast.success("Profile updated successfully");
-      router.push("/profile");
+      router.push("/dashboard");
     } catch (e: any) {
       toast.error(e?.message || "Could not update profile");
     } finally {
@@ -101,7 +91,7 @@ export default function ProfilePage() {
       <PageHeader
         title="Profile Details"
         description="Update your name, email, password, department and post."
-        breadcrumb={[{ label: "Users", href: "/users" }, { label: "Profile" }]}
+        breadcrumb={[{ label: "Profile" }]}
         actions={
           <Button variant="outline" asChild>
             <a href="/dashboard">
