@@ -309,6 +309,13 @@ export default function StockOutPage({
       return `${d.getDate().toString().padStart(2, "0")}-${(d.getMonth() + 1).toString().padStart(2, "0")}-${d.getFullYear()}`;
     };
 
+    // ── Top center: Job No ──
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text(`Job No: ${record.jobNo || "-"}`, pageWidth / 2, 13, {
+      align: "center",
+    });
+
     let y = 20;
 
     // ── Row 1: Job No (left) · Item Name (right) ──
