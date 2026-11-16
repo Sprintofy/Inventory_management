@@ -37,7 +37,8 @@ export interface InventoryItem {
   id: string;
   deviceName: string;
   brand: string;
-  type: "W" | "C" | "NC";
+  type: "SER" | "BER";
+  dateOfVintage?: string;
   category: string;
   notes?: string;
   sku: string;
@@ -209,7 +210,7 @@ export interface StockInRecord {
   secIcName: string | null;
   itemId: string;
   itemName: string;
-  productType: "W" | "C" | "NC";
+  productType: string;
   quantity: number;
   department: string;
   createdBy: string;

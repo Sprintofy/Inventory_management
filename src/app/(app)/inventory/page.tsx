@@ -31,6 +31,7 @@ export default function InventoryPage() {
       )) return false;
       if (filters.department !== "all" && i.department !== filters.department) return false;
       if (filters.category !== "all" && i.category !== filters.category) return false;
+      if (filters.type !== "all" && i.type !== filters.type) return false;
       if (filters.dateFrom && new Date(i.lastUpdated) < new Date(filters.dateFrom)) return false;
       if (filters.dateTo && new Date(i.lastUpdated) > new Date(filters.dateTo + "T23:59:59")) return false;
       return true;
@@ -43,9 +44,10 @@ export default function InventoryPage() {
       "Device Name": i.deviceName,
       Brand: i.brand,
       Type: i.type,
+      "Date of Vintage": i.dateOfVintage ?? "",
       Category: i.category,
       Notes: i.notes ?? "",
-      "CPU Type": i.cpuType ?? "",
+      "Roll of CPU": i.cpuType ?? "",
       "Reg No.": i.sku,
       Quantity: i.quantity,
       Status: i.status,

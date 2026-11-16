@@ -40,7 +40,10 @@ const HEADER_FIELDS: Record<string, string> = {
   item: "deviceName",
   brand: "brand",
   type: "type",
+  dateofvintage: "dateOfVintage",
+  vintage: "dateOfVintage",
   cputype: "cpuType",
+  rollofcpu: "cpuType",
   sku: "sku",
   code: "sku",
   category: "category",
@@ -57,7 +60,6 @@ const REQUIRED_FIELDS: { field: string; label: string }[] = [
   { field: "sku", label: "Reg No." },
   { field: "category", label: "Category" },
   { field: "department", label: "Department" },
-  { field: "unit", label: "Unit" },
 ];
 
 const normalizeKey = (k: string) => k.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -170,14 +172,21 @@ export function InventoryImportDialog({
           errors.push(`Reg No. "${sku}" already exists in inventory`);
         }
 
+        const rawType = String(get("type") ?? "").trim().toUpperCase();
+        if (rawType && rawType !== "SER" && rawType !== "BER") {
+          errors.push("Type must be SER or BER");
+        }
+
         return {
           row: rowNum,
           errors,
           item: {
             deviceName: String(get("deviceName") ?? "").trim(),
             brand: String(get("brand") ?? "").trim() || "—",
-            type: (String(get("type") ?? "").trim() || "C") as "W" | "C" | "NC",
-            cpuType: (String(get("cputype") ?? "").trim() || undefined) as
+            type: (rawType || "SER") as "SER" | "BER",
+            dateOfVintage:
+              String(get("dateOfVintage") ?? "").trim() || undefined,
+            cpuType: (String(get("cpuType") ?? "").trim() || undefined) as
               | "CAN"
               | "NCAN"
               | "SA"
@@ -288,7 +297,7 @@ export function InventoryImportDialog({
             </label>
             <div className="flex items-center justify-between">
               <p className="text-muted-foreground text-xs">
-                Required columns: Device Name, Reg No., Category, Department, Unit
+                Required columns: Device Name, Reg No., Category, Department
               </p>
               <Button
                 variant="outline"

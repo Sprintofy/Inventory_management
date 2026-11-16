@@ -14,6 +14,7 @@ import { useApp } from "@/store/app-store";
 export interface InventoryFiltersState {
   department: string;
   category: string;
+  type: string;
   dateFrom: string;
   dateTo: string;
 }
@@ -21,6 +22,7 @@ export interface InventoryFiltersState {
 export const emptyFilters: InventoryFiltersState = {
   department: "all",
   category: "all",
+  type: "all",
   dateFrom: "",
   dateTo: "",
 };
@@ -78,6 +80,17 @@ export function InventoryFilters({
                 <SelectContent>
                   <SelectItem value="all">All</SelectItem>
                   {state.categories.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Type</Label>
+              <Select value={filters.type} onValueChange={(v) => set({ type: v })}>
+                <SelectTrigger size="sm" className="w-full"><SelectValue placeholder="All Types" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="SER">SER</SelectItem>
+                  <SelectItem value="BER">BER</SelectItem>
                 </SelectContent>
               </Select>
             </div>

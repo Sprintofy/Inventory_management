@@ -40,7 +40,11 @@ import Link from "next/link";
 const formSchema = z.object({
   deviceName: z.string().min(2, "Device name is required"),
   brand: z.string().min(2, "Brand is required"),
-  type: z.enum(["W", "C", "NC"]),
+  type: z.enum(["SER", "BER"]),
+  dateOfVintage: z
+    .string()
+    .max(64, "Date of vintage must be 64 characters or less")
+    .optional(),
   category: z.string().min(1, "Select a category"),
   notes: z.string().optional(),
   sku: z.string().min(2, "Reg No. is required"),
@@ -56,7 +60,8 @@ function emptyValues(department: string): FormValues {
   return {
     deviceName: "",
     brand: "",
-    type: "C" as const,
+    type: "SER" as const,
+    dateOfVintage: "",
     category: "",
     notes: "",
     sku: "",
@@ -72,6 +77,7 @@ function valuesOf(item: InventoryItem): FormValues {
     deviceName: item.deviceName,
     brand: item.brand,
     type: item.type,
+    dateOfVintage: item.dateOfVintage ?? "",
     category: item.category,
     notes: item.notes ?? "",
     sku: item.sku,
@@ -138,6 +144,7 @@ export function InventoryForm({
       deviceName: values.deviceName.trim(),
       brand: values.brand.trim(),
       type: values.type,
+      dateOfVintage: values.dateOfVintage?.trim() || undefined,
       category: values.category,
       notes: values.notes?.trim() || undefined,
       sku: values.sku.trim(),
@@ -235,11 +242,23 @@ export function InventoryForm({
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="W">W (Workshop)</SelectItem>
-                        <SelectItem value="C">C (Consumable)</SelectItem>
-                        <SelectItem value="NC">NC (Non-Consumable)</SelectItem>
+                        <SelectItem value="SER">SER</SelectItem>
+                        <SelectItem value="BER">BER</SelectItem>
                       </SelectContent>
                     </Select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="dateOfVintage"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Date of Vintage</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. 2019" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -317,14 +336,14 @@ export function InventoryForm({
               name="cpuType"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Type of CPU</FormLabel>
+                  <FormLabel>Roll of CPU</FormLabel>
                   <FormControl>
                     <Select
                       value={field.value ?? ""}
                       onValueChange={field.onChange}
                     >
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select CPU type" />
+                        <SelectValue placeholder="Select CPU roll" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="CAN">CAN</SelectItem>

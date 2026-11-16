@@ -328,7 +328,7 @@ export function StockInDialog({
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Product Type</Label>
+              <Label className="text-xs">Type</Label>
               <Input
                 className="bg-muted/50"
                 readOnly
@@ -336,7 +336,7 @@ export function StockInDialog({
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">CPU Type</Label>
+              <Label className="text-xs">Roll of CPU</Label>
               <Input
                 className="bg-muted/50"
                 readOnly

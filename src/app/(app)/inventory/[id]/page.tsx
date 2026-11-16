@@ -144,7 +144,9 @@ export default function InventoryDetailPage({ params }: { params: Promise<{ id: 
                     { k: "Brand", v: item.brand },
                     { k: "Category", v: item.category },
                     { k: "Department", v: item.department },
-                    { k: "CPU Type", v: item.cpuType ?? "—" },
+                    { k: "Type", v: item.type },
+                    { k: "Date of Vintage", v: item.dateOfVintage ?? "—" },
+                    { k: "Roll of CPU", v: item.cpuType ?? "—" },
                     { k: "Created", v: formatDate(item.createdAt) },
                     { k: "Last Updated", v: formatDate(item.lastUpdated) },
                   ].map((row) => (

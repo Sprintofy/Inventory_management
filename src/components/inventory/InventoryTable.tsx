@@ -37,7 +37,8 @@ const allColumns = [
   { key: "deviceName", label: "Device Name" },
   { key: "brand", label: "Brand" },
   { key: "type", label: "Type" },
-  { key: "cpuType", label: "CPU Type" },
+  { key: "dateOfVintage", label: "Date of Vintage" },
+  { key: "cpuType", label: "Roll of CPU" },
   { key: "sku", label: "Reg No." },
   { key: "category", label: "Category" },
   { key: "quantity", label: "Quantity" },
@@ -160,6 +161,9 @@ export function InventoryTable({ items, onEdit }: InventoryTableProps) {
                       break;
                     case "type":
                       value = item.type;
+                      break;
+                    case "dateOfVintage":
+                      value = item.dateOfVintage ?? "-";
                       break;
                     case "cpuType":
                       value = item.cpuType ?? "-";

@@ -299,7 +299,7 @@ export default function ReportsPage() {
                   <TableHeader>
                     <TableRow className="hover:bg-transparent">
                       <TableHead>Item</TableHead>
-                      <TableHead>Product Type</TableHead>
+                      <TableHead>Type</TableHead>
                       <TableHead className="text-right">Quantity</TableHead>
                       <TableHead className="text-right">Department</TableHead>
                       <TableHead>Status</TableHead>
