@@ -34,6 +34,13 @@ interface StockLine {
   quantity: number;
 }
 
+const todayKey = () => {
+  const d = new Date();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${month}-${day}`;
+};
+
 /**
  * Right-side panel showing a selected product's stock-in history with remarks.
  */
@@ -177,6 +184,18 @@ export function StockInDialog({
   const selectedItem = state.inventory.find((i) => i.id === itemId);
   const overAvailable = selectedItem && quantity > selectedItem.quantity;
 
+  const openStockInToday = React.useMemo(() => {
+    if (!itemId) return undefined;
+    const today = todayKey();
+    return state.stockIn.find(
+      (r) =>
+        r.itemId === itemId &&
+        String(r.dateIn ?? "").slice(0, 10) === today &&
+        r.status !== "Stock Out" &&
+        !r.dateOut,
+    );
+  }, [state.stockIn, itemId]);
+
   const options = React.useMemo(() => {
     const term = search.trim().toLowerCase();
     return state.inventory.filter((i) => {
@@ -193,9 +212,15 @@ export function StockInDialog({
     });
   }, [state.inventory, search, visibleDepartments]);
 
-  const valid = !!itemId && quantity >= 1;
+  const valid = !!itemId && quantity >= 1 && !openStockInToday;
 
   const onSubmit = () => {
+    if (openStockInToday) {
+      toast.error(
+        `This product was already stocked in today (Job ${openStockInToday.jobNo}) and is not stocked out yet. Stock it out first.`,
+      );
+      return;
+    }
     if (!valid) {
       toast.error("Select a product and quantity");
       return;
@@ -261,6 +286,12 @@ export function StockInDialog({
           <p className="text-muted-foreground text-[11px]">
             Reg No. {selectedItem.sku} · Type {selectedItem.type} ·{" "}
             {formatNumber(selectedItem.quantity)} in stock
+          </p>
+        )}
+        {selectedItem && openStockInToday && (
+          <p className="text-destructive text-[11px]">
+            Already stocked in today (Job {openStockInToday.jobNo}) and not
+            stocked out yet. Stock it out before recording another stock-in.
           </p>
         )}
       </div>
