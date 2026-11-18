@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { FileDown, FileUp, PackageMinus, Plus } from "lucide-react";
+import { FileDown, FileUp, PackageMinus, Plus, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import {
@@ -31,6 +31,8 @@ import { useApp } from "@/store/app-store";
 import { useFakeLoading } from "@/hooks/use-fake-loading";
 import { downloadCSV, formatDate, formatNumber } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 type DateRange = "all" | "today" | "custom";
 
@@ -61,15 +63,7 @@ export default function StockInPage() {
       ? "All Departments"
       : `${activeDepartment} stock only.`;
 
-  const skuByItemId = React.useMemo(() => {
-    const map = new Map<string, string>();
-    for (const i of state.inventory) map.set(i.id, i.sku);
-    return map;
-  }, [state.inventory]);
-
-  const regNoOf = (itemId: string) => skuByItemId.get(itemId) ?? "-";
-
-  React.useEffect(() => {
+  const getDateRange = () => {
     let from = "";
     let to = "";
     if (range === "today") {
@@ -79,6 +73,20 @@ export default function StockInPage() {
       from = dateFrom;
       to = dateTo;
     }
+    return { from, to };
+  };
+
+  const { from, to } = getDateRange();
+
+  const skuByItemId = React.useMemo(() => {
+    const map = new Map<string, string>();
+    for (const i of state.inventory) map.set(i.id, i.sku);
+    return map;
+  }, [state.inventory]);
+
+  const regNoOf = (itemId: string) => skuByItemId.get(itemId) ?? "-";
+
+  React.useEffect(() => {
     fetchStockIn({
       status: "all",
       dateFrom: from,
@@ -106,6 +114,8 @@ export default function StockInPage() {
     category,
     fetchStockIn,
     fetchStockInStats,
+    from,
+    to,
   ]);
 
   const rangeLabel =
@@ -161,6 +171,138 @@ export default function StockInPage() {
     toast.success(`Exported ${records.length} records to CSV`);
   };
 
+  const doExportMIS = async () => {
+    try {
+      const res = await fetch(
+        `/api/inventory/stock-in/mis?dateFrom=${from}&dateTo=${to}&department=${activeDepartment === "all" ? "" : activeDepartment}`,
+      );
+      if (!res.ok) throw new Error("Failed to fetch MIS data");
+      const data = await res.json();
+      const misRows = data.results || [];
+
+      const earliestRes = await fetch(
+        `/api/inventory/stock-in/earliest?department=${activeDepartment === "all" ? "" : activeDepartment}`,
+      );
+      const earliestData = await earliestRes.json();
+      const earliestDate = earliestData.results || "";
+
+      const doc = new jsPDF({
+        orientation: "landscape",
+        unit: "mm",
+        format: "a4",
+      }) as any;
+
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const margin = 15;
+      let y = 12;
+
+      // Title: MIS CELL IT EQPT REPAIR STATE
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      const title = "MIS CELL IT EQPT REPAIR STATE";
+      doc.text(title, pageWidth / 2, y, { align: "center" });
+      y += 7;
+
+      // Date range line
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      let dateLabel = "";
+      if (range === "today") {
+        const today = new Date();
+        const day = today.getDate().toString().padStart(2, "0");
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const month = months[today.getMonth()];
+        const year = today.getFullYear();
+        dateLabel = `${day} ${month} ${year}`;
+      } else if (range === "custom") {
+        const fmt = (d: string) => {
+          const dt = new Date(d);
+          const day = dt.getDate().toString().padStart(2, "0");
+          const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+          const month = months[dt.getMonth()];
+          const year = dt.getFullYear();
+          return `${day} ${month} ${year}`;
+        };
+        dateLabel = `${fmt(from)} to ${fmt(to)}`;
+      } else {
+        if (earliestDate) {
+          const dt = new Date(earliestDate);
+          const day = dt.getDate().toString().padStart(2, "0");
+          const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+          const month = months[dt.getMonth()];
+          const year = dt.getFullYear();
+          const today = new Date();
+          const td = today.getDate().toString().padStart(2, "0");
+          const tm = months[today.getMonth()];
+          const ty = today.getFullYear();
+          dateLabel = `${day} ${month} ${year} to ${td} ${tm} ${ty}`;
+        }
+      }
+      doc.text(dateLabel, pageWidth / 2, y, { align: "center" });
+      y += 8;
+
+      // Table
+      const columns = ["S/No", "EQPT NOMENCLATURE", "BFF", "IN", "TOTAL", "OUT", "BAL U/R"];
+      const rows = misRows.map((r: any, idx: number) => {
+        const bff = Number(r.bff || 0);
+        const inQty = Number(r.in_qty || 0);
+        const outQty = Number(r.out_qty || 0);
+        const total = bff + inQty;
+        const bal = total - outQty;
+        return [
+          String(idx + 1),
+          r.category,
+          bff,
+          inQty,
+          total,
+          outQty,
+          bal,
+        ];
+      });
+
+      // Add totals row
+      const totalBff = rows.reduce((s: number, r: any) => s + Number(r[2]), 0);
+      const totalIn = rows.reduce((s: number, r: any) => s + Number(r[3]), 0);
+      const totalTotal = rows.reduce((s: number, r: any) => s + Number(r[4]), 0);
+      const totalOut = rows.reduce((s: number, r: any) => s + Number(r[5]), 0);
+      const totalBal = rows.reduce((s: number, r: any) => s + Number(r[6]), 0);
+      rows.push(["", "TOTAL", totalBff, totalIn, totalTotal, totalOut, totalBal]);
+
+      doc.autoTable({
+        startY: y,
+        head: [columns],
+        body: rows,
+        theme: "striped",
+        headStyles: {
+          fillColor: [31, 41, 55],
+          textColor: [255, 255, 255],
+          fontStyle: "bold",
+          fontSize: 9,
+          halign: "center",
+        },
+        bodyStyles: {
+          fontSize: 9,
+          halign: "center",
+        },
+        columnStyles: {
+          0: { cellWidth: 15, halign: "center" },
+          1: { cellWidth: 50, halign: "left" },
+          2: { cellWidth: 20, halign: "center" },
+          3: { cellWidth: 20, halign: "center" },
+          4: { cellWidth: 20, halign: "center" },
+          5: { cellWidth: 20, halign: "center" },
+          6: { cellWidth: 20, halign: "center" },
+        },
+        didDrawPage: () => {},
+      });
+
+      doc.save(`MIS-IT-EQPT-REPAIR-STATE-${new Date().toISOString().slice(0, 10)}.pdf`);
+      toast.success("MIS Report exported as PDF");
+    } catch (e) {
+      toast.error("Failed to export MIS report");
+    }
+  };
+
   const handleStockOut = (id: number | string) => {
     router.push(`/stock-out/${id}`);
   };
@@ -174,7 +316,10 @@ export default function StockInPage() {
         actions={
           <>
             <Button variant="outline" onClick={doExportCSV}>
-              <FileDown className="size-4" /> Export
+              <FileDown className="size-4" /> Export CSV
+            </Button>
+            <Button variant="outline" onClick={doExportMIS}>
+              <FileText className="size-4" /> Export MIS PDF
             </Button>
             <Button
               onClick={() => {
