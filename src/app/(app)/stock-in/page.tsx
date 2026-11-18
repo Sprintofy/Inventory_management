@@ -200,23 +200,31 @@ export default function StockInPage() {
               placeholder="Search by item, work order, job no…"
               className="md:max-w-sm"
             />
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-              <span className="text-muted-foreground">
-                Range:{" "}
-                <span className="font-medium text-foreground">{rangeLabel}</span>
-              </span>
-              <span className="text-muted-foreground">
-                Total In:{" "}
-                <span className="font-semibold text-foreground tabular-nums">
+            <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
+              <div>
+                <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+                  Range
+                </p>
+                <p className="text-foreground mt-0.5 text-lg font-bold">
+                  {rangeLabel}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+                  Total In
+                </p>
+                <p className="text-foreground mt-0.5 text-2xl font-bold tabular-nums">
                   {formatNumber(state.stockInStats.totalIn)}
-                </span>
-              </span>
-              <span className="text-muted-foreground">
-                Total Out:{" "}
-                <span className="font-semibold text-foreground tabular-nums">
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+                  Total Out
+                </p>
+                <p className="text-foreground mt-0.5 text-2xl font-bold tabular-nums">
                   {formatNumber(state.stockInStats.totalOut)}
-                </span>
-              </span>
+                </p>
+              </div>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3">
