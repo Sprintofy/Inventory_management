@@ -309,12 +309,12 @@ export default function ReportsPage() {
                     {topItems.map((i) => (
                       <TableRow key={i.id}>
                         <TableCell>
-                          <p className="text-sm font-medium">{i.itemName}</p>
-                          <p className="text-muted-foreground font-mono text-xs">Reg No. {i.itemId}</p>
+                          <p className="font-semibold">{i.itemName}</p>
+                          <p className="text-foreground/70 font-mono text-sm">Reg No. {i.itemId}</p>
                         </TableCell>
-                        <TableCell className="text-xs">{i.productType}</TableCell>
-                        <TableCell className="text-right text-sm tabular-nums">{i.quantity.toLocaleString()}</TableCell>
-                        <TableCell className="text-right text-sm tabular-nums">{i.department}</TableCell>
+                        <TableCell className="text-sm font-semibold">{i.productType}</TableCell>
+                        <TableCell className="text-right font-semibold tabular-nums">{i.quantity.toLocaleString()}</TableCell>
+                        <TableCell className="text-right text-sm">{i.department}</TableCell>
                         <TableCell><StatusBadge status={i.status as any} /></TableCell>
                       </TableRow>
                     ))}
@@ -354,16 +354,16 @@ export default function ReportsPage() {
                 <TableBody>
                   {ticketReportData.map((t) => (
                     <TableRow key={t.jobNo}>
-                      <TableCell className="text-center text-sm">{t.sNo}</TableCell>
-                      <TableCell className="text-sm font-mono">{t.jobNo}</TableCell>
-                      <TableCell className="text-sm">{t.eqpt}</TableCell>
-                      <TableCell className="text-sm font-mono">{t.regNo}</TableCell>
-                      <TableCell className="text-right text-sm tabular-nums">{t.qty}</TableCell>
+                      <TableCell className="text-center text-sm font-medium">{t.sNo}</TableCell>
+                      <TableCell className="font-mono text-sm font-semibold">{t.jobNo}</TableCell>
+                      <TableCell className="font-medium">{t.eqpt}</TableCell>
+                      <TableCell className="font-mono text-sm font-medium">{t.regNo}</TableCell>
+                      <TableCell className="text-right font-semibold tabular-nums">{t.qty}</TableCell>
                       <TableCell className="text-sm">{t.secDept}</TableCell>
-                      <TableCell className="text-sm font-mono">{t.dateIn}</TableCell>
-                      <TableCell className="text-sm font-mono">{t.dateOut}</TableCell>
+                      <TableCell className="font-mono text-sm">{t.dateIn}</TableCell>
+                      <TableCell className="font-mono text-sm">{t.dateOut}</TableCell>
                       <TableCell className="text-sm">{t.typeOfFault}</TableCell>
-                      <TableCell className="text-sm"><StatusBadge status={t.progress as any} /></TableCell>
+                      <TableCell><StatusBadge status={t.progress as any} /></TableCell>
                       <TableCell className="text-sm">{t.actionByTech}</TableCell>
                     </TableRow>
                   ))}

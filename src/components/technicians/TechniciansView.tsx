@@ -163,18 +163,18 @@ export function TechniciansView({ basePath = "/technicians" }: { basePath?: stri
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead>
-                <button type="button" className="inline-flex items-center gap-1 hover:text-foreground" onClick={() => toggleSort("name")}>
+                <button type="button" className="inline-flex items-center gap-1 uppercase hover:text-foreground" onClick={() => toggleSort("name")}>
                   Technician {sortKey === "name" && (sortDir === "asc" ? "↑" : "↓")}
                 </button>
               </TableHead>
               <TableHead>Specialization</TableHead>
               <TableHead>
-                <button type="button" className="inline-flex items-center gap-1 hover:text-foreground" onClick={() => toggleSort("activeTickets")}>
+                <button type="button" className="inline-flex items-center gap-1 uppercase hover:text-foreground" onClick={() => toggleSort("activeTickets")}>
                   Active Tickets {sortKey === "activeTickets" && (sortDir === "asc" ? "↑" : "↓")}
                 </button>
               </TableHead>
               <TableHead>
-                <button type="button" className="inline-flex items-center gap-1 hover:text-foreground" onClick={() => toggleSort("resolvedTickets")}>
+                <button type="button" className="inline-flex items-center gap-1 uppercase hover:text-foreground" onClick={() => toggleSort("resolvedTickets")}>
                   Resolved {sortKey === "resolvedTickets" && (sortDir === "asc" ? "↑" : "↓")}
                 </button>
               </TableHead>
@@ -199,14 +199,14 @@ export function TechniciansView({ basePath = "/technicians" }: { basePath?: stri
                       {t.name.split(" ").map((p) => p[0]).join("").slice(0, 2)}
                     </div>
                     <div>
-                      <p className="text-sm font-medium group-hover:underline">{t.name}</p>
-                      <p className="text-muted-foreground text-xs">{t.employeeId} · {t.email}</p>
+                      <p className="font-semibold group-hover:underline">{t.name}</p>
+                      <p className="text-foreground/70 text-sm">{t.employeeId} · {t.email}</p>
                     </div>
                   </Link>
                 </TableCell>
-                <TableCell><span className="bg-muted inline-flex rounded-md px-2 py-0.5 text-xs font-medium">{t.specialization}</span></TableCell>
-                <TableCell className="text-sm tabular-nums">{workload.get(t.id) ?? 0}</TableCell>
-                <TableCell className="text-sm tabular-nums">{t.resolvedTickets}</TableCell>
+                <TableCell><span className="bg-muted inline-flex rounded-md px-2 py-1 text-sm font-medium">{t.specialization}</span></TableCell>
+                <TableCell className="font-semibold tabular-nums">{workload.get(t.id) ?? 0}</TableCell>
+                <TableCell className="font-semibold tabular-nums">{t.resolvedTickets}</TableCell>
                 <TableCell><Badge variant={t.status === "Active" ? "success" : "neutral"} className="capitalize">{t.status}</Badge></TableCell>
                 <TableCell className="pr-4 text-right">
                   {can("technicians.manage") && (

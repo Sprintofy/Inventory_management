@@ -367,29 +367,29 @@ export default function StockInPage() {
                     router.push(`/stock-out/${r.id}`);
                   }}
                 >
-                  <TableCell className="font-mono text-xs font-medium">
+                  <TableCell className="font-mono text-sm font-semibold">
                     {r.id}
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-xs">
+                  <TableCell className="text-foreground/80 text-sm font-medium">
                     {r.jobNo}
                   </TableCell>
-                  <TableCell className="text-sm font-medium">
+                  <TableCell className="font-semibold">
                     {r.itemName}
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-xs">
+                  <TableCell className="text-foreground/80 font-mono text-sm">
                     {regNoOf(r.itemId)}
                   </TableCell>
-                  <TableCell className="text-sm font-semibold tabular-nums">
+                  <TableCell className="text-base font-bold tabular-nums">
                     {formatNumber(r.quantity)}
                   </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
+                  <TableCell className="text-foreground/80 text-sm">
                     {r.department}
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-xs">
+                  <TableCell className="text-foreground/80 text-sm">
                     {formatDate(r.dateIn)}
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-xs">
-                    {r.dateOut ? formatDate(r.dateOut) : "-"}
+                  <TableCell className="text-foreground/80 text-sm">
+                    {r.dateOut ? formatDate(r.dateOut) : "—"}
                   </TableCell>
                   <TableCell className="text-right">
                     {r.status !== "Stock Out" && (

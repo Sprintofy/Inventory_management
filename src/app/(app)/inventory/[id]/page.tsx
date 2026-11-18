@@ -184,10 +184,14 @@ export default function InventoryDetailPage({ params }: { params: Promise<{ id: 
             <div>
               <h4 className="mb-3 text-sm font-semibold">Stock In History ({inHistory.length})</h4>
               <div className="overflow-x-auto rounded-lg border">
-                <table className="w-full text-sm">
+                <table className="w-full text-[15px]">
                   <thead>
-                    <tr className="bg-muted/50 text-muted-foreground">
-                      {["Reference", "Quantity", "Department", "Date", "By"].map((h) => <th key={h} className="px-4 py-2.5 text-left text-xs font-medium">{h}</th>)}
+                    <tr className="bg-muted/50 text-muted-foreground border-b">
+                      {["Reference", "Quantity", "Department", "Date", "By"].map((h) => (
+                        <th key={h} className="px-4 py-3 text-left text-xs font-bold tracking-wider uppercase">
+                          {h}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
@@ -195,12 +199,12 @@ export default function InventoryDetailPage({ params }: { params: Promise<{ id: 
                       <tr><td colSpan={5} className="text-muted-foreground px-4 py-8 text-center">No stock in records</td></tr>
                     )}
                     {inHistory.map((t) => (
-                      <tr key={t.id} className="border-t">
-                        <td className="px-4 py-2.5 font-mono text-xs">{t.reference}</td>
-                        <td className="text-success px-4 py-2.5 font-medium tabular-nums">+{t.quantity}</td>
-                        <td className="text-muted-foreground px-4 py-2.5 text-xs">{t.department}{t.toDepartment ? ` → ${t.toDepartment}` : ""}</td>
-                        <td className="text-muted-foreground px-4 py-2.5 text-xs">{formatDate(t.date)}</td>
-                        <td className="px-4 py-2.5 text-xs">{t.createdBy}</td>
+                      <tr key={t.id} className="border-t transition-colors even:bg-muted/25 hover:bg-muted/60">
+                        <td className="px-4 py-3 font-mono text-sm font-semibold">{t.reference}</td>
+                        <td className="text-success px-4 py-3 font-bold tabular-nums">+{t.quantity}</td>
+                        <td className="text-foreground/80 px-4 py-3 text-sm">{t.department}{t.toDepartment ? ` → ${t.toDepartment}` : ""}</td>
+                        <td className="text-foreground/80 px-4 py-3 text-sm">{formatDate(t.date)}</td>
+                        <td className="px-4 py-3 text-sm">{t.createdBy}</td>
                       </tr>
                     ))}
                   </tbody>
