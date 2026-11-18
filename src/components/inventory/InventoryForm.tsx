@@ -105,7 +105,9 @@ export function InventoryForm({
 
   const existingSku = (sku: string, excludeId?: string) =>
     state.inventory.some(
-      (i) => i.sku.trim().toLowerCase() === sku.trim().toLowerCase() && i.id !== excludeId,
+      (i) =>
+        i.sku.trim().toLowerCase() === sku.trim().toLowerCase() &&
+        i.id !== excludeId,
     );
 
   const departmentOptions = React.useMemo(
@@ -194,7 +196,6 @@ export function InventoryForm({
   const renderFormContent = () => (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-
         {/* Section 1: Basic Info */}
         <section className="space-y-4">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
@@ -234,10 +235,7 @@ export function InventoryForm({
                 <FormItem>
                   <FormLabel>Type</FormLabel>
                   <FormControl>
-                    <Select
-                      value={field.value}
-                      onValueChange={field.onChange}
-                    >
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
@@ -271,10 +269,7 @@ export function InventoryForm({
                 <FormItem>
                   <FormLabel>Category</FormLabel>
                   <FormControl>
-                    <Select
-                      value={field.value}
-                      onValueChange={field.onChange}
-                    >
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
@@ -311,10 +306,7 @@ export function InventoryForm({
                 <FormItem>
                   <FormLabel>Department</FormLabel>
                   <FormControl>
-                    <Select
-                      value={field.value}
-                      onValueChange={field.onChange}
-                    >
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select department" />
                       </SelectTrigger>
@@ -347,7 +339,7 @@ export function InventoryForm({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="CAN">CAN</SelectItem>
-                        <SelectItem value="NCAN">NCAN</SelectItem>
+                        <SelectItem value="NKAN">NKAN</SelectItem>
                         <SelectItem value="SA">SA</SelectItem>
                       </SelectContent>
                     </Select>
@@ -412,10 +404,7 @@ export function InventoryForm({
                 <FormItem>
                   <FormLabel>Status</FormLabel>
                   <FormControl>
-                    <Select
-                      value={field.value}
-                      onValueChange={field.onChange}
-                    >
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
@@ -437,18 +426,18 @@ export function InventoryForm({
             <Link href="/inventory">
               <Button variant="outline">Cancel</Button>
             </Link>
-            <Button type="submit">
-              {item ? "Update Item" : "Save Item"}
-            </Button>
+            <Button type="submit">{item ? "Update Item" : "Save Item"}</Button>
           </div>
         ) : (
           <DialogFooter className="border-t pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
               Cancel
             </Button>
-            <Button type="submit">
-              {item ? "Update Item" : "Save Item"}
-            </Button>
+            <Button type="submit">{item ? "Update Item" : "Save Item"}</Button>
           </DialogFooter>
         )}
       </form>
