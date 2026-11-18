@@ -20,14 +20,26 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SearchInput } from "@/components/ui/SearchInput";
 import {
-  StockInFilters,
-  emptyStockInFilters,
-  type StockInFiltersState,
-} from "@/components/inventory/InventoryFilters";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { useApp } from "@/store/app-store";
 import { useFakeLoading } from "@/hooks/use-fake-loading";
 import { downloadCSV, formatDate, formatNumber } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
+
+type DateRange = "all" | "today" | "custom";
+
+const localToday = () => {
+  const d = new Date();
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 10);
+};
 
 export default function StockInPage() {
   const { state, activeDepartment, user, fetchStockIn } = useApp();
@@ -35,8 +47,9 @@ export default function StockInPage() {
   const loading = useFakeLoading();
   const [page, setPage] = React.useState(1);
   const [search, setSearch] = React.useState("");
-  const [filters, setFilters] =
-    React.useState<StockInFiltersState>(emptyStockInFilters);
+  const [range, setRange] = React.useState<DateRange>("today");
+  const [dateFrom, setDateFrom] = React.useState(localToday);
+  const [dateTo, setDateTo] = React.useState(localToday);
   const pageSize = 10;
 
   const scopeLabel =
@@ -53,8 +66,16 @@ export default function StockInPage() {
   const regNoOf = (itemId: string) => skuByItemId.get(itemId) ?? "-";
 
   React.useEffect(() => {
-    fetchStockIn(filters);
-  }, [filters, fetchStockIn]);
+    if (range === "all") {
+      fetchStockIn({ status: "all", dateFrom: "", dateTo: "" });
+    } else if (range === "today") {
+      const today = localToday();
+      fetchStockIn({ status: "all", dateFrom: today, dateTo: today });
+    } else {
+      fetchStockIn({ status: "all", dateFrom, dateTo });
+    }
+    setPage(1);
+  }, [range, dateFrom, dateTo, fetchStockIn]);
 
   const records = React.useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -138,25 +159,50 @@ export default function StockInPage() {
               {scopeLabel}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <StockInFilters
-              filters={filters}
-              onChange={setFilters}
-            />
-            {(search ||
-              Object.values(filters).some((v) => v !== "all" && v !== "")) && (
-              <Button
-                variant="ghost"
+          <div className="flex flex-wrap items-center gap-3">
+            <Select
+              value={range}
+              onValueChange={(v) => setRange(v as DateRange)}
+            >
+              <SelectTrigger
                 size="sm"
-                className="text-muted-foreground h-8 text-xs"
-                onClick={() => {
-                  setSearch("");
-                  setFilters(emptyStockInFilters);
-                  setPage(1);
-                }}
+                className="w-[150px]"
+                aria-label="Date range"
               >
-                Clear all
-              </Button>
+                <SelectValue placeholder="Select range" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="custom">Custom</SelectItem>
+              </SelectContent>
+            </Select>
+            {range === "custom" && (
+              <div className="flex flex-wrap items-center gap-2">
+                <Input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setDateFrom(v);
+                    if (v && dateTo && v > dateTo) setDateTo(v);
+                  }}
+                  className="h-8 w-[150px] text-xs"
+                  aria-label="Start date"
+                />
+                <span className="text-muted-foreground text-xs">to</span>
+                <Input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setDateTo(v);
+                    if (v && dateFrom && v < dateFrom) setDateFrom(v);
+                  }}
+                  className="h-8 w-[150px] text-xs"
+                  aria-label="End date"
+                />
+              </div>
             )}
           </div>
         </CardContent>
