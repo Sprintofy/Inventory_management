@@ -38,6 +38,7 @@ export interface InventoryItem {
   deviceName: string;
   brand: string;
   type: "W" | "C" | "NC";
+  maintenanceType: "SER" | "BER";
   dateOfVintage?: string;
   category: string;
   notes?: string;

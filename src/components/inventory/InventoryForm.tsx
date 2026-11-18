@@ -41,6 +41,7 @@ const formSchema = z.object({
   deviceName: z.string().min(2, "Device name is required"),
   brand: z.string().min(2, "Brand is required"),
   type: z.enum(["W", "C", "NC"]),
+  maintenanceType: z.enum(["SER", "BER"]),
   dateOfVintage: z
     .string()
     .max(64, "Date of vintage must be 64 characters or less")
@@ -61,6 +62,7 @@ function emptyValues(department: string): FormValues {
     deviceName: "",
     brand: "",
     type: "C" as const,
+    maintenanceType: "SER" as const,
     dateOfVintage: "",
     category: "",
     notes: "",
@@ -77,6 +79,7 @@ function valuesOf(item: InventoryItem): FormValues {
     deviceName: item.deviceName,
     brand: item.brand,
     type: item.type,
+    maintenanceType: item.maintenanceType ?? "SER",
     dateOfVintage: item.dateOfVintage ?? "",
     category: item.category,
     notes: item.notes ?? "",
@@ -146,6 +149,7 @@ export function InventoryForm({
       deviceName: values.deviceName.trim(),
       brand: values.brand.trim(),
       type: values.type,
+      maintenanceType: values.maintenanceType,
       dateOfVintage: values.dateOfVintage?.trim() || undefined,
       category: values.category,
       notes: values.notes?.trim() || undefined,
@@ -243,6 +247,27 @@ export function InventoryForm({
                         <SelectItem value="W">W (Workshop)</SelectItem>
                         <SelectItem value="C">C (Consumable)</SelectItem>
                         <SelectItem value="NC">NC (Non-Consumable)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="maintenanceType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Maintenance Type</FormLabel>
+                  <FormControl>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select maintenance type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="SER">SER</SelectItem>
+                        <SelectItem value="BER">BER</SelectItem>
                       </SelectContent>
                     </Select>
                   </FormControl>

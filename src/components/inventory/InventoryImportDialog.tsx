@@ -40,6 +40,8 @@ const HEADER_FIELDS: Record<string, string> = {
   item: "deviceName",
   brand: "brand",
   type: "type",
+  maintenancetype: "maintenanceType",
+  maintenance: "maintenanceType",
   dateofvintage: "dateOfVintage",
   vintage: "dateOfVintage",
   cputype: "cpuType",
@@ -177,6 +179,17 @@ export function InventoryImportDialog({
           errors.push("Type must be W, C or NC");
         }
 
+        const rawMaintenanceType = String(get("maintenanceType") ?? "")
+          .trim()
+          .toUpperCase();
+        if (
+          rawMaintenanceType &&
+          rawMaintenanceType !== "SER" &&
+          rawMaintenanceType !== "BER"
+        ) {
+          errors.push("Maintenance Type must be SER or BER");
+        }
+
         return {
           row: rowNum,
           errors,
@@ -184,6 +197,7 @@ export function InventoryImportDialog({
             deviceName: String(get("deviceName") ?? "").trim(),
             brand: String(get("brand") ?? "").trim() || "—",
             type: (rawType || "C") as "W" | "C" | "NC",
+            maintenanceType: (rawMaintenanceType || "SER") as "SER" | "BER",
             dateOfVintage:
               String(get("dateOfVintage") ?? "").trim() || undefined,
             cpuType: (String(get("cpuType") ?? "").trim() || undefined) as

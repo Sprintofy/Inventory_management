@@ -145,6 +145,7 @@ export default function InventoryDetailPage({ params }: { params: Promise<{ id: 
                     { k: "Category", v: item.category },
                     { k: "Department", v: item.department },
                     { k: "Type", v: item.type },
+                    { k: "Maintenance Type", v: item.maintenanceType ?? "—" },
                     { k: "Date of Vintage", v: item.dateOfVintage ?? "—" },
                     { k: "Roll of CPU", v: item.cpuType ?? "—" },
                     { k: "Created", v: formatDate(item.createdAt) },

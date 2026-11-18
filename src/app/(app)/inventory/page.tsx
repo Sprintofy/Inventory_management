@@ -44,6 +44,7 @@ export default function InventoryPage() {
       "Device Name": i.deviceName,
       Brand: i.brand,
       Type: i.type,
+      "Maintenance Type": i.maintenanceType ?? "",
       "Date of Vintage": i.dateOfVintage ?? "",
       Category: i.category,
       Notes: i.notes ?? "",
