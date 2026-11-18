@@ -32,7 +32,10 @@ import { useFakeLoading } from "@/hooks/use-fake-loading";
 import { downloadCSV, formatDate, formatNumber } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
+
+// Register autoTable plugin
+(jsPDF as any).API.autoTable = autoTable;
 
 type DateRange = "all" | "today" | "custom";
 
@@ -57,6 +60,13 @@ export default function StockInPage() {
   const [type, setType] = React.useState("all");
   const [category, setCategory] = React.useState("all");
   const pageSize = 10;
+
+  const getAuthToken = () => {
+    if (typeof window !== "undefined") {
+      return window.localStorage.getItem("inventoryos-token");
+    }
+    return null;
+  };
 
   const scopeLabel =
     activeDepartment === "all"
@@ -172,19 +182,52 @@ export default function StockInPage() {
   };
 
   const doExportMIS = async () => {
+    console.log("doExportMIS called", { from, to, activeDepartment, range });
     try {
-      const res = await fetch(
-        `/api/inventory/stock-in/mis?dateFrom=${from}&dateTo=${to}&department=${activeDepartment === "all" ? "" : activeDepartment}`,
-      );
-      if (!res.ok) throw new Error("Failed to fetch MIS data");
-      const data = await res.json();
-      const misRows = data.results || [];
+      const token = getAuthToken();
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["authorization"] = token;
+      const deptParam = activeDepartment === "all" ? "" : activeDepartment;
 
-      const earliestRes = await fetch(
-        `/api/inventory/stock-in/earliest?department=${activeDepartment === "all" ? "" : activeDepartment}`,
+      // Determine date range for API query
+      let queryFrom = from;
+      let queryTo = to;
+      let earliestDateForLabel = "";
+
+      if (range === "all") {
+        // Fetch earliest transaction date for "all" range
+        const earliestRes = await fetch(
+          `/api/inventory/stock-in/earliest?department=${deptParam}`,
+          { headers },
+        );
+        const earliestData = await earliestRes.json();
+        earliestDateForLabel = earliestData.results || "";
+        if (earliestDateForLabel) {
+          const dt = new Date(earliestDateForLabel);
+          queryFrom = dt.toISOString().slice(0, 10);
+        }
+        const today = new Date();
+        queryTo = today.toISOString().slice(0, 10);
+      }
+
+      const misRes = await fetch(
+        `/api/inventory/stock-in/mis?dateFrom=${queryFrom}&dateTo=${queryTo}&department=${deptParam}`,
+        { headers },
       );
-      const earliestData = await earliestRes.json();
-      const earliestDate = earliestData.results || "";
+      if (!misRes.ok) throw new Error("Failed to fetch MIS data");
+      const misData = await misRes.json();
+      const misRows = misData.results || [];
+
+      // For label, use earliestDateForLabel if we fetched it, otherwise fetch it
+      let labelEarliestDate = earliestDateForLabel;
+      if (!labelEarliestDate && range === "all") {
+        const earliestRes = await fetch(
+          `/api/inventory/stock-in/earliest?department=${deptParam}`,
+          { headers },
+        );
+        const earliestData = await earliestRes.json();
+        labelEarliestDate = earliestData.results || "";
+      }
 
       const doc = new jsPDF({
         orientation: "landscape",
@@ -225,8 +268,8 @@ export default function StockInPage() {
         };
         dateLabel = `${fmt(from)} to ${fmt(to)}`;
       } else {
-        if (earliestDate) {
-          const dt = new Date(earliestDate);
+        if (labelEarliestDate) {
+          const dt = new Date(labelEarliestDate);
           const day = dt.getDate().toString().padStart(2, "0");
           const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
           const month = months[dt.getMonth()];
@@ -268,7 +311,11 @@ export default function StockInPage() {
       const totalBal = rows.reduce((s: number, r: any) => s + Number(r[6]), 0);
       rows.push(["", "TOTAL", totalBff, totalIn, totalTotal, totalOut, totalBal]);
 
-      doc.autoTable({
+      // Set default font to avoid "Cannot read properties of undefined (reading 'getFontSize')" error
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      // Call autoTable as a function with doc as first argument
+      autoTable(doc, {
         startY: y,
         head: [columns],
         body: rows,
