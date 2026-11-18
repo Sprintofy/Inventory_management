@@ -266,6 +266,9 @@ interface AppContextValue {
     dateFrom?: string;
     dateTo?: string;
     department?: string;
+    type?: string;
+    maintenanceType?: string;
+    category?: string;
   }) => Promise<void>;
   fetchStockInHistory: (itemId: string) => Promise<void>;
   addTransfer: (
@@ -666,13 +669,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 
   const fetchStockIn = React.useCallback(
-    async (filters: StockInFiltersState) => {
+    async (filters: StockInFiltersState | any) => {
       try {
         const params = new URLSearchParams();
         if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
         if (filters.dateTo) params.set("dateTo", filters.dateTo);
         if (filters.status && filters.status !== "all")
           params.set("status", filters.status);
+        if (filters.type && filters.type !== "all")
+          params.set("type", filters.type);
+        if (filters.maintenanceType && filters.maintenanceType !== "all")
+          params.set("maintenanceType", filters.maintenanceType);
+        if (filters.category && filters.category !== "all")
+          params.set("category", filters.category);
         const data = await authCall(`/inventory/stock-in?${params.toString()}`);
         setState((s) => ({ ...s, stockInRecords: data.results || data }));
       } catch (e) {
@@ -687,6 +696,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       dateFrom?: string;
       dateTo?: string;
       department?: string;
+      type?: string;
+      maintenanceType?: string;
+      category?: string;
     }) => {
       try {
         const params = new URLSearchParams();
@@ -694,6 +706,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (filters.dateTo) params.set("dateTo", filters.dateTo);
         if (filters.department && filters.department !== "all")
           params.set("department", filters.department);
+        if (filters.type && filters.type !== "all")
+          params.set("type", filters.type);
+        if (filters.maintenanceType && filters.maintenanceType !== "all")
+          params.set("maintenanceType", filters.maintenanceType);
+        if (filters.category && filters.category !== "all")
+          params.set("category", filters.category);
         const data = await authCall(
           `/inventory/stock-in/stats?${params.toString()}`,
         );

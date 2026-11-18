@@ -51,6 +51,9 @@ export default function StockInPage() {
   const [range, setRange] = React.useState<DateRange>("today");
   const [dateFrom, setDateFrom] = React.useState(localToday);
   const [dateTo, setDateTo] = React.useState(localToday);
+  const [maintenanceType, setMaintenanceType] = React.useState("all");
+  const [type, setType] = React.useState("all");
+  const [category, setCategory] = React.useState("all");
   const pageSize = 10;
 
   const scopeLabel =
@@ -76,14 +79,31 @@ export default function StockInPage() {
       from = dateFrom;
       to = dateTo;
     }
-    fetchStockIn({ status: "all", dateFrom: from, dateTo: to });
-    fetchStockInStats({ dateFrom: from, dateTo: to, department: activeDepartment });
+    fetchStockIn({
+      status: "all",
+      dateFrom: from,
+      dateTo: to,
+      type,
+      maintenanceType,
+      category,
+    });
+    fetchStockInStats({
+      dateFrom: from,
+      dateTo: to,
+      department: activeDepartment,
+      type,
+      maintenanceType,
+      category,
+    });
     setPage(1);
   }, [
     range,
     dateFrom,
     dateTo,
     activeDepartment,
+    type,
+    maintenanceType,
+    category,
     fetchStockIn,
     fetchStockInStats,
   ]);
@@ -244,6 +264,48 @@ export default function StockInPage() {
                 />
               </div>
             )}
+            <Select value={maintenanceType} onValueChange={setMaintenanceType}>
+              <SelectTrigger
+                size="sm"
+                className="w-[170px]"
+                aria-label="Maintenance type"
+              >
+                <SelectValue placeholder="All Maintenance" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Maintenance</SelectItem>
+                <SelectItem value="SER">SER</SelectItem>
+                <SelectItem value="BER">BER</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={type} onValueChange={setType}>
+              <SelectTrigger size="sm" className="w-[170px]" aria-label="Type">
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="W">W (Workshop)</SelectItem>
+                <SelectItem value="C">C (Consumable)</SelectItem>
+                <SelectItem value="NC">NC (Non-Consumable)</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger
+                size="sm"
+                className="w-[170px]"
+                aria-label="Category"
+              >
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {state.categories.map((c) => (
+                  <SelectItem key={c.id} value={c.name}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
