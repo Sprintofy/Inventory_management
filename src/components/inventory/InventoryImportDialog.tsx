@@ -173,8 +173,8 @@ export function InventoryImportDialog({
         }
 
         const rawType = String(get("type") ?? "").trim().toUpperCase();
-        if (rawType && rawType !== "SER" && rawType !== "BER") {
-          errors.push("Type must be SER or BER");
+        if (rawType && rawType !== "W" && rawType !== "C" && rawType !== "NC") {
+          errors.push("Type must be W, C or NC");
         }
 
         return {
@@ -183,7 +183,7 @@ export function InventoryImportDialog({
           item: {
             deviceName: String(get("deviceName") ?? "").trim(),
             brand: String(get("brand") ?? "").trim() || "—",
-            type: (rawType || "SER") as "SER" | "BER",
+            type: (rawType || "C") as "W" | "C" | "NC",
             dateOfVintage:
               String(get("dateOfVintage") ?? "").trim() || undefined,
             cpuType: (String(get("cpuType") ?? "").trim() || undefined) as

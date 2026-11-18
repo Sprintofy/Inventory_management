@@ -37,7 +37,7 @@ export interface InventoryItem {
   id: string;
   deviceName: string;
   brand: string;
-  type: "SER" | "BER";
+  type: "W" | "C" | "NC";
   dateOfVintage?: string;
   category: string;
   notes?: string;

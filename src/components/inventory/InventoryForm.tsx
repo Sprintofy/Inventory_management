@@ -40,7 +40,7 @@ import Link from "next/link";
 const formSchema = z.object({
   deviceName: z.string().min(2, "Device name is required"),
   brand: z.string().min(2, "Brand is required"),
-  type: z.enum(["SER", "BER"]),
+  type: z.enum(["W", "C", "NC"]),
   dateOfVintage: z
     .string()
     .max(64, "Date of vintage must be 64 characters or less")
@@ -60,7 +60,7 @@ function emptyValues(department: string): FormValues {
   return {
     deviceName: "",
     brand: "",
-    type: "SER" as const,
+    type: "C" as const,
     dateOfVintage: "",
     category: "",
     notes: "",
@@ -240,8 +240,9 @@ export function InventoryForm({
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="SER">SER</SelectItem>
-                        <SelectItem value="BER">BER</SelectItem>
+                        <SelectItem value="W">W (Workshop)</SelectItem>
+                        <SelectItem value="C">C (Consumable)</SelectItem>
+                        <SelectItem value="NC">NC (Non-Consumable)</SelectItem>
                       </SelectContent>
                     </Select>
                   </FormControl>

@@ -89,8 +89,9 @@ export function InventoryFilters({
                 <SelectTrigger size="sm" className="w-full"><SelectValue placeholder="All Types" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="SER">SER</SelectItem>
-                  <SelectItem value="BER">BER</SelectItem>
+                  <SelectItem value="W">W (Workshop)</SelectItem>
+                  <SelectItem value="C">C (Consumable)</SelectItem>
+                  <SelectItem value="NC">NC (Non-Consumable)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
