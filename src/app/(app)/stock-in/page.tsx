@@ -319,28 +319,51 @@ export default function StockInPage() {
         startY: y,
         head: [columns],
         body: rows,
-        theme: "striped",
+        theme: "grid",
+        margin: { left: 14, right: 14 },
+        tableWidth: "auto",
         headStyles: {
-          fillColor: [31, 41, 55],
+          fillColor: [30, 41, 59],
           textColor: [255, 255, 255],
           fontStyle: "bold",
           fontSize: 9,
           halign: "center",
+          valign: "middle",
+          cellPadding: 4,
+          lineWidth: 0.3,
+          lineColor: [226, 232, 240],
         },
         bodyStyles: {
+          fillColor: [255, 255, 255],
+          textColor: [15, 23, 42],
           fontSize: 9,
           halign: "center",
+          valign: "middle",
+          cellPadding: 4,
+          lineWidth: 0.3,
+          lineColor: [226, 232, 240],
+        },
+        alternateRowStyles: {
+          fillColor: [248, 250, 252],
         },
         columnStyles: {
-          0: { cellWidth: 15, halign: "center" },
-          1: { cellWidth: 50, halign: "left" },
-          2: { cellWidth: 20, halign: "center" },
-          3: { cellWidth: 20, halign: "center" },
-          4: { cellWidth: 20, halign: "center" },
-          5: { cellWidth: 20, halign: "center" },
-          6: { cellWidth: 20, halign: "center" },
+          0: { cellWidth: 14, halign: "center" },
+          1: { cellWidth: 52, halign: "center" },
+          2: { cellWidth: 22, halign: "center" },
+          3: { cellWidth: 22, halign: "center" },
+          4: { cellWidth: 22, halign: "center" },
+          5: { cellWidth: 22, halign: "center" },
+          6: { cellWidth: 22, halign: "center" },
         },
-        didDrawPage: () => {},
+        didDrawPage: (data) => {
+          // Draw table border
+          if (data.cursor) {
+            const pageWidth = doc.internal.pageSize.getWidth();
+            doc.setDrawColor(226, 232, 240);
+            doc.setLineWidth(0.5);
+            doc.rect(data.settings.margin.left, data.settings.startY, pageWidth - data.settings.margin.left - data.settings.margin.right, data.cursor.y - data.settings.startY);
+          }
+        },
       });
 
       doc.save(`MIS-IT-EQPT-REPAIR-STATE-${new Date().toISOString().slice(0, 10)}.pdf`);
