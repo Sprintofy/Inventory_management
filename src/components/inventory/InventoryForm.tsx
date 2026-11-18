@@ -339,7 +339,7 @@ export function InventoryForm({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="CAN">CAN</SelectItem>
-                        <SelectItem value="NKAN">NKAN</SelectItem>
+                        <SelectItem value="NKN">NKN</SelectItem>
                         <SelectItem value="SA">SA</SelectItem>
                       </SelectContent>
                     </Select>
