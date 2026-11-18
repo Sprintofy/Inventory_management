@@ -42,7 +42,8 @@ const localToday = () => {
 };
 
 export default function StockInPage() {
-  const { state, activeDepartment, user, fetchStockIn } = useApp();
+  const { state, activeDepartment, user, fetchStockIn, fetchStockInStats } =
+    useApp();
   const router = useRouter();
   const loading = useFakeLoading();
   const [page, setPage] = React.useState(1);
@@ -66,16 +67,41 @@ export default function StockInPage() {
   const regNoOf = (itemId: string) => skuByItemId.get(itemId) ?? "-";
 
   React.useEffect(() => {
-    if (range === "all") {
-      fetchStockIn({ status: "all", dateFrom: "", dateTo: "" });
-    } else if (range === "today") {
-      const today = localToday();
-      fetchStockIn({ status: "all", dateFrom: today, dateTo: today });
-    } else {
-      fetchStockIn({ status: "all", dateFrom, dateTo });
+    let from = "";
+    let to = "";
+    if (range === "today") {
+      from = localToday();
+      to = from;
+    } else if (range === "custom") {
+      from = dateFrom;
+      to = dateTo;
     }
+    fetchStockIn({ status: "all", dateFrom: from, dateTo: to });
+    fetchStockInStats({ dateFrom: from, dateTo: to, department: activeDepartment });
     setPage(1);
-  }, [range, dateFrom, dateTo, fetchStockIn]);
+  }, [
+    range,
+    dateFrom,
+    dateTo,
+    activeDepartment,
+    fetchStockIn,
+    fetchStockInStats,
+  ]);
+
+  const rangeLabel =
+    range === "all"
+      ? "All"
+      : range === "today"
+        ? "Today"
+        : dateFrom && dateTo
+          ? dateFrom === dateTo
+            ? formatDate(dateFrom)
+            : `${formatDate(dateFrom)} – ${formatDate(dateTo)}`
+          : dateFrom
+            ? `From ${formatDate(dateFrom)}`
+            : dateTo
+              ? `Up to ${formatDate(dateTo)}`
+              : "Custom";
 
   const records = React.useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -154,10 +180,24 @@ export default function StockInPage() {
               placeholder="Search by item, work order, job no…"
               className="md:max-w-sm"
             />
-            <p className="text-muted-foreground text-sm tabular-nums">
-              {records.length} inbound record{records.length !== 1 ? "s" : ""} ·{" "}
-              {scopeLabel}
-            </p>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+              <span className="text-muted-foreground">
+                Range:{" "}
+                <span className="font-medium text-foreground">{rangeLabel}</span>
+              </span>
+              <span className="text-muted-foreground">
+                Total In:{" "}
+                <span className="font-semibold text-foreground tabular-nums">
+                  {formatNumber(state.stockInStats.totalIn)}
+                </span>
+              </span>
+              <span className="text-muted-foreground">
+                Total Out:{" "}
+                <span className="font-semibold text-foreground tabular-nums">
+                  {formatNumber(state.stockInStats.totalOut)}
+                </span>
+              </span>
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Select

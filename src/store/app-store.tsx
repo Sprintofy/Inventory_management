@@ -175,6 +175,7 @@ interface AppState {
   stockIn: StockInRecord[];
   stockInRecords: StockInRecord[];
   stockInHistory: StockInRecord[];
+  stockInStats: { totalIn: number; totalOut: number };
   departments: Department[];
   activities: Activity[];
   notifications: NotificationItem[];
@@ -211,6 +212,7 @@ const emptyState = (user: User | null): AppState => ({
   stockIn: [],
   stockInRecords: [],
   stockInHistory: [],
+  stockInStats: { totalIn: 0, totalOut: 0 },
   departments: [],
   activities: [],
   notifications: [],
@@ -260,6 +262,11 @@ interface AppContextValue {
   ) => void;
   updateStockInStatus: (id: string, status: StockInRecord["status"]) => void;
   fetchStockIn: (filters: StockInFiltersState | any) => Promise<void>;
+  fetchStockInStats: (filters: {
+    dateFrom?: string;
+    dateTo?: string;
+    department?: string;
+  }) => Promise<void>;
   fetchStockInHistory: (itemId: string) => Promise<void>;
   addTransfer: (
     t: Omit<Transfer, "id" | "transferNo" | "status" | "requestedBy" | "date">,
@@ -675,6 +682,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [authCall, fail],
   );
 
+  const fetchStockInStats = React.useCallback(
+    async (filters: {
+      dateFrom?: string;
+      dateTo?: string;
+      department?: string;
+    }) => {
+      try {
+        const params = new URLSearchParams();
+        if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
+        if (filters.dateTo) params.set("dateTo", filters.dateTo);
+        if (filters.department && filters.department !== "all")
+          params.set("department", filters.department);
+        const data = await authCall(
+          `/inventory/stock-in/stats?${params.toString()}`,
+        );
+        const stats = data.results || data || {};
+        setState((s) => ({
+          ...s,
+          stockInStats: {
+            totalIn: Number(stats.totalIn || 0),
+            totalOut: Number(stats.totalOut || 0),
+          },
+        }));
+      } catch (e) {
+        fail(e, "Could not fetch stock totals");
+      }
+    },
+    [authCall, fail],
+  );
+
   const fetchStockInHistory = React.useCallback(
     async (itemId: string) => {
       try {
@@ -1018,6 +1055,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       stockOut,
       updateStockInStatus,
       fetchStockIn,
+      fetchStockInStats,
       fetchStockInHistory,
       addTransfer,
       updateTransfer,
@@ -1058,6 +1096,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       stockOut,
       updateStockInStatus,
       fetchStockIn,
+      fetchStockInStats,
       fetchStockInHistory,
       addTransfer,
       updateTransfer,
