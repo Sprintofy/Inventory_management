@@ -3,28 +3,22 @@
 import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
-import { Header } from "@/components/layout/Header";
 import { useApp } from "@/store/app-store";
 import { cn } from "@/lib/utils";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const [mounted, setMounted] = React.useState(false); // 1. Added mounted state
+  const [mounted, setMounted] = React.useState(false);
   const { user, role, state } = useApp();
   const pathname = usePathname();
   const router = useRouter();
   const collapsed = state.settings.sidebarCollapsed;
 
-  // 2. Wait until client-side hydration finishes
   React.useEffect(() => {
     setMounted(true);
   }, []);
-  // eslint-disable-line react-hooks/set-state-in-effect
 
   const blockedPaths = React.useMemo(() => {
     const blocked: string[] = [];
-    // Scoped users (department login): dept inventory/stock/reports only.
-    // No purchase orders, no suppliers, no admin areas.
-    // Tickets ARE allowed for department-manager (they see their dept's tickets only).
     if (role === "user" || role === "department-manager" || role === "department-user") {
       blocked.push(
         "/stock-in",
@@ -52,7 +46,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   );
 
   React.useEffect(() => {
-    if (!mounted) return; // Wait until mounted before redirecting
+    if (!mounted) return;
 
     if (!user) {
       router.replace("/login");
@@ -61,7 +55,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, [user, router, isBlocked, mounted, role, pathname]);
 
-  // 3. Render identical loading state during Server rendering and initial Client hydration
   if (!mounted || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -83,7 +76,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           collapsed ? "lg:pl-[68px]" : "lg:pl-64",
         )}
       >
-        <Header />
         <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
       </div>
     </div>
