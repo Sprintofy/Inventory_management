@@ -256,7 +256,7 @@ export default function ReportsPage() {
                     <TrendingUp className="size-5" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground font-medium">Total Qty In</p>
+                    <p className="text-xs text-muted-foreground font-medium">Depth of Devices(Total Quantity of All Devices)</p>
                     <p className="text-2xl font-bold tabular-nums text-foreground">{filteredStockIn.reduce((s, r) => s + r.quantity, 0).toLocaleString()}</p>
                   </div>
                 </CardContent>

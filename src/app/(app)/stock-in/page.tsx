@@ -409,7 +409,7 @@ export default function StockInPage() {
                 <TrendingUp className="size-5" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground font-medium">Total In</p>
+                <p className="text-xs text-muted-foreground font-medium">Devices Received</p>
                 <p className="text-2xl font-bold tabular-nums text-foreground">{formatNumber(state.stockInStats.totalIn)}</p>
               </div>
             </CardContent>
@@ -420,7 +420,7 @@ export default function StockInPage() {
                 <TrendingDown className="size-5" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground font-medium">Total Out</p>
+                <p className="text-xs text-muted-foreground font-medium">Devices Issued</p>
                 <p className="text-2xl font-bold tabular-nums text-foreground">{formatNumber(state.stockInStats.totalOut)}</p>
               </div>
             </CardContent>
@@ -473,14 +473,14 @@ export default function StockInPage() {
                 <div className="flex items-center gap-3 px-3 py-2 bg-sky-500/10 rounded-lg border border-sky-200/50">
                   <Package className="text-sky-600 size-4" />
                   <div>
-                    <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Total In</p>
+                    <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Devices Received</p>
                     <p className="text-foreground mt-0.5 text-xl font-bold tabular-nums">{formatNumber(state.stockInStats.totalIn)}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 px-3 py-2 bg-amber-500/10 rounded-lg border border-amber-200/50">
                   <PackageMinus className="text-amber-600 size-4" />
                   <div>
-                    <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Total Out</p>
+                    <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Devices Issued</p>
                     <p className="text-foreground mt-0.5 text-xl font-bold tabular-nums">{formatNumber(state.stockInStats.totalOut)}</p>
                   </div>
                 </div>
