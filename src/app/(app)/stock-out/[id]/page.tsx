@@ -31,6 +31,8 @@ import { BackButton } from "@/components/ui/BackButton";
 import { PageHeader } from "@/components/ui/PageHeader";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { getPageGradient } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 
 export default function StockOutPage({
   params,
@@ -480,8 +482,11 @@ export default function StockOutPage({
     toast.success("Detailed report exported as PDF");
   };
 
+  const pageGradient = getPageGradient("stockIn");
+
   return (
-    <div className="space-y-5">
+    <div className={cn("min-h-screen", pageGradient)}>
+      <div className="space-y-5 p-4 sm:p-6">
       <PageHeader
         title="Stock Out"
         description={`Issue stock for ${record.itemName}`}
@@ -721,8 +726,6 @@ export default function StockOutPage({
         </Card>
       )}
     </div>
+    </div>
   );
-}
-function wrapText(arg0: string, defect: number): any {
-  throw new Error("Function not implemented.");
 }
