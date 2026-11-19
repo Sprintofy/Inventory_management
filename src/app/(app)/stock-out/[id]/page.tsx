@@ -10,6 +10,8 @@ import {
   CheckCircle2,
   Download,
   FileText,
+  FileDown,
+  Table,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -28,6 +30,7 @@ import { useApp } from "@/store/app-store";
 import { BackButton } from "@/components/ui/BackButton";
 import { PageHeader } from "@/components/ui/PageHeader";
 import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export default function StockOutPage({
   params,
@@ -377,6 +380,106 @@ export default function StockOutPage({
     doc.save(`Log Book Repairs - ${record.jobNo}.pdf`);
   };
 
+  const generateDetailedPDF = () => {
+    if (!record) return;
+
+    const fmtDate = (dateStr?: string | null) => {
+      if (!dateStr) return "-";
+      const d = new Date(dateStr);
+      return `${d.getDate().toString().padStart(2, "0")}-${(d.getMonth() + 1).toString().padStart(2, "0")}-${d.getFullYear()}`;
+    };
+
+    const doc = new jsPDF({
+      orientation: "landscape",
+      unit: "mm",
+      format: "a4",
+    }) as any;
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 15;
+    let y = 12;
+
+    // Title
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("STOCK OUT DETAILED REPORT", pageWidth / 2, y, { align: "center" });
+    y += 8;
+
+    // Job info
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Job No: ${record.jobNo || "-"}`, margin, y);
+    doc.text(`Item: ${record.itemName || "-"}`, pageWidth / 2, y, { align: "center" });
+    doc.text(`Qty: ${formatNumber(record.quantity)}`, pageWidth - margin, y, { align: "right" });
+    y += 6;
+    doc.text(`Stock In: ${fmtDate(record.dateIn)}`, margin, y);
+    doc.text(`Stock Out: ${fmtDate(record.dateOut)}`, pageWidth / 2, y, { align: "center" });
+    doc.text(`Type: ${record.productType || "-"}`, pageWidth - margin, y, { align: "right" });
+    y += 10;
+
+    // Build category lookup from inventory
+    const inventoryById = new Map(state.inventory.map(i => [i.id, i.category]));
+    const stockInRecords = state.stockInRecords.filter(r => r.itemId === record.itemId);
+    const categories = [...new Set(stockInRecords.map(r => inventoryById.get(r.itemId)).filter(Boolean))];
+
+    categories.forEach((cat, catIdx) => {
+      if (y > pageWidth - 30) {
+        doc.addPage();
+        y = 12;
+      }
+
+      // Category header
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setFillColor(30, 41, 59);
+      doc.rect(margin, y - 4, pageWidth - margin * 2, 8, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.text(`  Category: ${cat}`, margin + 2, y + 2);
+      doc.setTextColor(0, 0, 0);
+      y += 8;
+
+      // Table for this category
+      const catRecords = stockInRecords.filter(r => inventoryById.get(r.itemId) === cat);
+      const columns = ["S/No", "Stock In Date", "Stock Out Date", "Remarks"];
+      const rows = catRecords.map((r, idx) => [
+        String(idx + 1),
+        fmtDate(r.dateIn),
+        fmtDate(r.dateOut),
+        r.remarks ?? "-",
+      ]);
+
+      autoTable(doc, {
+        startY: y,
+        head: [columns],
+        body: rows,
+        theme: "grid",
+        margin: { left: margin, right: margin },
+        headStyles: {
+          fillColor: [30, 41, 59],
+          textColor: [255, 255, 255],
+          fontStyle: "bold",
+          fontSize: 8,
+          halign: "center",
+        },
+        bodyStyles: {
+          fontSize: 8,
+          halign: "center",
+        },
+        columnStyles: {
+          0: { cellWidth: 15, halign: "center" },
+          1: { cellWidth: 30, halign: "center" },
+          2: { cellWidth: 30, halign: "center" },
+          3: { cellWidth: 60, halign: "left" },
+        },
+      });
+
+      y = (doc as any).lastAutoTable.finalY + 8;
+    });
+
+    doc.save(`Stock Out Detail - ${record.jobNo}.pdf`);
+    toast.success("Detailed report exported as PDF");
+  };
+
   return (
     <div className="space-y-5">
       <PageHeader
@@ -393,24 +496,29 @@ export default function StockOutPage({
                 <ArrowLeft className="size-4 mr-2" /> Back to Stock In
               </Button>
             </Link>
-            {(submitted || record.status === "Stock Out") && (
-              <>
-                <Button
-                  onClick={generateJobCardPDF}
-                  className="bg-primary hover:bg-primary/90 text-white"
-                  disabled={submitting}
-                >
-                  <Download className="size-4 mr-2" /> Download Job Card
-                </Button>
-                <Button
-                  onClick={generateLogBookPDF}
-                  className="bg-primary hover:bg-primary/90 text-white"
-                  disabled={submitting}
-                >
-                  <FileText className="size-4 mr-2" /> Log book repairs
-                </Button>
-              </>
-            )}
+            <>
+              <Button
+                onClick={generateJobCardPDF}
+                className="bg-primary hover:bg-primary/90 text-white"
+                disabled={submitting}
+              >
+                <Download className="size-4 mr-2" /> Download Job Card
+              </Button>
+              <Button
+                onClick={generateLogBookPDF}
+                className="bg-primary hover:bg-primary/90 text-white"
+                disabled={submitting}
+              >
+                <FileText className="size-4 mr-2" /> Log book repairs
+              </Button>
+              <Button
+                onClick={generateDetailedPDF}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                disabled={submitting}
+              >
+                <FileDown className="size-4 mr-2" /> Export Detailed Report
+              </Button>
+            </>
           </>
         }
       />

@@ -405,6 +405,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const activeDepartment = React.useMemo(() => {
     if (role === "super-admin" || role === "admin") {
+      if (state.department && state.department !== "all") return state.department;
       return "all";
     }
     if (
