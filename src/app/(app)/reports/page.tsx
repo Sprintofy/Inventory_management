@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import { FileDown } from "lucide-react";
+import { FileDown, BarChart3, Filter, X, Calendar, Download } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,8 +16,7 @@ import { formatNumber } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from "recharts";
 import * as XLSX from "xlsx";
-
-const palette = ["#4f46e5", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6", "#f43f5e", "#6366f1", "#84cc16"];
+import { CHART_PALETTE, getCardGradient, getIconBgClass } from "@/lib/theme";
 
 const HISTOGRAM_BINS = [
   { name: "Out of stock (0)", test: (q: number) => q <= 0 },
@@ -202,10 +201,10 @@ export default function ReportsPage() {
                 </SelectContent>
               </Select>
             ) : (
-              <span className="bg-muted rounded-md px-3 py-1.5 text-sm font-medium">{dept}</span>
+              <span className="bg-primary/5 text-primary px-3 py-1.5 text-sm font-medium rounded-lg border border-primary/10">{dept}</span>
             )}
             <Tabs value={reportView} onValueChange={(v) => setReportView(v as "inventory" | "tickets")} className="h-auto border-none">
-              <TabsList className="px-2 bg-muted border-none rounded-md">
+              <TabsList className="px-2 bg-primary/5 border-none rounded-md">
                 <TabsTrigger value="inventory">Inventory Report</TabsTrigger>
                 <TabsTrigger value="tickets">Ticket Report</TabsTrigger>
               </TabsList>
@@ -234,7 +233,54 @@ export default function ReportsPage() {
       {/* Inventory Report View */}
       {reportView === "inventory" && (
         <>
-          <p className="text-muted-foreground text-sm">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <Card className="relative overflow-hidden bg-gradient-to-br from-primary/5 to-sky-500/5 border-primary/10">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="flex items-center justify-center rounded-xl size-11 bg-primary/10 text-primary">
+                  <BarChart3 className="size-5" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">Total Records</p>
+                  <p className="text-2xl font-bold tabular-nums text-foreground">{filteredStockIn.length}</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="relative overflow-hidden bg-gradient-to-br from-sky-500/5 to-emerald-500/5 border-sky-500/10">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="flex items-center justify-center rounded-xl size-11 bg-sky-500/10 text-sky-500">
+                  <Download className="size-5" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">Total Qty In</p>
+                  <p className="text-2xl font-bold tabular-nums text-foreground">{filteredStockIn.reduce((s, r) => s + r.quantity, 0).toLocaleString()}</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="relative overflow-hidden bg-gradient-to-br from-amber-500/5 to-orange-500/5 border-amber-500/10">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="flex items-center justify-center rounded-xl size-11 bg-amber-500/10 text-amber-500">
+                  <Filter className="size-5" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">Categories</p>
+                  <p className="text-2xl font-bold tabular-nums text-foreground">{byCategory.length}</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="relative overflow-hidden bg-gradient-to-br from-violet-500/5 to-indigo-500/5 border-violet-500/10">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="flex items-center justify-center rounded-xl size-11 bg-violet-500/10 text-violet-500">
+                  <Calendar className="size-5" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">Date Filter</p>
+                  <p className="text-xl font-bold text-foreground capitalize">{dateFilter}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <p className="text-muted-foreground text-sm mt-4">
             Showing inventory for <span className="text-foreground font-medium">{scopeLabel}</span> · {filteredStockIn.length} item{filteredStockIn.length === 1 ? "" : "s"}
           </p>
 
@@ -249,7 +295,7 @@ export default function ReportsPage() {
                     <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
                     <Tooltip formatter={(v) => [`${Number(v ?? 0).toLocaleString()} items`, "Items"]} cursor={{ fill: "hsl(var(--muted) / 0.4)" }} />
                     <Bar dataKey="items" radius={[4, 4, 0, 0]}>
-                      {byCategory.map((_, i) => <Cell key={i} fill={palette[i % palette.length]} />)}
+                      {byCategory.map((_, i) => <Cell key={i} fill={CHART_PALETTE[i % CHART_PALETTE.length]} />)}
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
@@ -283,7 +329,7 @@ export default function ReportsPage() {
                     <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
                     <Tooltip formatter={(v) => [`${Number(v ?? 0).toLocaleString()} items`, "Items"]} cursor={{ fill: "hsl(var(--muted) / 0.4)" }} />
                     <Bar dataKey="items" radius={[4, 4, 0, 0]}>
-                      {byScope.map((row, i) => <Cell key={i} fill={row.color ?? palette[i % palette.length]} />)}
+                      {byScope.map((row, i) => <Cell key={i} fill={row.color ?? CHART_PALETTE[i % CHART_PALETTE.length]} />)}
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>

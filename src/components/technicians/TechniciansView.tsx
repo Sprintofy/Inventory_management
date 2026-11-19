@@ -4,7 +4,7 @@ import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, type Resolver } from "react-hook-form";
 import { z } from "zod";
-import { Check, MoreHorizontal, Plus, Trash2, UserCircle2, Users as UsersIcon } from "lucide-react";
+import { Check, MoreHorizontal, Plus, Trash2, UserCircle2, Users as UsersIcon, User, Mail, Phone, Building2, Award } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -25,6 +25,9 @@ import { useApp } from "@/store/app-store";
 import { getTechnicianWorkload } from "@/lib/dashboard-selectors";
 import { useFakeLoadingOn } from "@/hooks/use-fake-loading";
 import type { Technician } from "@/types";
+import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import { getIconBgClass, getCardGradient, CHART_PALETTE, getStatusColors } from "@/lib/theme";
 
 const schema = z.object({
   name: z.string().min(2, "Name is required"),
@@ -139,6 +142,54 @@ export function TechniciansView({ basePath = "/technicians" }: { basePath?: stri
         actions={can("technicians.manage") ? <Button onClick={() => { setEditing(null); setDialogOpen(true); }}><Plus className="size-4" /> Add Technician</Button> : undefined}
       />
 
+      {/* Summary Stats */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Card className="relative overflow-hidden bg-gradient-to-br from-primary/5 to-sky-500/5 border-primary/10">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="flex items-center justify-center rounded-xl size-11 bg-primary/10 text-primary">
+              <UsersIcon className="size-5" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium">Total Technicians</p>
+              <p className="text-2xl font-bold tabular-nums text-foreground">{filtered.length}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="relative overflow-hidden bg-gradient-to-br from-sky-500/5 to-emerald-500/5 border-sky-500/10">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="flex items-center justify-center rounded-xl size-11 bg-sky-500/10 text-sky-500">
+              <User className="size-5" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium">Active</p>
+              <p className="text-2xl font-bold tabular-nums text-foreground">{filtered.filter(t => t.status === "Active").length}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="relative overflow-hidden bg-gradient-to-br from-amber-500/5 to-orange-500/5 border-amber-500/10">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="flex items-center justify-center rounded-xl size-11 bg-amber-500/10 text-amber-500">
+              <Award className="size-5" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium">Total Resolved</p>
+              <p className="text-2xl font-bold tabular-nums text-foreground">{filtered.reduce((s, t) => s + t.resolvedTickets, 0)}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="relative overflow-hidden bg-gradient-to-br from-violet-500/5 to-indigo-500/5 border-violet-500/10">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="flex items-center justify-center rounded-xl size-11 bg-violet-500/10 text-violet-500">
+              <Building2 className="size-5" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium">Specializations</p>
+              <p className="text-2xl font-bold tabular-nums text-foreground">{specializations.length}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
         <SearchInput
           value={search}
@@ -195,7 +246,7 @@ export function TechniciansView({ basePath = "/technicians" }: { basePath?: stri
               <TableRow key={t.id}>
                 <TableCell>
                   <Link href={`${basePath}/${t.id}`} className="group flex items-center gap-3">
-                    <div className="bg-primary/10 text-primary flex size-9 items-center justify-center rounded-full text-xs font-semibold">
+                    <div className={cn("flex items-center justify-center rounded-full size-9 text-xs font-semibold", getIconBgClass(specializations.indexOf(t.specialization)))}>
                       {t.name.split(" ").map((p) => p[0]).join("").slice(0, 2)}
                     </div>
                     <div>
@@ -207,7 +258,7 @@ export function TechniciansView({ basePath = "/technicians" }: { basePath?: stri
                 <TableCell><span className="bg-muted inline-flex rounded-md px-2 py-1 text-sm font-medium">{t.specialization}</span></TableCell>
                 <TableCell className="font-semibold tabular-nums">{workload.get(t.id) ?? 0}</TableCell>
                 <TableCell className="font-semibold tabular-nums">{t.resolvedTickets}</TableCell>
-                <TableCell><Badge variant={t.status === "Active" ? "success" : "neutral"} className="capitalize">{t.status}</Badge></TableCell>
+                <TableCell><Badge variant="outline" className={cn("capitalize", getStatusColors(t.status).text, "bg-" + getStatusColors(t.status).bg.replace("bg-", ""), "border-" + getStatusColors(t.status).border.replace("border-", ""))}>{t.status}</Badge></TableCell>
                 <TableCell className="pr-4 text-right">
                   {can("technicians.manage") && (
                     <DropdownMenu>

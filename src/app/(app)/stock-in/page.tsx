@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { FileDown, FileUp, PackageMinus, Plus, FileText } from "lucide-react";
+import { FileDown, FileUp, PackageMinus, Plus, FileText, Search, Filter, X, Calendar, Package, Download, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import {
@@ -33,6 +33,7 @@ import { downloadCSV, formatDate, formatNumber } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { getIconBgClass, getCardGradient, CHART_PALETTE, getStatusColors } from "@/lib/theme";
 
 // Register autoTable plugin
 (jsPDF as any).API.autoTable = autoTable;
@@ -41,7 +42,7 @@ type DateRange = "all" | "today" | "custom";
 
 const localToday = () => {
   const d = new Date();
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60 * 1000)
     .toISOString()
     .slice(0, 10);
 };
@@ -88,6 +89,8 @@ export default function StockInPage() {
 
   const { from, to } = getDateRange();
 
+  const rangeLabel = range === "today" ? "Today" : range === "all" ? "All Records" : `${dateFrom} to ${dateTo}`;
+
   const skuByItemId = React.useMemo(() => {
     const map = new Map<string, string>();
     for (const i of state.inventory) map.set(i.id, i.sku);
@@ -128,38 +131,20 @@ export default function StockInPage() {
     to,
   ]);
 
-  const rangeLabel =
-    range === "all"
-      ? "All"
-      : range === "today"
-        ? "Today"
-        : dateFrom && dateTo
-          ? dateFrom === dateTo
-            ? formatDate(dateFrom)
-            : `${formatDate(dateFrom)} – ${formatDate(dateTo)}`
-          : dateFrom
-            ? `From ${formatDate(dateFrom)}`
-            : dateTo
-              ? `Up to ${formatDate(dateTo)}`
-              : "Custom";
-
   const records = React.useMemo(() => {
-    const term = search.trim().toLowerCase();
-    return state.stockInRecords.filter((r) => {
-      if (activeDepartment !== "all" && r.department !== activeDepartment)
-        return false;
-      if (
-        term &&
-        !(
-          r.itemName.toLowerCase().includes(term) ||
-          r.workOrderId.toLowerCase().includes(term) ||
-          r.jobNo.toLowerCase().includes(term) ||
-          r.createdBy.toLowerCase().includes(term)
-        )
-      )
-        return false;
-      return true;
-    });
+    return state.stockInRecords
+      .filter((r) => {
+        const term = search.trim().toLowerCase();
+        if (term && !(
+          (r.itemName ?? '').toLowerCase().includes(term) ||
+          (r.jobNo ?? '').toLowerCase().includes(term) ||
+          (r.workOrderId ?? '').toLowerCase().includes(term) ||
+          (r.department ?? '').toLowerCase().includes(term)
+        )) return false;
+        if (activeDepartment !== "all" && r.department !== activeDepartment) return false;
+        return true;
+      })
+      .sort((a, b) => new Date(b.dateIn).getTime() - new Date(a.dateIn).getTime());
   }, [state.stockInRecords, activeDepartment, search]);
 
   const paged = records.slice((page - 1) * pageSize, page * pageSize);
@@ -182,7 +167,6 @@ export default function StockInPage() {
   };
 
   const doExportMIS = async () => {
-    console.log("doExportMIS called", { from, to, activeDepartment, range });
     try {
       const token = getAuthToken();
       const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -402,6 +386,65 @@ export default function StockInPage() {
         }
       />
 
+      {/* Summary Stats Cards */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-5">
+        <Card className="relative overflow-hidden bg-gradient-to-br from-primary/5 to-sky-500/5 border-primary/10">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="flex items-center justify-center rounded-xl size-11 bg-primary/10 text-primary">
+              <Package className="size-5" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium">Total Records</p>
+              <p className="text-2xl font-bold tabular-nums text-foreground">{records.length}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="relative overflow-hidden bg-gradient-to-br from-sky-500/5 to-emerald-500/5 border-sky-500/10">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="flex items-center justify-center rounded-xl size-11 bg-sky-500/10 text-sky-500">
+              <Download className="size-5" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium">Total In</p>
+              <p className="text-2xl font-bold tabular-nums text-foreground">{formatNumber(state.stockInStats.totalIn)}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="relative overflow-hidden bg-gradient-to-br from-amber-500/5 to-orange-500/5 border-amber-500/10">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="flex items-center justify-center rounded-xl size-11 bg-amber-500/10 text-amber-500">
+              <PackageMinus className="size-5" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium">Total Out</p>
+              <p className="text-2xl font-bold tabular-nums text-foreground">{formatNumber(state.stockInStats.totalOut)}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="relative overflow-hidden bg-gradient-to-br from-rose-500/5 to-violet-500/5 border-rose-500/10">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="flex items-center justify-center rounded-xl size-11 bg-rose-500/10 text-rose-500">
+              <BarChart3 className="size-5" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium">Net Balance</p>
+              <p className="text-2xl font-bold tabular-nums text-foreground">{formatNumber(state.stockInStats.totalIn - state.stockInStats.totalOut)}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="relative overflow-hidden bg-gradient-to-br from-violet-500/5 to-indigo-500/5 border-violet-500/10">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="flex items-center justify-center rounded-xl size-11 bg-violet-500/10 text-violet-500">
+              <Calendar className="size-5" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium">Range</p>
+              <p className="text-xl font-bold text-foreground">{rangeLabel}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card className="py-4">
         <CardContent className="space-y-3 px-6">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -416,29 +459,26 @@ export default function StockInPage() {
               className="md:max-w-sm"
             />
             <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
-              <div>
-                <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-                  Range
-                </p>
-                <p className="text-foreground mt-0.5 text-lg font-bold">
-                  {rangeLabel}
-                </p>
+              <div className="flex items-center gap-3 px-3 py-2 bg-muted/30 rounded-lg">
+                <Calendar className="text-muted-foreground size-4" />
+                <div>
+                  <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Range</p>
+                  <p className="text-foreground mt-0.5 text-lg font-bold">{rangeLabel}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-                  Total In
-                </p>
-                <p className="text-foreground mt-0.5 text-2xl font-bold tabular-nums">
-                  {formatNumber(state.stockInStats.totalIn)}
-                </p>
+              <div className="flex items-center gap-3 px-3 py-2 bg-primary/5 rounded-lg border border-primary/10">
+                <Package className="text-primary size-4" />
+                <div>
+                  <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Total In</p>
+                  <p className="text-foreground mt-0.5 text-xl font-bold tabular-nums">{formatNumber(state.stockInStats.totalIn)}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-                  Total Out
-                </p>
-                <p className="text-foreground mt-0.5 text-2xl font-bold tabular-nums">
-                  {formatNumber(state.stockInStats.totalOut)}
-                </p>
+              <div className="flex items-center gap-3 px-3 py-2 bg-amber-500/5 rounded-lg border border-amber-500/10">
+                <PackageMinus className="text-amber-500 size-4" />
+                <div>
+                  <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Total Out</p>
+                  <p className="text-foreground mt-0.5 text-xl font-bold tabular-nums">{formatNumber(state.stockInStats.totalOut)}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -533,15 +573,15 @@ export default function StockInPage() {
         </CardContent>
       </Card>
 
-      <div className="rounded-xl border bg-card shadow-sm">
+      <Card>
         <Table>
           <TableHeader>
-            <TableRow className="hover:bg-transparent">
+            <TableRow>
               <TableHead>S/N</TableHead>
               <TableHead>JOB NO</TableHead>
               <TableHead>EQPT NOMENCLATURE</TableHead>
               <TableHead>REGD NO</TableHead>
-              <TableHead>QTY</TableHead>
+              <TableHead className="text-right">QTY</TableHead>
               <TableHead>DEPT</TableHead>
               <TableHead>DATE IN</TableHead>
               <TableHead>DATE OUT</TableHead>
@@ -577,7 +617,7 @@ export default function StockInPage() {
               paged.map((r) => (
                 <TableRow
                   key={r.id}
-                  className="cursor-pointer hover:bg-muted"
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
                   onClick={() => {
                     router.push(`/stock-out/${r.id}`);
                   }}
@@ -594,7 +634,7 @@ export default function StockInPage() {
                   <TableCell className="text-foreground/80 font-mono text-sm">
                     {regNoOf(r.itemId)}
                   </TableCell>
-                  <TableCell className="text-base font-bold tabular-nums">
+                  <TableCell className="text-base font-bold tabular-nums text-right">
                     {formatNumber(r.quantity)}
                   </TableCell>
                   <TableCell className="text-foreground/80 text-sm">
@@ -634,7 +674,7 @@ export default function StockInPage() {
             />
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }

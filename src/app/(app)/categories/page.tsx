@@ -4,7 +4,7 @@ import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, type Resolver } from "react-hook-form";
 import { z } from "zod";
-import { FolderTree, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import { FolderTree, MoreHorizontal, Pencil, Plus, Trash2, Box, Tag, Hash, Package } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,16 +19,15 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useApp } from "@/store/app-store";
 import { useFakeLoading } from "@/hooks/use-fake-loading";
-import { formatNumber, uid } from "@/lib/utils";
+import { formatNumber, uid, cn } from "@/lib/utils";
 import type { Category } from "@/types";
+import { getIconBgClass, getCardGradient, CHART_PALETTE } from "@/lib/theme";
 
 const schema = z.object({
   name: z.string().min(2, "Category name is required"),
   description: z.string().min(2, "Description is required"),
 });
 type SV = z.output<typeof schema>;
-
-const palette = ["#4f46e5", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6", "#6366f1"];
 
 export default function CategoriesPage() {
   const { state, addCategory, updateCategory, deleteCategory, can } = useApp();
@@ -52,7 +51,7 @@ export default function CategoriesPage() {
     if (editing) {
       updateCategory({ ...editing, name: values.name, description: values.description });
     } else {
-      addCategory({ id: uid("CAT"), name: values.name, description: values.description, items: 0, color: palette[state.categories.length % palette.length] });
+      addCategory({ id: uid("CAT"), name: values.name, description: values.description, items: 0, color: CHART_PALETTE[state.categories.length % CHART_PALETTE.length] });
     }
     setDialogOpen(false);
     setEditing(null);
@@ -67,6 +66,54 @@ export default function CategoriesPage() {
         actions={can("categories.manage") ? <Button onClick={() => { setEditing(null); setDialogOpen(true); }}><Plus className="size-4" /> Add Category</Button> : undefined}
       />
 
+      {/* Summary Stats */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Card className="relative overflow-hidden bg-gradient-to-br from-primary/5 to-sky-500/5 border-primary/10">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="flex items-center justify-center rounded-xl size-11 bg-primary/10 text-primary">
+              <FolderTree className="size-5" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium">Total Categories</p>
+              <p className="text-2xl font-bold tabular-nums text-foreground">{categories.length}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="relative overflow-hidden bg-gradient-to-br from-sky-500/5 to-emerald-500/5 border-sky-500/10">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="flex items-center justify-center rounded-xl size-11 bg-sky-500/10 text-sky-500">
+              <Box className="size-5" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium">Total Items</p>
+              <p className="text-2xl font-bold tabular-nums text-foreground">{state.inventory.length}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="relative overflow-hidden bg-gradient-to-br from-amber-500/5 to-orange-500/5 border-amber-500/10">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="flex items-center justify-center rounded-xl size-11 bg-amber-500/10 text-amber-500">
+              <Tag className="size-5" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium">Active Categories</p>
+              <p className="text-2xl font-bold tabular-nums text-foreground">{categories.filter(c => state.inventory.some(i => i.category === c.name)).length}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="relative overflow-hidden bg-gradient-to-br from-violet-500/5 to-indigo-500/5 border-violet-500/10">
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="flex items-center justify-center rounded-xl size-11 bg-violet-500/10 text-violet-500">
+              <Hash className="size-5" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground font-medium">Empty Categories</p>
+              <p className="text-2xl font-bold tabular-nums text-foreground">{categories.filter(c => !state.inventory.some(i => i.category === c.name)).length}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-36" />)}</div>
       ) : categories.length === 0 ? (
@@ -75,13 +122,15 @@ export default function CategoriesPage() {
         </CardContent></Card>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {categories.map((c) => {
+          {categories.map((c, idx) => {
             const itemCount = state.inventory.filter((i) => i.category === c.name).length;
+            const iconBg = getIconBgClass(idx);
+            const cardGradient = getCardGradient(idx);
             return (
-              <Card key={c.id} className="group relative py-5 transition-shadow hover:shadow-md">
+              <Card key={c.id} className="group relative py-5 transition-all hover:shadow-lg hover:-translate-y-0.5" style={{ background: `linear-gradient(135deg, ${cardGradient})` }}>
                 <CardContent className="px-5">
                   <div className="flex items-start justify-between">
-                    <div className="flex size-11 items-center justify-center rounded-xl" style={{ backgroundColor: `${c.color}18`, color: c.color }}>
+                    <div className={cn("flex size-11 items-center justify-center rounded-xl", iconBg)}>
                       <FolderTree className="size-5" />
                     </div>
                     {can("categories.manage") && (
@@ -101,8 +150,13 @@ export default function CategoriesPage() {
                     <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">{c.description}</p>
                   </div>
                   <div className="mt-4 flex items-center justify-between border-t pt-3">
-                    <Badge variant="secondary">{formatNumber(itemCount)} items</Badge>
-                    <span className="text-muted-foreground text-xs">{itemCount === 0 ? "no stock" : "active"}</span>
+                    <Badge variant="outline" className={cn("gap-1", iconBg.replace("bg-", "bg-").replace("text-", "text-"))}>
+                      <Package className="size-3" />
+                      {formatNumber(itemCount)} items
+                    </Badge>
+                    <span className={cn("text-xs", itemCount === 0 ? "text-rose-500" : "text-emerald-500")}>
+                      {itemCount === 0 ? "no stock" : "active"}
+                    </span>
                   </div>
                 </CardContent>
               </Card>
