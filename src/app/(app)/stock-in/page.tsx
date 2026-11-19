@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { FileDown, FileUp, PackageMinus, Plus, FileText, Search, Filter, X, Calendar, Package, Download, BarChart3 } from "lucide-react";
+import { FileDown, FileUp, PackageMinus, Plus, FileText, Search, Filter, X, Calendar, Package, Download, BarChart3, TrendingUp, TrendingDown } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import {
@@ -33,7 +33,8 @@ import { downloadCSV, formatDate, formatNumber } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { getIconBgClass, getCardGradient, CHART_PALETTE, getStatusColors } from "@/lib/theme";
+import { getIconBgClass, getCardGradient, CHART_PALETTE, getStatusColors, getPageGradient } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 
 // Register autoTable plugin
 (jsPDF as any).API.autoTable = autoTable;
@@ -361,320 +362,324 @@ export default function StockInPage() {
     router.push(`/stock-out/${id}`);
   };
 
+  const pageGradient = getPageGradient("stockIn");
+
   return (
-    <div className="space-y-5">
-      <PageHeader
-        title="Stock In"
-        description={`Inbound inventory · ${scopeLabel}`}
-        breadcrumb={[{ label: "Stock In" }]}
-        actions={
-          <>
-            <Button variant="outline" onClick={doExportCSV}>
-              <FileDown className="size-4" /> Export CSV
-            </Button>
-            <Button variant="outline" onClick={doExportMIS}>
-              <FileText className="size-4" /> Export MIS PDF
-            </Button>
-            <Button
-              onClick={() => {
-                window.location.href = "/stock-in/create";
-              }}
-            >
-              <Plus className="size-4" /> Record Stock In
-            </Button>
-          </>
-        }
-      />
+    <div className={cn("min-h-screen", pageGradient)}>
+      <div className="space-y-5 p-4 sm:p-6">
+        <PageHeader
+          title="Stock In"
+          description={`Inbound inventory · ${scopeLabel}`}
+          breadcrumb={[{ label: "Stock In" }]}
+          actions={
+            <>
+              <Button variant="outline" onClick={doExportCSV}>
+                <FileDown className="size-4" /> Export CSV
+              </Button>
+              <Button variant="outline" onClick={doExportMIS}>
+                <FileText className="size-4" /> Export MIS PDF
+              </Button>
+              <Button
+                onClick={() => {
+                  window.location.href = "/stock-in/create";
+                }}
+              >
+                <Plus className="size-4" /> Record Stock In
+              </Button>
+            </>
+          }
+        />
 
-      {/* Summary Stats Cards */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-5">
-        <Card className="relative overflow-hidden bg-gradient-to-br from-primary/5 to-sky-500/5 border-primary/10">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="flex items-center justify-center rounded-xl size-11 bg-primary/10 text-primary">
-              <Package className="size-5" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground font-medium">Total Records</p>
-              <p className="text-2xl font-bold tabular-nums text-foreground">{records.length}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="relative overflow-hidden bg-gradient-to-br from-sky-500/5 to-emerald-500/5 border-sky-500/10">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="flex items-center justify-center rounded-xl size-11 bg-sky-500/10 text-sky-500">
-              <Download className="size-5" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground font-medium">Total In</p>
-              <p className="text-2xl font-bold tabular-nums text-foreground">{formatNumber(state.stockInStats.totalIn)}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="relative overflow-hidden bg-gradient-to-br from-amber-500/5 to-orange-500/5 border-amber-500/10">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="flex items-center justify-center rounded-xl size-11 bg-amber-500/10 text-amber-500">
-              <PackageMinus className="size-5" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground font-medium">Total Out</p>
-              <p className="text-2xl font-bold tabular-nums text-foreground">{formatNumber(state.stockInStats.totalOut)}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="relative overflow-hidden bg-gradient-to-br from-rose-500/5 to-violet-500/5 border-rose-500/10">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="flex items-center justify-center rounded-xl size-11 bg-rose-500/10 text-rose-500">
-              <BarChart3 className="size-5" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground font-medium">Net Balance</p>
-              <p className="text-2xl font-bold tabular-nums text-foreground">{formatNumber(state.stockInStats.totalIn - state.stockInStats.totalOut)}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="relative overflow-hidden bg-gradient-to-br from-violet-500/5 to-indigo-500/5 border-violet-500/10">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="flex items-center justify-center rounded-xl size-11 bg-violet-500/10 text-violet-500">
-              <Calendar className="size-5" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground font-medium">Range</p>
-              <p className="text-xl font-bold text-foreground">{rangeLabel}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+        {/* Summary Stats Cards */}
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-5">
+          <Card className="relative overflow-hidden transition-all hover:shadow-xl hover:-translate-y-0.5" style={{ background: "linear-gradient(135deg, rgba(59,130,246,0.15) 0%, rgba(14,165,233,0.1) 100%)" }}>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="flex items-center justify-center rounded-xl size-11 bg-primary/20 text-primary">
+                <Package className="size-5" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Total Records</p>
+                <p className="text-2xl font-bold tabular-nums text-foreground">{records.length}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="relative overflow-hidden transition-all hover:shadow-xl hover:-translate-y-0.5" style={{ background: "linear-gradient(135deg, rgba(14,165,233,0.15) 0%, rgba(16,185,129,0.1) 100%)" }}>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="flex items-center justify-center rounded-xl size-11 bg-sky-500/20 text-sky-500">
+                <TrendingUp className="size-5" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Total In</p>
+                <p className="text-2xl font-bold tabular-nums text-foreground">{formatNumber(state.stockInStats.totalIn)}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="relative overflow-hidden transition-all hover:shadow-xl hover:-translate-y-0.5" style={{ background: "linear-gradient(135deg, rgba(245,158,11,0.15) 0%, rgba(249,115,22,0.1) 100%)" }}>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="flex items-center justify-center rounded-xl size-11 bg-amber-500/20 text-amber-500">
+                <TrendingDown className="size-5" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Total Out</p>
+                <p className="text-2xl font-bold tabular-nums text-foreground">{formatNumber(state.stockInStats.totalOut)}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="relative overflow-hidden transition-all hover:shadow-xl hover:-translate-y-0.5" style={{ background: "linear-gradient(135deg, rgba(244,63,94,0.15) 0%, rgba(139,92,246,0.1) 100%)" }}>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="flex items-center justify-center rounded-xl size-11 bg-rose-500/20 text-rose-500">
+                <BarChart3 className="size-5" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Net Balance</p>
+                <p className="text-2xl font-bold tabular-nums text-foreground">{formatNumber(state.stockInStats.totalIn - state.stockInStats.totalOut)}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="relative overflow-hidden transition-all hover:shadow-xl hover:-translate-y-0.5" style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.15) 0%, rgba(99,102,241,0.1) 100%)" }}>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="flex items-center justify-center rounded-xl size-11 bg-violet-500/20 text-violet-500">
+                <Calendar className="size-5" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Range</p>
+                <p className="text-xl font-bold text-foreground">{rangeLabel}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-      <Card className="py-4">
-        <CardContent className="space-y-3 px-6">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <SearchInput
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              onClear={() => setSearch("")}
-              placeholder="Search by item, work order, job no…"
-              className="md:max-w-sm"
-            />
-            <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
-              <div className="flex items-center gap-3 px-3 py-2 bg-muted/30 rounded-lg">
-                <Calendar className="text-muted-foreground size-4" />
-                <div>
-                  <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Range</p>
-                  <p className="text-foreground mt-0.5 text-lg font-bold">{rangeLabel}</p>
+        <Card className="py-4 relative overflow-hidden" style={{ background: "linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(249,115,22,0.05) 100%)" }}>
+          <CardContent className="space-y-3 px-6">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <SearchInput
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                onClear={() => setSearch("")}
+                placeholder="Search by item, work order, job no…"
+                className="md:max-w-sm"
+              />
+              <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
+                <div className="flex items-center gap-3 px-3 py-2 bg-white/50 rounded-lg border border-amber-200/50">
+                  <Calendar className="text-amber-600 size-4" />
+                  <div>
+                    <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Range</p>
+                    <p className="text-foreground mt-0.5 text-lg font-bold">{rangeLabel}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 px-3 py-2 bg-sky-500/10 rounded-lg border border-sky-200/50">
+                  <Package className="text-sky-600 size-4" />
+                  <div>
+                    <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Total In</p>
+                    <p className="text-foreground mt-0.5 text-xl font-bold tabular-nums">{formatNumber(state.stockInStats.totalIn)}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 px-3 py-2 bg-amber-500/10 rounded-lg border border-amber-200/50">
+                  <PackageMinus className="text-amber-600 size-4" />
+                  <div>
+                    <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Total Out</p>
+                    <p className="text-foreground mt-0.5 text-xl font-bold tabular-nums">{formatNumber(state.stockInStats.totalOut)}</p>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center gap-3 px-3 py-2 bg-primary/5 rounded-lg border border-primary/10">
-                <Package className="text-primary size-4" />
-                <div>
-                  <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Total In</p>
-                  <p className="text-foreground mt-0.5 text-xl font-bold tabular-nums">{formatNumber(state.stockInStats.totalIn)}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 px-3 py-2 bg-amber-500/5 rounded-lg border border-amber-500/10">
-                <PackageMinus className="text-amber-500 size-4" />
-                <div>
-                  <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Total Out</p>
-                  <p className="text-foreground mt-0.5 text-xl font-bold tabular-nums">{formatNumber(state.stockInStats.totalOut)}</p>
-                </div>
-              </div>
             </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Select
-              value={range}
-              onValueChange={(v) => setRange(v as DateRange)}
-            >
-              <SelectTrigger
-                size="sm"
-                className="w-[150px]"
-                aria-label="Date range"
+            <div className="flex flex-wrap items-center gap-3">
+              <Select
+                value={range}
+                onValueChange={(v) => setRange(v as DateRange)}
               >
-                <SelectValue placeholder="Select range" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="today">Today</SelectItem>
-                <SelectItem value="custom">Custom</SelectItem>
-              </SelectContent>
-            </Select>
-            {range === "custom" && (
-              <div className="flex flex-wrap items-center gap-2">
-                <Input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setDateFrom(v);
-                    if (v && dateTo && v > dateTo) setDateTo(v);
-                  }}
-                  className="h-8 w-[150px] text-xs"
-                  aria-label="Start date"
-                />
-                <span className="text-muted-foreground text-xs">to</span>
-                <Input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setDateTo(v);
-                    if (v && dateFrom && v < dateFrom) setDateFrom(v);
-                  }}
-                  className="h-8 w-[150px] text-xs"
-                  aria-label="End date"
-                />
-              </div>
-            )}
-            <Select value={maintenanceType} onValueChange={setMaintenanceType}>
-              <SelectTrigger
-                size="sm"
-                className="w-[170px]"
-                aria-label="Maintenance type"
-              >
-                <SelectValue placeholder="All Maintenance" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Maintenance</SelectItem>
-                <SelectItem value="SER">SER</SelectItem>
-                <SelectItem value="BER">BER</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={type} onValueChange={setType}>
-              <SelectTrigger size="sm" className="w-[170px]" aria-label="Type">
-                <SelectValue placeholder="All Types" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="W">W (Workshop)</SelectItem>
-                <SelectItem value="C">C (Consumable)</SelectItem>
-                <SelectItem value="NC">NC (Non-Consumable)</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger
-                size="sm"
-                className="w-[170px]"
-                aria-label="Category"
-              >
-                <SelectValue placeholder="All Categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {state.categories.map((c) => (
-                  <SelectItem key={c.id} value={c.name}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>S/N</TableHead>
-              <TableHead>JOB NO</TableHead>
-              <TableHead>EQPT NOMENCLATURE</TableHead>
-              <TableHead>REGD NO</TableHead>
-              <TableHead className="text-right">QTY</TableHead>
-              <TableHead>DEPT</TableHead>
-              <TableHead>DATE IN</TableHead>
-              <TableHead>DATE OUT</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading && (
-              <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={9} className="py-2">
-                  <Skeleton className="h-8 w-full" />
-                </TableCell>
-              </TableRow>
-            )}
-            {!loading && paged.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={9} className="p-0">
-                  <EmptyState
-                    icon={PackageMinus}
-                    title="No stock-in records"
-                    description="Receive inventory to start tracking inbound stock."
-                    action={{
-                      label: "Record Stock In",
-                      onClick: () => {
-                        window.location.href = "/stock-in/create";
-                      },
-                    }}
-                  />
-                </TableCell>
-              </TableRow>
-            )}
-            {!loading &&
-              paged.map((r) => (
-                <TableRow
-                  key={r.id}
-                  className="cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => {
-                    router.push(`/stock-out/${r.id}`);
-                  }}
+                <SelectTrigger
+                  size="sm"
+                  className="w-[150px]"
+                  aria-label="Date range"
                 >
-                  <TableCell className="font-mono text-sm font-semibold">
-                    {r.id}
-                  </TableCell>
-                  <TableCell className="text-foreground/80 text-sm font-medium">
-                    {r.jobNo}
-                  </TableCell>
-                  <TableCell className="font-semibold">
-                    {r.itemName}
-                  </TableCell>
-                  <TableCell className="text-foreground/80 font-mono text-sm">
-                    {regNoOf(r.itemId)}
-                  </TableCell>
-                  <TableCell className="text-base font-bold tabular-nums text-right">
-                    {formatNumber(r.quantity)}
-                  </TableCell>
-                  <TableCell className="text-foreground/80 text-sm">
-                    {r.department}
-                  </TableCell>
-                  <TableCell className="text-foreground/80 text-sm">
-                    {formatDate(r.dateIn)}
-                  </TableCell>
-                  <TableCell className="text-foreground/80 text-sm">
-                    {r.dateOut ? formatDate(r.dateOut) : "—"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {r.status !== "Stock Out" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleStockOut(r.id);
-                        }}
-                      >
-                        <PackageMinus className="size-3.5" /> Stock Out
-                      </Button>
-                    )}
+                  <SelectValue placeholder="Select range" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="today">Today</SelectItem>
+                  <SelectItem value="custom">Custom</SelectItem>
+                </SelectContent>
+              </Select>
+              {range === "custom" && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <Input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setDateFrom(v);
+                      if (v && dateTo && v > dateTo) setDateTo(v);
+                    }}
+                    className="h-8 w-[150px] text-xs"
+                    aria-label="Start date"
+                  />
+                  <span className="text-muted-foreground text-xs">to</span>
+                  <Input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setDateTo(v);
+                      if (v && dateFrom && v < dateFrom) setDateFrom(v);
+                    }}
+                    className="h-8 w-[150px] text-xs"
+                    aria-label="End date"
+                  />
+                </div>
+              )}
+              <Select value={maintenanceType} onValueChange={setMaintenanceType}>
+                <SelectTrigger
+                  size="sm"
+                  className="w-[170px]"
+                  aria-label="Maintenance type"
+                >
+                  <SelectValue placeholder="All Maintenance" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Maintenance</SelectItem>
+                  <SelectItem value="SER">SER</SelectItem>
+                  <SelectItem value="BER">BER</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={type} onValueChange={setType}>
+                <SelectTrigger size="sm" className="w-[170px]" aria-label="Type">
+                  <SelectValue placeholder="All Types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="W">W (Workshop)</SelectItem>
+                  <SelectItem value="C">C (Consumable)</SelectItem>
+                  <SelectItem value="NC">NC (Non-Consumable)</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger
+                  size="sm"
+                  className="w-[170px]"
+                  aria-label="Category"
+                >
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {state.categories.map((c) => (
+                    <SelectItem key={c.id} value={c.name}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="relative overflow-hidden" style={{ background: "linear-gradient(135deg, rgba(245,158,11,0.05) 0%, rgba(249,115,22,0.03) 100%)" }}>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>S/N</TableHead>
+                <TableHead>JOB NO</TableHead>
+                <TableHead>EQPT NOMENCLATURE</TableHead>
+                <TableHead>REGD NO</TableHead>
+                <TableHead className="text-right">QTY</TableHead>
+                <TableHead>DEPT</TableHead>
+                <TableHead>DATE IN</TableHead>
+                <TableHead>DATE OUT</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading && (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={9} className="py-2">
+                    <Skeleton className="h-8 w-full" />
                   </TableCell>
                 </TableRow>
-              ))}
-          </TableBody>
-        </Table>
-        {paged.length > 0 && (
-          <div className="border-t px-4 py-3">
-            <Pagination
-              total={records.length}
-              page={page}
-              pageSize={pageSize}
-              onPageChange={setPage}
-            />
-          </div>
-        )}
-      </Card>
+              )}
+              {!loading && paged.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={9} className="p-0">
+                    <EmptyState
+                      icon={PackageMinus}
+                      title="No stock-in records"
+                      description="Receive inventory to start tracking inbound stock."
+                      action={{
+                        label: "Record Stock In",
+                        onClick: () => {
+                          window.location.href = "/stock-in/create";
+                        },
+                      }}
+                    />
+                  </TableCell>
+                </TableRow>
+              )}
+              {!loading &&
+                paged.map((r) => (
+                  <TableRow
+                    key={r.id}
+                    className="cursor-pointer hover:bg-amber-50/50 transition-colors"
+                    onClick={() => {
+                      router.push(`/stock-out/${r.id}`);
+                    }}
+                  >
+                    <TableCell className="font-mono text-sm font-semibold">
+                      {r.id}
+                    </TableCell>
+                    <TableCell className="text-foreground/80 text-sm font-medium">
+                      {r.jobNo}
+                    </TableCell>
+                    <TableCell className="font-semibold">
+                      {r.itemName}
+                    </TableCell>
+                    <TableCell className="text-foreground/80 font-mono text-sm">
+                      {regNoOf(r.itemId)}
+                    </TableCell>
+                    <TableCell className="text-base font-bold tabular-nums text-right">
+                      {formatNumber(r.quantity)}
+                    </TableCell>
+                    <TableCell className="text-foreground/80 text-sm">
+                      {r.department}
+                    </TableCell>
+                    <TableCell className="text-foreground/80 text-sm">
+                      {formatDate(r.dateIn)}
+                    </TableCell>
+                    <TableCell className="text-foreground/80 text-sm">
+                      {r.dateOut ? formatDate(r.dateOut) : "—"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {r.status !== "Stock Out" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStockOut(r.id);
+                          }}
+                        >
+                          <PackageMinus className="size-3.5" /> Stock Out
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+            </TableBody>
+          </Table>
+          {paged.length > 0 && (
+            <div className="border-t px-4 py-3">
+              <Pagination
+                total={records.length}
+                page={page}
+                pageSize={pageSize}
+                onPageChange={setPage}
+              />
+            </div>
+          )}
+        </Card>
+      </div>
     </div>
   );
 }

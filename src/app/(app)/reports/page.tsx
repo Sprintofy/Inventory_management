@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import { FileDown, BarChart3, Filter, X, Calendar, Download } from "lucide-react";
+import { FileDown, BarChart3, Filter, X, Calendar, Download, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +16,8 @@ import { formatNumber } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from "recharts";
 import * as XLSX from "xlsx";
-import { CHART_PALETTE, getCardGradient, getIconBgClass } from "@/lib/theme";
+import { CHART_PALETTE, getCardGradient, getIconBgClass, getPageGradient } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 
 const HISTOGRAM_BINS = [
   { name: "Out of stock (0)", test: (q: number) => q <= 0 },
@@ -184,241 +185,246 @@ export default function ReportsPage() {
     setDept(d);
   };
 
+  const pageGradient = getPageGradient("reports");
+
   return (
-    <div className="space-y-5">
-      <PageHeader
-        title="Reports"
-        description={isGlobal ? "Department inventory reports." : "Your department's inventory report."}
-        breadcrumb={[{ label: "Reports" }]}
-        actions={
-          <div className="flex flex-wrap items-center gap-3">
-            {isGlobal ? (
-              <Select value={dept} onValueChange={handleDeptChange}>
-                <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+    <div className={cn("min-h-screen", pageGradient)}>
+      <div className="space-y-5 p-4 sm:p-6">
+        <PageHeader
+          title="Reports"
+          description={isGlobal ? "Department inventory reports." : "Your department's inventory report."}
+          breadcrumb={[{ label: "Reports" }]}
+          actions={
+            <div className="flex flex-wrap items-center gap-3">
+              {isGlobal ? (
+                <Select value={dept} onValueChange={handleDeptChange}>
+                  <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Departments</SelectItem>
+                    {visibleDepartments.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <span className="bg-violet-500/10 text-violet-700 px-3 py-1.5 text-sm font-medium rounded-lg border border-violet-200/50">{dept}</span>
+              )}
+              <Tabs value={reportView} onValueChange={(v) => setReportView(v as "inventory" | "tickets")} className="h-auto border-none">
+                <TabsList className="px-2 bg-violet-500/10 border-none rounded-md">
+                  <TabsTrigger value="inventory">Inventory Report</TabsTrigger>
+                  <TabsTrigger value="tickets">Ticket Report</TabsTrigger>
+                </TabsList>
+              </Tabs>
+              <Select value={dateFilter} onValueChange={(v) => setDateFilter(v as "today" | "week" | "month" | "all")}>
+                <SelectTrigger className="w-32"><SelectValue placeholder="Date Filter" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Departments</SelectItem>
-                  {visibleDepartments.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                  <SelectItem value="all">All Dates</SelectItem>
+                  <SelectItem value="today">Today</SelectItem>
+                  <SelectItem value="week">This Week</SelectItem>
+                  <SelectItem value="month">This Month</SelectItem>
+                  <SelectItem value="year">This Year</SelectItem>
                 </SelectContent>
               </Select>
-            ) : (
-              <span className="bg-primary/5 text-primary px-3 py-1.5 text-sm font-medium rounded-lg border border-primary/10">{dept}</span>
-            )}
-            <Tabs value={reportView} onValueChange={(v) => setReportView(v as "inventory" | "tickets")} className="h-auto border-none">
-              <TabsList className="px-2 bg-primary/5 border-none rounded-md">
-                <TabsTrigger value="inventory">Inventory Report</TabsTrigger>
-                <TabsTrigger value="tickets">Ticket Report</TabsTrigger>
-              </TabsList>
-            </Tabs>
-            <Select value={dateFilter} onValueChange={(v) => setDateFilter(v as "today" | "week" | "month" | "all")}>
-              <SelectTrigger className="w-32"><SelectValue placeholder="Date Filter" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Dates</SelectItem>
-                <SelectItem value="today">Today</SelectItem>
-                <SelectItem value="week">This Week</SelectItem>
-                <SelectItem value="month">This Month</SelectItem>
-                <SelectItem value="year">This Year</SelectItem>
-              </SelectContent>
-            </Select>
-            {reportView === "inventory" ? (
-              <Button variant="outline" onClick={exportInventoryExcel}><FileDown className="size-4" /> Export Excel</Button>
-            ) : (
-              <>
+              {reportView === "inventory" ? (
                 <Button variant="outline" onClick={exportInventoryExcel}><FileDown className="size-4" /> Export Excel</Button>
-              </>
-            )}
-          </div>
-        }
-      />
+              ) : (
+                <>
+                  <Button variant="outline" onClick={exportInventoryExcel}><FileDown className="size-4" /> Export Excel</Button>
+                </>
+              )}
+            </div>
+          }
+        />
 
-      {/* Inventory Report View */}
-      {reportView === "inventory" && (
-        <>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <Card className="relative overflow-hidden bg-gradient-to-br from-primary/5 to-sky-500/5 border-primary/10">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="flex items-center justify-center rounded-xl size-11 bg-primary/10 text-primary">
-                  <BarChart3 className="size-5" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground font-medium">Total Records</p>
-                  <p className="text-2xl font-bold tabular-nums text-foreground">{filteredStockIn.length}</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="relative overflow-hidden bg-gradient-to-br from-sky-500/5 to-emerald-500/5 border-sky-500/10">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="flex items-center justify-center rounded-xl size-11 bg-sky-500/10 text-sky-500">
-                  <Download className="size-5" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground font-medium">Total Qty In</p>
-                  <p className="text-2xl font-bold tabular-nums text-foreground">{filteredStockIn.reduce((s, r) => s + r.quantity, 0).toLocaleString()}</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="relative overflow-hidden bg-gradient-to-br from-amber-500/5 to-orange-500/5 border-amber-500/10">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="flex items-center justify-center rounded-xl size-11 bg-amber-500/10 text-amber-500">
-                  <Filter className="size-5" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground font-medium">Categories</p>
-                  <p className="text-2xl font-bold tabular-nums text-foreground">{byCategory.length}</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="relative overflow-hidden bg-gradient-to-br from-violet-500/5 to-indigo-500/5 border-violet-500/10">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="flex items-center justify-center rounded-xl size-11 bg-violet-500/10 text-violet-500">
-                  <Calendar className="size-5" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground font-medium">Date Filter</p>
-                  <p className="text-xl font-bold text-foreground capitalize">{dateFilter}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+        {/* Inventory Report View */}
+        {reportView === "inventory" && (
+          <>
+            {/* Summary Stats */}
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              <Card className="relative overflow-hidden transition-all hover:shadow-xl hover:-translate-y-0.5" style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.15) 0%, rgba(99,102,241,0.1) 100%)" }}>
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="flex items-center justify-center rounded-xl size-11 bg-violet-500/20 text-violet-500">
+                    <BarChart3 className="size-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium">Total Records</p>
+                    <p className="text-2xl font-bold tabular-nums text-foreground">{filteredStockIn.length}</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="relative overflow-hidden transition-all hover:shadow-xl hover:-translate-y-0.5" style={{ background: "linear-gradient(135deg, rgba(14,165,233,0.15) 0%, rgba(16,185,129,0.1) 100%)" }}>
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="flex items-center justify-center rounded-xl size-11 bg-sky-500/20 text-sky-500">
+                    <TrendingUp className="size-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium">Total Qty In</p>
+                    <p className="text-2xl font-bold tabular-nums text-foreground">{filteredStockIn.reduce((s, r) => s + r.quantity, 0).toLocaleString()}</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="relative overflow-hidden transition-all hover:shadow-xl hover:-translate-y-0.5" style={{ background: "linear-gradient(135deg, rgba(245,158,11,0.15) 0%, rgba(249,115,22,0.1) 100%)" }}>
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="flex items-center justify-center rounded-xl size-11 bg-amber-500/20 text-amber-500">
+                    <Filter className="size-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium">Categories</p>
+                    <p className="text-2xl font-bold tabular-nums text-foreground">{byCategory.length}</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="relative overflow-hidden transition-all hover:shadow-xl hover:-translate-y-0.5" style={{ background: "linear-gradient(135deg, rgba(168,85,247,0.15) 0%, rgba(139,92,246,0.1) 100%)" }}>
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="flex items-center justify-center rounded-xl size-11 bg-purple-500/20 text-purple-500">
+                    <Calendar className="size-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium">Date Filter</p>
+                    <p className="text-xl font-bold text-foreground capitalize">{dateFilter}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
-          <p className="text-muted-foreground text-sm mt-4">
-            Showing inventory for <span className="text-foreground font-medium">{scopeLabel}</span> · {filteredStockIn.length} item{filteredStockIn.length === 1 ? "" : "s"}
-          </p>
+            <p className="text-muted-foreground text-sm mt-4">
+              Showing inventory for <span className="text-foreground font-medium">{scopeLabel}</span> · {filteredStockIn.length} item{filteredStockIn.length === 1 ? "" : "s"}
+            </p>
 
-          <div className="grid gap-5 lg:grid-cols-2">
-            <Card>
-              <CardHeader><CardTitle className="text-base">Items by Category</CardTitle></CardHeader>
-              <CardContent className="h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={byCategory} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} interval={0} angle={-30} textAnchor="end" height={55} />
-                    <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
-                    <Tooltip formatter={(v) => [`${Number(v ?? 0).toLocaleString()} items`, "Items"]} cursor={{ fill: "hsl(var(--muted) / 0.4)" }} />
-                    <Bar dataKey="items" radius={[4, 4, 0, 0]}>
-                      {byCategory.map((_, i) => <Cell key={i} fill={CHART_PALETTE[i % CHART_PALETTE.length]} />)}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+            <div className="grid gap-5 lg:grid-cols-2">
+              <Card className="relative overflow-hidden" style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(99,102,241,0.05) 100%)" }}>
+                <CardHeader><CardTitle className="text-base">Items by Category</CardTitle></CardHeader>
+                <CardContent className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={byCategory} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
+                      <XAxis dataKey="name" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} interval={0} angle={-30} textAnchor="end" height={55} />
+                      <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
+                      <Tooltip formatter={(v) => [`${Number(v ?? 0).toLocaleString()} items`, "Items"]} cursor={{ fill: "hsl(var(--muted) / 0.4)" }} />
+                      <Bar dataKey="items" radius={[4, 4, 0, 0]}>
+                        {byCategory.map((_, i) => <Cell key={i} fill={CHART_PALETTE[i % CHART_PALETTE.length]} />)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader><CardTitle className="text-base">Stock Quantity Histogram</CardTitle></CardHeader>
-              <CardContent className="h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={histogram} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} interval={0} angle={-30} textAnchor="end" height={55} />
-                    <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
-                    <Tooltip formatter={(v) => [`${Number(v ?? 0).toLocaleString()} items`, "Items"]} cursor={{ fill: "hsl(var(--muted) / 0.4)" }} />
-                    <Bar dataKey="items" fill="var(--primary)" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
+              <Card className="relative overflow-hidden" style={{ background: "linear-gradient(135deg, rgba(14,165,233,0.08) 0%, rgba(16,185,129,0.05) 100%)" }}>
+                <CardHeader><CardTitle className="text-base">Stock Quantity Histogram</CardTitle></CardHeader>
+                <CardContent className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={histogram} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
+                      <XAxis dataKey="name" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} interval={0} angle={-30} textAnchor="end" height={55} />
+                      <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
+                      <Tooltip formatter={(v) => [`${Number(v ?? 0).toLocaleString()} items`, "Items"]} cursor={{ fill: "hsl(var(--muted) / 0.4)" }} />
+                      <Bar dataKey="items" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
 
-          <div className="grid gap-5 lg:grid-cols-2">
-            <Card>
-              <CardHeader><CardTitle className="text-base">Items by Department</CardTitle></CardHeader>
-              <CardContent className="h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={byScope} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} interval={0} angle={-30} textAnchor="end" height={55} />
-                    <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
-                    <Tooltip formatter={(v) => [`${Number(v ?? 0).toLocaleString()} items`, "Items"]} cursor={{ fill: "hsl(var(--muted) / 0.4)" }} />
-                    <Bar dataKey="items" radius={[4, 4, 0, 0]}>
-                      {byScope.map((row, i) => <Cell key={i} fill={row.color ?? CHART_PALETTE[i % CHART_PALETTE.length]} />)}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+            <div className="grid gap-5 lg:grid-cols-2">
+              <Card className="relative overflow-hidden" style={{ background: "linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(245,158,11,0.05) 100%)" }}>
+                <CardHeader><CardTitle className="text-base">Items by Department</CardTitle></CardHeader>
+                <CardContent className="h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={byScope} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
+                      <XAxis dataKey="name" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} interval={0} angle={-30} textAnchor="end" height={55} />
+                      <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
+                      <Tooltip formatter={(v) => [`${Number(v ?? 0).toLocaleString()} items`, "Items"]} cursor={{ fill: "hsl(var(--muted) / 0.4)" }} />
+                      <Bar dataKey="items" radius={[4, 4, 0, 0]}>
+                        {byScope.map((row, i) => <Cell key={i} fill={row.color ?? CHART_PALETTE[i % CHART_PALETTE.length]} />)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader className="flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-base">Top Items by Quantity</CardTitle>
-              </CardHeader>
-              <CardContent>
+              <Card className="relative overflow-hidden" style={{ background: "linear-gradient(135deg, rgba(244,63,94,0.08) 0%, rgba(139,92,246,0.05) 100%)" }}>
+                <CardHeader className="flex-row items-center justify-between space-y-0">
+                  <CardTitle className="text-base">Top Items by Quantity</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead>Item</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead className="text-right">Quantity</TableHead>
+                        <TableHead className="text-right">Department</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {topItems.map((i) => (
+                        <TableRow key={i.id}>
+                          <TableCell>
+                            <p className="font-semibold">{i.itemName}</p>
+                            <p className="text-foreground/70 font-mono text-sm">Reg No. {i.itemId}</p>
+                          </TableCell>
+                          <TableCell className="text-sm font-semibold">{i.productType}</TableCell>
+                          <TableCell className="text-right font-semibold tabular-nums">{i.quantity.toLocaleString()}</TableCell>
+                          <TableCell className="text-right text-sm">{i.department}</TableCell>
+                          <TableCell><StatusBadge status={i.status as any} /></TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
+          </>
+        )}
+
+        {/* Ticket Report View */}
+        {reportView === "tickets" && (
+          <>
+            <div className="space-y-4">
+              <p className="text-muted-foreground text-sm">
+                Ticket Report · {ticketReportData.length} ticket{ticketReportData.length === 1 ? "" : "s"}
+              </p>
+
+              <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="hover:bg-transparent">
-                      <TableHead>Item</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead className="text-right">Quantity</TableHead>
-                      <TableHead className="text-right">Department</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead className="text-center">S/N</TableHead>
+                      <TableHead className="text-left">JOB NO</TableHead>
+                      <TableHead className="text-left">EQPT</TableHead>
+                      <TableHead className="text-left">REGD NO</TableHead>
+                      <TableHead className="text-right">QTY</TableHead>
+                      <TableHead className="text-left">SEC/DEPT</TableHead>
+                      <TableHead className="text-left">DATE IN</TableHead>
+                      <TableHead className="text-left">DATE OUT</TableHead>
+                      <TableHead className="text-left">TYPE OF FAULT</TableHead>
+                      <TableHead className="text-left">PROGRESS</TableHead>
+                      <TableHead className="text-left">ACTION BY TEAM</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {topItems.map((i) => (
-                      <TableRow key={i.id}>
-                        <TableCell>
-                          <p className="font-semibold">{i.itemName}</p>
-                          <p className="text-foreground/70 font-mono text-sm">Reg No. {i.itemId}</p>
-                        </TableCell>
-                        <TableCell className="text-sm font-semibold">{i.productType}</TableCell>
-                        <TableCell className="text-right font-semibold tabular-nums">{i.quantity.toLocaleString()}</TableCell>
-                        <TableCell className="text-right text-sm">{i.department}</TableCell>
-                        <TableCell><StatusBadge status={i.status as any} /></TableCell>
+                    {ticketReportData.map((t) => (
+                      <TableRow key={t.jobNo}>
+                        <TableCell className="text-center text-sm font-medium">{t.sNo}</TableCell>
+                        <TableCell className="font-mono text-sm font-semibold">{t.jobNo}</TableCell>
+                        <TableCell className="font-medium">{t.eqpt}</TableCell>
+                        <TableCell className="font-mono text-sm font-medium">{t.regNo}</TableCell>
+                        <TableCell className="text-right font-semibold tabular-nums">{t.qty}</TableCell>
+                        <TableCell className="text-sm">{t.secDept}</TableCell>
+                        <TableCell className="font-mono text-sm">{t.dateIn}</TableCell>
+                        <TableCell className="font-mono text-sm">{t.dateOut}</TableCell>
+                        <TableCell className="text-sm">{t.typeOfFault}</TableCell>
+                        <TableCell><StatusBadge status={t.progress as any} /></TableCell>
+                        <TableCell className="text-sm">{t.actionByTech}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
-              </CardContent>
-            </Card>
-          </div>
-        </>
-      )}
-
-      {/* Ticket Report View */}
-      {reportView === "tickets" && (
-        <>
-          <div className="space-y-4">
-            <p className="text-muted-foreground text-sm">
-              Ticket Report · {ticketReportData.length} ticket{ticketReportData.length === 1 ? "" : "s"}
-            </p>
-
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead className="text-center">S/N</TableHead>
-                    <TableHead className="text-left">JOB NO</TableHead>
-                    <TableHead className="text-left">EQPT</TableHead>
-                    <TableHead className="text-left">REGD NO</TableHead>
-                    <TableHead className="text-right">QTY</TableHead>
-                    <TableHead className="text-left">SEC/DEPT</TableHead>
-                    <TableHead className="text-left">DATE IN</TableHead>
-                    <TableHead className="text-left">DATE OUT</TableHead>
-                    <TableHead className="text-left">TYPE OF FAULT</TableHead>
-                    <TableHead className="text-left">PROGRESS</TableHead>
-                    <TableHead className="text-left">ACTION BY TEAM</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {ticketReportData.map((t) => (
-                    <TableRow key={t.jobNo}>
-                      <TableCell className="text-center text-sm font-medium">{t.sNo}</TableCell>
-                      <TableCell className="font-mono text-sm font-semibold">{t.jobNo}</TableCell>
-                      <TableCell className="font-medium">{t.eqpt}</TableCell>
-                      <TableCell className="font-mono text-sm font-medium">{t.regNo}</TableCell>
-                      <TableCell className="text-right font-semibold tabular-nums">{t.qty}</TableCell>
-                      <TableCell className="text-sm">{t.secDept}</TableCell>
-                      <TableCell className="font-mono text-sm">{t.dateIn}</TableCell>
-                      <TableCell className="font-mono text-sm">{t.dateOut}</TableCell>
-                      <TableCell className="text-sm">{t.typeOfFault}</TableCell>
-                      <TableCell><StatusBadge status={t.progress as any} /></TableCell>
-                      <TableCell className="text-sm">{t.actionByTech}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              </div>
             </div>
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

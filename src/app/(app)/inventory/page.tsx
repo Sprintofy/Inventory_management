@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
-import { FileDown, FileUp, Plus, Filter, X, AlertTriangle, PackageX, BarChart3, Package } from "lucide-react";
+import { FileDown, FileUp, Plus, Filter, X, AlertTriangle, PackageX, BarChart3, Package, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -15,7 +15,8 @@ import { downloadCSV, formatDate } from "@/lib/toast-utils";
 import { exportInventoryExcel } from "@/lib/excel";
 import type { InventoryItem } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
-import { getIconBgClass, getCardGradient, CHART_PALETTE, getStatusColors } from "@/lib/theme";
+import { getIconBgClass, getCardGradient, CHART_PALETTE, getStatusColors, getPageGradient } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 
 export default function InventoryPage() {
   const { departmentItems, can, activeDepartment, user } = useApp();
@@ -70,111 +71,115 @@ export default function InventoryPage() {
 
   const hasActiveFilters = search || Object.values(filters).some((v) => v !== "all" && v !== "");
 
+  const pageGradient = getPageGradient("inventory");
+
   return (
-    <div className="space-y-5">
-      <PageHeader
-        title="Inventory"
-        description={activeDepartment === "all" ? "All departments stock." : `${activeDepartment} stock only.`}
-        breadcrumb={[{ label: "Inventory" }]}
-        actions={
-          <>
-            <Button variant="outline" onClick={exportExcel}><FileDown className="size-4" /> Export Excel</Button>
-            <Button variant="outline" onClick={exportAll}>Export CSV</Button>
-            <Button variant="outline" onClick={() => setImportOpen(true)}><FileUp className="size-4" /> Import</Button>
-            {can("inventory.manage") && (
-              <Button onClick={() => { window.location.href = "/inventory/create"; }}>
-                <Plus className="size-4" /> Add Item
-              </Button>
-            )}
-          </>
-        }
-      />
+    <div className={cn("min-h-screen", pageGradient)}>
+      <div className="space-y-5 p-4 sm:p-6">
+        <PageHeader
+          title="Inventory"
+          description={activeDepartment === "all" ? "All departments stock." : `${activeDepartment} stock only.`}
+          breadcrumb={[{ label: "Inventory" }]}
+          actions={
+            <>
+              <Button variant="outline" onClick={exportExcel}><FileDown className="size-4" /> Export Excel</Button>
+              <Button variant="outline" onClick={exportAll}>Export CSV</Button>
+              <Button variant="outline" onClick={() => setImportOpen(true)}><FileUp className="size-4" /> Import</Button>
+              {can("inventory.manage") && (
+                <Button onClick={() => { window.location.href = "/inventory/create"; }}>
+                  <Plus className="size-4" /> Add Item
+                </Button>
+              )}
+            </>
+          }
+        />
 
-      {/* Summary Stats Bar */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-5">
-        <Card className="relative overflow-hidden bg-gradient-to-br from-primary/5 to-sky-500/5 border-primary/10">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="flex items-center justify-center rounded-xl size-11 bg-primary/10 text-primary">
-              <Plus className="size-5" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground font-medium">Total Items</p>
-              <p className="text-2xl font-bold tabular-nums text-foreground">{filtered.length}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="relative overflow-hidden bg-gradient-to-br from-sky-500/5 to-emerald-500/5 border-sky-500/10">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="flex items-center justify-center rounded-xl size-11 bg-sky-500/10 text-sky-500">
-              <Plus className="size-5" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground font-medium">Total Units</p>
-              <p className="text-2xl font-bold tabular-nums text-foreground">{filtered.reduce((s, i) => s + i.quantity, 0).toLocaleString()}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="relative overflow-hidden bg-gradient-to-br from-amber-500/5 to-orange-500/5 border-amber-500/10">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="flex items-center justify-center rounded-xl size-11 bg-amber-500/10 text-amber-500">
-              <AlertTriangle className="size-5" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground font-medium">Low Stock (1-10)</p>
-              <p className="text-2xl font-bold tabular-nums text-foreground">{filtered.filter(i => i.quantity > 0 && i.quantity <= 10).length}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="relative overflow-hidden bg-gradient-to-br from-rose-500/5 to-violet-500/5 border-rose-500/10">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="flex items-center justify-center rounded-xl size-11 bg-rose-500/10 text-rose-500">
-              <PackageX className="size-5" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground font-medium">Out of Stock</p>
-              <p className="text-2xl font-bold tabular-nums text-foreground">{filtered.filter(i => i.quantity <= 0).length}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="relative overflow-hidden bg-gradient-to-br from-violet-500/5 to-indigo-500/5 border-violet-500/10">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="flex items-center justify-center rounded-xl size-11 bg-violet-500/10 text-violet-500">
-              <BarChart3 className="size-5" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground font-medium">Categories</p>
-              <p className="text-2xl font-bold tabular-nums text-foreground">{[...new Set(filtered.map(i => i.category))].length}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="space-y-5">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center">
-          <SearchInput
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onClear={() => setSearch("")}
-            placeholder="Search by device name, Reg No., category…"
-            className="md:max-w-sm"
-          />
-          <div className="flex items-center gap-2">
-            <InventoryFilters filters={filters} onChange={setFilters} />
-            {hasActiveFilters && (
-              <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => { setSearch(""); setFilters(emptyFilters); }}>
-                <X className="size-3.5 mr-1.5" /> Clear all
-              </Button>
-            )}
-          </div>
+        {/* Summary Stats Bar */}
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-5">
+          <Card className="relative overflow-hidden transition-all hover:shadow-xl hover:-translate-y-0.5" style={{ background: "linear-gradient(135deg, rgba(59,130,246,0.15) 0%, rgba(14,165,233,0.1) 100%)" }}>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="flex items-center justify-center rounded-xl size-11 bg-primary/20 text-primary">
+                <Plus className="size-5" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Total Items</p>
+                <p className="text-2xl font-bold tabular-nums text-foreground">{filtered.length}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="relative overflow-hidden transition-all hover:shadow-xl hover:-translate-y-0.5" style={{ background: "linear-gradient(135deg, rgba(14,165,233,0.15) 0%, rgba(16,185,129,0.1) 100%)" }}>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="flex items-center justify-center rounded-xl size-11 bg-sky-500/20 text-sky-500">
+                <TrendingUp className="size-5" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Total Units</p>
+                <p className="text-2xl font-bold tabular-nums text-foreground">{filtered.reduce((s, i) => s + i.quantity, 0).toLocaleString()}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="relative overflow-hidden transition-all hover:shadow-xl hover:-translate-y-0.5" style={{ background: "linear-gradient(135deg, rgba(245,158,11,0.15) 0%, rgba(249,115,22,0.1) 100%)" }}>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="flex items-center justify-center rounded-xl size-11 bg-amber-500/20 text-amber-500">
+                <AlertTriangle className="size-5" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Low Stock (1-10)</p>
+                <p className="text-2xl font-bold tabular-nums text-foreground">{filtered.filter(i => i.quantity > 0 && i.quantity <= 10).length}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="relative overflow-hidden transition-all hover:shadow-xl hover:-translate-y-0.5" style={{ background: "linear-gradient(135deg, rgba(244,63,94,0.15) 0%, rgba(139,92,246,0.1) 100%)" }}>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="flex items-center justify-center rounded-xl size-11 bg-rose-500/20 text-rose-500">
+                <PackageX className="size-5" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Out of Stock</p>
+                <p className="text-2xl font-bold tabular-nums text-foreground">{filtered.filter(i => i.quantity <= 0).length}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="relative overflow-hidden transition-all hover:shadow-xl hover:-translate-y-0.5" style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.15) 0%, rgba(99,102,241,0.1) 100%)" }}>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="flex items-center justify-center rounded-xl size-11 bg-violet-500/20 text-violet-500">
+                <BarChart3 className="size-5" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Categories</p>
+                <p className="text-2xl font-bold tabular-nums text-foreground">{[...new Set(filtered.map(i => i.category))].length}</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        <InventoryTable
-          items={filtered}
-          onEdit={() => {}}
-        />
-      </div>
+        <div className="space-y-5">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center">
+            <SearchInput
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onClear={() => setSearch("")}
+              placeholder="Search by device name, Reg No., category…"
+              className="md:max-w-sm"
+            />
+            <div className="flex items-center gap-2">
+              <InventoryFilters filters={filters} onChange={setFilters} />
+              {hasActiveFilters && (
+                <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => { setSearch(""); setFilters(emptyFilters); }}>
+                  <X className="size-3.5 mr-1.5" /> Clear all
+                </Button>
+              )}
+            </div>
+          </div>
 
-      <InventoryImportDialog open={importOpen} onOpenChange={setImportOpen} />
+          <InventoryTable
+            items={filtered}
+            onEdit={() => {}}
+          />
+        </div>
+
+        <InventoryImportDialog open={importOpen} onOpenChange={setImportOpen} />
+      </div>
     </div>
   );
 }

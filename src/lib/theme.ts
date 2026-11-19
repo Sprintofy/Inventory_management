@@ -12,6 +12,7 @@ export const THEME_COLORS = {
     700: "#1d4ed8",
     800: "#1e40af",
     900: "#1e3a8a",
+    950: "#172554",
   },
   sky: {
     50: "#f0f9ff",
@@ -24,6 +25,7 @@ export const THEME_COLORS = {
     700: "#0369a1",
     800: "#075985",
     900: "#0c4a6e",
+    950: "#082f49",
   },
   emerald: {
     50: "#ecfdf5",
@@ -36,6 +38,7 @@ export const THEME_COLORS = {
     700: "#047857",
     800: "#065f46",
     900: "#064e3b",
+    950: "#022c22",
   },
   amber: {
     50: "#fffbeb",
@@ -48,6 +51,7 @@ export const THEME_COLORS = {
     700: "#b45309",
     800: "#92400e",
     900: "#78350f",
+    950: "#451a03",
   },
   rose: {
     50: "#fff1f2",
@@ -60,6 +64,7 @@ export const THEME_COLORS = {
     700: "#be123c",
     800: "#9f1239",
     900: "#881337",
+    950: "#4c0519",
   },
   violet: {
     50: "#f5f3ff",
@@ -72,6 +77,7 @@ export const THEME_COLORS = {
     700: "#6d28d9",
     800: "#5b21b6",
     900: "#4c1d95",
+    950: "#2e1065",
   },
   indigo: {
     50: "#eef2ff",
@@ -84,6 +90,7 @@ export const THEME_COLORS = {
     700: "#4338ca",
     800: "#3730a3",
     900: "#312e81",
+    950: "#1e1b4b",
   },
   teal: {
     50: "#f0fdfa",
@@ -96,6 +103,7 @@ export const THEME_COLORS = {
     700: "#0f766e",
     800: "#115e59",
     900: "#134e4a",
+    950: "#042f2e",
   },
   orange: {
     50: "#fff7ed",
@@ -108,6 +116,7 @@ export const THEME_COLORS = {
     700: "#c2410c",
     800: "#9a3412",
     900: "#7c2d12",
+    950: "#431407",
   },
 };
 
@@ -129,13 +138,13 @@ export function getCategoryColor(index: number) {
 
 export function getColorVariants(colorScale: typeof THEME_COLORS.primary) {
   return {
-    bg: colorScale[50],
-    bgHover: colorScale[100],
-    border: colorScale[200],
-    text: colorScale[700],
+    bg: colorScale[100],
+    bgHover: colorScale[200],
+    border: colorScale[300],
+    text: colorScale[800],
     textDark: colorScale[900],
     icon: colorScale[500],
-    ring: colorScale[300],
+    ring: colorScale[400],
   };
 }
 
@@ -157,37 +166,37 @@ export function getDepartmentColor(index: number) {
 }
 
 export const STATUS_COLORS = {
-  pending: { bg: THEME_COLORS.amber[50], text: THEME_COLORS.amber[700], border: THEME_COLORS.amber[200], icon: THEME_COLORS.amber[500] },
-  "Stock Out": { bg: THEME_COLORS.emerald[50], text: THEME_COLORS.emerald[700], border: THEME_COLORS.emerald[200], icon: THEME_COLORS.emerald[500] },
-  cancelled: { bg: THEME_COLORS.rose[50], text: THEME_COLORS.rose[700], border: THEME_COLORS.rose[200], icon: THEME_COLORS.rose[500] },
-  received: { bg: THEME_COLORS.sky[50], text: THEME_COLORS.sky[700], border: THEME_COLORS.sky[200], icon: THEME_COLORS.sky[500] },
-  issued: { bg: THEME_COLORS.violet[50], text: THEME_COLORS.violet[700], border: THEME_COLORS.violet[200], icon: THEME_COLORS.violet[500] },
-  active: { bg: THEME_COLORS.emerald[50], text: THEME_COLORS.emerald[700], border: THEME_COLORS.emerald[200], icon: THEME_COLORS.emerald[500] },
-  inactive: { bg: THEME_COLORS.rose[50], text: THEME_COLORS.rose[700], border: THEME_COLORS.rose[200], icon: THEME_COLORS.rose[500] },
-  completed: { bg: THEME_COLORS.sky[50], text: THEME_COLORS.sky[700], border: THEME_COLORS.sky[200], icon: THEME_COLORS.sky[500] },
-  rejected: { bg: THEME_COLORS.rose[50], text: THEME_COLORS.rose[700], border: THEME_COLORS.rose[200], icon: THEME_COLORS.rose[500] },
-  approved: { bg: THEME_COLORS.emerald[50], text: THEME_COLORS.emerald[700], border: THEME_COLORS.emerald[200], icon: THEME_COLORS.emerald[500] },
+  pending: { bg: THEME_COLORS.amber[200], text: THEME_COLORS.amber[900], border: THEME_COLORS.amber[400], icon: THEME_COLORS.amber[500] },
+  "Stock Out": { bg: THEME_COLORS.emerald[200], text: THEME_COLORS.emerald[900], border: THEME_COLORS.emerald[400], icon: THEME_COLORS.emerald[500] },
+  cancelled: { bg: THEME_COLORS.rose[200], text: THEME_COLORS.rose[900], border: THEME_COLORS.rose[400], icon: THEME_COLORS.rose[500] },
+  received: { bg: THEME_COLORS.sky[200], text: THEME_COLORS.sky[900], border: THEME_COLORS.sky[400], icon: THEME_COLORS.sky[500] },
+  issued: { bg: THEME_COLORS.violet[200], text: THEME_COLORS.violet[900], border: THEME_COLORS.violet[400], icon: THEME_COLORS.violet[500] },
+  active: { bg: THEME_COLORS.emerald[200], text: THEME_COLORS.emerald[900], border: THEME_COLORS.emerald[400], icon: THEME_COLORS.emerald[500] },
+  inactive: { bg: THEME_COLORS.rose[200], text: THEME_COLORS.rose[900], border: THEME_COLORS.rose[400], icon: THEME_COLORS.rose[500] },
+  completed: { bg: THEME_COLORS.sky[200], text: THEME_COLORS.sky[900], border: THEME_COLORS.sky[400], icon: THEME_COLORS.sky[500] },
+  rejected: { bg: THEME_COLORS.rose[200], text: THEME_COLORS.rose[900], border: THEME_COLORS.rose[400], icon: THEME_COLORS.rose[500] },
+  approved: { bg: THEME_COLORS.emerald[200], text: THEME_COLORS.emerald[900], border: THEME_COLORS.emerald[400], icon: THEME_COLORS.emerald[500] },
 };
 
 export function getStatusColors(status: string) {
   return STATUS_COLORS[status as keyof typeof STATUS_COLORS] || {
-    bg: THEME_COLORS.indigo[50],
-    text: THEME_COLORS.indigo[700],
-    border: THEME_COLORS.indigo[200],
+    bg: THEME_COLORS.indigo[200],
+    text: THEME_COLORS.indigo[900],
+    border: THEME_COLORS.indigo[400],
     icon: THEME_COLORS.indigo[500],
   };
 }
 
 export const ICON_BG_CLASSES = [
-  "bg-primary/10 text-primary",
-  "bg-sky-500/10 text-sky-500",
-  "bg-emerald-500/10 text-emerald-500",
-  "bg-amber-500/10 text-amber-500",
-  "bg-rose-500/10 text-rose-500",
-  "bg-violet-500/10 text-violet-500",
-  "bg-indigo-500/10 text-indigo-500",
-  "bg-teal-500/10 text-teal-500",
-  "bg-orange-500/10 text-orange-500",
+  "bg-primary/20 text-primary",
+  "bg-sky-500/20 text-sky-500",
+  "bg-emerald-500/20 text-emerald-500",
+  "bg-amber-500/20 text-amber-500",
+  "bg-rose-500/20 text-rose-500",
+  "bg-violet-500/20 text-violet-500",
+  "bg-indigo-500/20 text-indigo-500",
+  "bg-teal-500/20 text-teal-500",
+  "bg-orange-500/20 text-orange-500",
 ];
 
 export function getIconBgClass(index: number) {
@@ -195,15 +204,15 @@ export function getIconBgClass(index: number) {
 }
 
 export const CARD_GRADIENTS = [
-  "from-primary/5 via-transparent to-sky-500/5",
-  "from-sky-500/5 via-transparent to-emerald-500/5",
-  "from-emerald-500/5 via-transparent to-amber-500/5",
-  "from-amber-500/5 via-transparent to-rose-500/5",
-  "from-rose-500/5 via-transparent to-violet-500/5",
-  "from-violet-500/5 via-transparent to-indigo-500/5",
-  "from-indigo-500/5 via-transparent to-teal-500/5",
-  "from-teal-500/5 via-transparent to-orange-500/5",
-  "from-orange-500/5 via-transparent to-primary/5",
+  "from-primary/25 via-sky-500/15 to-transparent",
+  "from-sky-500/25 via-emerald-500/15 to-transparent",
+  "from-emerald-500/25 via-amber-500/15 to-transparent",
+  "from-amber-500/25 via-rose-500/15 to-transparent",
+  "from-rose-500/25 via-violet-500/15 to-transparent",
+  "from-violet-500/25 via-indigo-500/15 to-transparent",
+  "from-indigo-500/25 via-teal-500/15 to-transparent",
+  "from-teal-500/25 via-orange-500/15 to-transparent",
+  "from-orange-500/25 via-primary/15 to-transparent",
 ];
 
 export function getCardGradient(index: number) {
@@ -233,4 +242,17 @@ export function hexToRgba(hex: string, alpha: number) {
 export function getChartColor(index: number, alpha = 1) {
   const hex = CHART_PALETTE[index % CHART_PALETTE.length];
   return alpha < 1 ? hexToRgba(hex, alpha) : hex;
+}
+
+export const PAGE_GRADIENTS = {
+  dashboard: "from-primary/10 via-sky-500/5 to-emerald-500/5",
+  inventory: "from-sky-500/10 via-emerald-500/5 to-teal-500/5",
+  stockIn: "from-amber-500/10 via-orange-500/5 to-rose-500/5",
+  reports: "from-violet-500/10 via-indigo-500/5 to-primary-500/5",
+  technicians: "from-emerald-500/10 via-teal-500/5 to-sky-500/5",
+  categories: "from-rose-500/10 via-violet-500/5 to-primary-500/5",
+};
+
+export function getPageGradient(page: keyof typeof PAGE_GRADIENTS) {
+  return PAGE_GRADIENTS[page];
 }
