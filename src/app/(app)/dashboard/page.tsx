@@ -3,7 +3,6 @@
 import * as React from "react";
 import Link from "next/link";
 import {
-  AlertTriangle,
   ArrowUpRight,
   Boxes,
   CalendarDays,
@@ -11,7 +10,6 @@ import {
   CircleDot,
   ClipboardList,
   Package,
-  PackageX,
   Timer,
   TrendingUp,
   TrendingDown,
@@ -19,6 +17,7 @@ import {
   Building2,
   BarChart3,
   Activity as ActivityIcon,
+  AlertCircle,
 } from "lucide-react";
 import { useApp } from "@/store/app-store";
 import { StatCard } from "@/components/ui/StatCard";
@@ -182,11 +181,9 @@ export default function DashboardPage() {
         </div>
 
         {/* Primary Stats Row */}
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
           <StatCard icon={Boxes} label="Range Of Devices" value={formatNumber(stats.totalItems)} change={4.2} trend="up" loading={loading} iconClass="bg-primary/20 text-primary" />
           <StatCard icon={Package} label="Depth of Devices(Total Quantity of All Devices)" value={formatNumber(stats.totalStock)} change={2.8} trend="up" loading={loading} iconClass="bg-sky-500/20 text-sky-500" />
-          <StatCard icon={AlertTriangle} label="Low Stock" value={formatNumber(stats.lowStock)} change={-3.1} trend="down" loading={loading} iconClass="bg-amber-500/20 text-amber-500" />
-          <StatCard icon={PackageX} label="Out of Stock" value={formatNumber(stats.outOfStock)} change={1.4} trend="up" loading={loading} iconClass="bg-rose-500/20 text-rose-500" />
           <StatCard icon={ClipboardList} label="Pending Requests" value={formatNumber(stats.pendingRequests)} change={-12.5} trend="down" loading={loading} iconClass="bg-violet-500/20 text-violet-500" />
         </div>
 
@@ -312,7 +309,7 @@ export default function DashboardPage() {
 
         {(role === "user" || role === "department-user" || role === "department-manager") && (
           <div className="bg-primary/10 text-primary-foreground flex items-center gap-2 rounded-lg border border-primary/20 px-4 py-3 text-xs">
-            <AlertTriangle className="size-4" />
+            <AlertCircle className="size-4" />
             You&apos;re viewing as <span className="font-medium">{activeDepartment}</span> — actions are limited to your department.
           </div>
         )}
