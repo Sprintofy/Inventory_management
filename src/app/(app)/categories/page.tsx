@@ -88,7 +88,7 @@ export default function CategoriesPage() {
                 <Box className="size-5" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground font-medium">Total Items</p>
+                <p className="text-xs text-muted-foreground font-medium">Range Of Devices</p>
                 <p className="text-2xl font-bold tabular-nums text-foreground">{state.inventory.length}</p>
               </div>
             </CardContent>

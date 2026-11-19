@@ -210,7 +210,7 @@ export default function ReportsPage() {
               <Tabs value={reportView} onValueChange={(v) => setReportView(v as "inventory" | "tickets")} className="h-auto border-none">
                 <TabsList className="px-2 bg-violet-500/10 border-none rounded-md">
                   <TabsTrigger value="inventory">Inventory Report</TabsTrigger>
-                  <TabsTrigger value="tickets">Ticket Report</TabsTrigger>
+                  <TabsTrigger value="tickets">Job Report</TabsTrigger>
                 </TabsList>
               </Tabs>
               <Select value={dateFilter} onValueChange={(v) => setDateFilter(v as "today" | "week" | "month" | "all")}>
@@ -377,12 +377,12 @@ export default function ReportsPage() {
           </>
         )}
 
-        {/* Ticket Report View */}
+        {/* Job Report View */}
         {reportView === "tickets" && (
           <>
             <div className="space-y-4">
               <p className="text-muted-foreground text-sm">
-                Ticket Report · {ticketReportData.length} ticket{ticketReportData.length === 1 ? "" : "s"}
+                Job Report · {ticketReportData.length} job{ticketReportData.length === 1 ? "" : "s"}
               </p>
 
               <div className="overflow-x-auto">
