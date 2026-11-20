@@ -3,7 +3,7 @@
 import * as React from "react";
 import { use, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BarChart3, Building2, ChevronRight, FileDown, MoreHorizontal, Package, Pencil, Plus, Ticket as TicketIcon, Trash2 } from "lucide-react";
+import { BarChart3, Building2, ChevronRight, FileDown, MoreHorizontal, Package, Pencil, Plus, Trash2 } from "lucide-react";
 import { BackButton } from "@/components/ui/BackButton";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,6 @@ export default function DepartmentDetailPage({ params }: { params: Promise<{ id:
     () => state.inventory.filter((i) => i.department === dept?.name),
     [state.inventory, dept]
   );
-  const routedTickets = React.useMemo<any[]>(() => [], [dept]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -87,10 +86,6 @@ export default function DepartmentDetailPage({ params }: { params: Promise<{ id:
           <p className="text-muted-foreground flex items-center gap-2 text-xs"><Package className="size-3.5" /> Inventory Items</p>
           <p className="mt-1 text-2xl font-semibold tabular-nums">{items.length}</p>
         </CardContent></Card>
-        <Card className="py-4"><CardContent>
-          <p className="text-muted-foreground flex items-center gap-2 text-xs"><TicketIcon className="size-3.5" /> Routed Tickets</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums">{routedTickets.length}</p>
-        </CardContent></Card>
       </div>
 
       <Card>
@@ -120,33 +115,6 @@ export default function DepartmentDetailPage({ params }: { params: Promise<{ id:
                 </div>
               ))}
               {items.length > 6 && <p className="text-muted-foreground pt-1 text-center text-xs">+{items.length - 6} more items — see the Inventory Report</p>}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex-row items-center justify-between space-y-0">
-          <CardTitle className="flex items-center gap-2 text-base"><TicketIcon className="text-primary size-4" /> Routed Tickets</CardTitle>
-          <Badge variant="secondary">{routedTickets.length}</Badge>
-        </CardHeader>
-        <CardContent>
-          {routedTickets.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No tickets routed to {dept.name}.</p>
-          ) : (
-            <div className="space-y-2">
-              {routedTickets.slice(0, 5).map((t) => (
-                <div key={t.id} className="flex items-center justify-between rounded-lg border px-3 py-2.5">
-                  <div>
-                    <p className="text-sm font-medium">{t.title}</p>
-                    <p className="text-muted-foreground text-xs">{t.id} · {t.category}</p>
-                  </div>
-                  <div className="text-right">
-                    <Badge variant={t.status === "closed" ? "success" : t.status === "in-progress" ? "info" : "warning"} className="capitalize">{t.status}</Badge>
-                    <p className="text-muted-foreground mt-1 text-xs">{formatDate(t.createdAt)}</p>
-                  </div>
-                </div>
-              ))}
             </div>
           )}
         </CardContent>
