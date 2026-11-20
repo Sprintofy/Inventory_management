@@ -18,24 +18,37 @@ import {
   BarChart3,
   Activity as ActivityIcon,
   AlertCircle,
+  PieChart,
+  LineChart,
+  TrendingUp as TrendingUpIcon,
 } from "lucide-react";
 import { useApp } from "@/store/app-store";
 import { StatCard } from "@/components/ui/StatCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { InventoryChart, DepartmentChart } from "@/components/dashboard/charts";
+import {
+  InventoryChart,
+  DepartmentChart,
+  StockMovementChart,
+  CategoryDistributionChart,
+  StockTrendChart,
+  TopItemsChart,
+  LowStockAlertChart,
+  MonthlyComparisonChart,
+} from "@/components/dashboard/charts";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useFakeLoading } from "@/hooks/use-fake-loading";
 import { formatNumber, timeAgo, cn } from "@/lib/utils";
 import {
-  getTicketsByStatus,
-  getTicketsByPriority,
-  getTechnicianWorkload,
-  getTotalTickets,
-} from "@/lib/dashboard-selectors";
+  getStatusColors,
+  getCategoryColor,
+  getIconBgClass,
+  getCardGradient,
+  CHART_PALETTE,
+  getPageGradient,
+} from "@/lib/theme";
 import { workloadLevel, type WorkloadLevelKey } from "@/lib/workload";
-import { getStatusColors, getCategoryColor, getIconBgClass, getCardGradient, CHART_PALETTE, getPageGradient } from "@/lib/theme";
 
 const priorityClass: Record<string, string> = {
   low: "bg-muted text-muted-foreground",
@@ -225,6 +238,73 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               {loading ? <Skeleton className="h-[230px] w-full" /> : <DepartmentChart data={deptChart} />}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Additional Charts Row */}
+        <div className="grid gap-6 xl:grid-cols-2">
+          <Card className="relative overflow-hidden" style={{ background: "linear-gradient(135deg, rgba(59,130,246,0.08) 0%, rgba(14,165,233,0.05) 100%)" }}>
+            <CardHeader>
+              <CardTitle className="text-base">Stock Movement</CardTitle>
+              <p className="text-muted-foreground text-xs">Stock In vs Stock Out over time</p>
+            </CardHeader>
+            <CardContent>
+              {loading ? <Skeleton className="h-[240px] w-full" /> : <StockMovementChart range={range} />}
+            </CardContent>
+          </Card>
+
+          <Card className="relative overflow-hidden" style={{ background: "linear-gradient(135deg, rgba(14,165,233,0.08) 0%, rgba(16,185,129,0.05) 100%)" }}>
+            <CardHeader>
+              <CardTitle className="text-base">Category Distribution</CardTitle>
+              <p className="text-muted-foreground text-xs">Stock movements by category</p>
+            </CardHeader>
+            <CardContent>
+              {loading ? <Skeleton className="h-[300px] w-full" /> : <CategoryDistributionChart />}
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid gap-6 xl:grid-cols-2">
+          <Card className="relative overflow-hidden" style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(99,102,241,0.05) 100%)" }}>
+            <CardHeader>
+              <CardTitle className="text-base">Stock Trend</CardTitle>
+              <p className="text-muted-foreground text-xs">Running balance over time</p>
+            </CardHeader>
+            <CardContent>
+              {loading ? <Skeleton className="h-[280px] w-full" /> : <StockTrendChart range={range} />}
+            </CardContent>
+          </Card>
+
+          <Card className="relative overflow-hidden" style={{ background: "linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(249,115,22,0.05) 100%)" }}>
+            <CardHeader>
+              <CardTitle className="text-base">Top Items</CardTitle>
+              <p className="text-muted-foreground text-xs">Most moved items by quantity</p>
+            </CardHeader>
+            <CardContent>
+              {loading ? <Skeleton className="h-[280px] w-full" /> : <TopItemsChart />}
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid gap-6 xl:grid-cols-2">
+          <Card className="relative overflow-hidden" style={{ background: "linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(245,158,11,0.05) 100%)" }}>
+            <CardHeader>
+              <CardTitle className="text-base">Low Stock Alert</CardTitle>
+              <p className="text-muted-foreground text-xs">Items by stock status</p>
+            </CardHeader>
+            <CardContent>
+              {loading ? <Skeleton className="h-[200px] w-full" /> : <LowStockAlertChart />}
+            </CardContent>
+          </Card>
+
+          <Card className="relative overflow-hidden" style={{ background: "linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(249,115,22,0.05) 100%)" }}>
+            <CardHeader>
+              <CardTitle className="text-base">Monthly Comparison</CardTitle>
+              <p className="text-muted-foreground text-xs">Monthly stock in vs out</p>
+            </CardHeader>
+            <CardContent>
+              {loading ? <Skeleton className="h-[240px] w-full" /> : <MonthlyComparisonChart />}
             </CardContent>
           </Card>
         </div>
