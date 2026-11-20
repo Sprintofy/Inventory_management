@@ -91,7 +91,6 @@ export default function DepartmentsPage() {
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {departments.map((d) => {
             const items = state.inventory.filter((i) => i.department === d.name);
-            const openTickets = 0;
             return (
               <Card key={d.id} className="group relative cursor-pointer py-5 transition-shadow hover:shadow-md" onClick={() => router.push(`/departments/${d.id}`)}>
                 <CardContent className="px-5">
@@ -121,9 +120,8 @@ export default function DepartmentsPage() {
                     </div>
                   </div>
                   <p className="text-muted-foreground mt-3 text-xs">Manager: <span className="text-foreground font-medium">{d.manager}</span></p>
-                  <div className="mt-4 grid grid-cols-2 gap-2 border-t pt-3 text-center">
+                  <div className="mt-4 grid grid-cols-1 gap-2 border-t pt-3 text-center">
                     <div><p className="text-sm font-semibold">{formatNumber(items.length)}</p><p className="text-muted-foreground text-[10px]">Items</p></div>
-                    <div><p className="text-sm font-semibold">{openTickets}</p><p className="text-muted-foreground text-[10px]">Tickets</p></div>
                   </div>
                 </CardContent>
               </Card>
