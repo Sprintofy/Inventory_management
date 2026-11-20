@@ -24,7 +24,7 @@ import { StatCard } from "@/components/ui/StatCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { InventoryChart, DepartmentChart, StockHealthChart } from "@/components/dashboard/charts";
+import { InventoryChart, DepartmentChart } from "@/components/dashboard/charts";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useFakeLoading } from "@/hooks/use-fake-loading";
 import { formatNumber, timeAgo, cn } from "@/lib/utils";
@@ -117,18 +117,6 @@ export default function DashboardPage() {
       color: CHART_PALETTE[idx],
     }));
   }, [activeDepartment, allItems, stats.totalStock, state.departments]);
-
-  const health = React.useMemo(() => {
-    const source = activeDepartment === "all" ? allItems : items;
-    const healthy = source.filter((i) => i.quantity > 10).length;
-    const lowStock = source.filter((i) => i.quantity > 0 && i.quantity <= 10).length;
-    const outOfStock = source.filter((i) => i.quantity <= 0).length;
-    return [
-      { label: "Healthy", value: healthy, color: CHART_PALETTE[2] },
-      { label: "Low Stock", value: lowStock, color: CHART_PALETTE[3] },
-      { label: "Out of Stock", value: outOfStock, color: CHART_PALETTE[4] },
-    ];
-  }, [activeDepartment, items, allItems]);
 
   const recentActivity = React.useMemo(() => {
     return state.activities
@@ -241,15 +229,7 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-3">
-          <Card className="relative overflow-hidden" style={{ background: "linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(245,158,11,0.05) 100%)" }}>
-            <CardHeader>
-              <CardTitle className="text-base">Stock Health</CardTitle>
-              <p className="text-muted-foreground text-xs">Items by stock status</p>
-            </CardHeader>
-            <CardContent>{loading ? <Skeleton className="h-[160px] w-full" /> : <StockHealthChart data={health} />}</CardContent>
-          </Card>
-
+        <div className="grid gap-6 xl:grid-cols-2">
           <Card className="xl:col-span-2 relative overflow-hidden" style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.08) 0%, rgba(99,102,241,0.05) 100%)" }}>
             <CardHeader className="flex-row items-center justify-between">
               <div>
