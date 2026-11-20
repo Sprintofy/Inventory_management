@@ -6,7 +6,6 @@ import {
   ArrowUpRight,
   Boxes,
   CalendarDays,
-  ClipboardList,
   Package,
   Users as UsersIcon,
   Building2,
@@ -76,9 +75,8 @@ export default function DashboardPage() {
   const stats = React.useMemo(() => {
     const totalItems = items.length;
     const totalStock = items.reduce((s, i) => s + i.quantity, 0);
-    const pendingRequests = state.requests.filter((r) => r.status === "pending" && (activeDepartment === "all" || r.department === activeDepartment)).length;
-    return { totalItems, totalStock, pendingRequests };
-  }, [items, state.requests, activeDepartment]);
+    return { totalItems, totalStock };
+  }, [items]);
 
   const deptChart = React.useMemo(() => {
     const depts = state.departments;
@@ -144,10 +142,9 @@ export default function DashboardPage() {
         </div>
 
         {/* Primary Stats Row */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <StatCard icon={Boxes} label="Range Of Devices" value={formatNumber(stats.totalItems)} loading={loading} iconClass="bg-primary/20 text-primary" />
           <StatCard icon={Package} label="Depth of Devices(Total Quantity of All Devices)" value={formatNumber(stats.totalStock)} loading={loading} iconClass="bg-sky-500/20 text-sky-500" />
-          <StatCard icon={ClipboardList} label="Pending Requests" value={formatNumber(stats.pendingRequests)} loading={loading} iconClass="bg-violet-500/20 text-violet-500" />
         </div>
 
         {/* Secondary Quick Stats */}
