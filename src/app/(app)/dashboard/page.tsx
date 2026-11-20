@@ -101,9 +101,8 @@ export default function DashboardPage() {
   const quickStats = React.useMemo(() => [
     { label: "Departments", value: state.departments.length, icon: Building2, color: "indigo" },
     { label: "Categories", value: state.categories.length, icon: BarChart3, color: "teal" },
-    { label: "Technicians", value: state.technicians.length, icon: UsersIcon, color: "violet" },
     { label: "Activities (24h)", value: state.activities.filter(a => new Date(a.date) > new Date(Date.now() - 24*60*60*1000)).length, icon: ActivityIcon, color: "orange" },
-  ], [state.departments.length, state.categories.length, state.technicians.length, state.activities]);
+  ], [state.departments.length, state.categories.length, state.activities]);
 
   const pageGradient = getPageGradient("dashboard");
 

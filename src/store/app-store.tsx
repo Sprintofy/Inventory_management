@@ -11,7 +11,6 @@ import type {
   StockInRecord,
   StockTransaction,
   User,
-  Technician,
 } from "@/types";
 import { uid } from "@/lib/utils";
 import type {
@@ -63,8 +62,7 @@ export type Permission =
   | "reports.view"
   | "activity.view"
   | "settings.manage"
-  | "global.view"
-  | "technicians.manage";
+  | "global.view";
 
 const rolePermissions: Record<Role, Permission[]> = {
   "super-admin": [
@@ -82,7 +80,6 @@ const rolePermissions: Record<Role, Permission[]> = {
     "activity.view",
     "settings.manage",
     "global.view",
-    "technicians.manage",
   ],
   admin: [
     "inventory.manage",
@@ -98,7 +95,6 @@ const rolePermissions: Record<Role, Permission[]> = {
     "reports.view",
     "activity.view",
     "settings.manage",
-    "technicians.manage",
   ],
   user: [
     "inventory.manage",
@@ -147,7 +143,6 @@ interface AppState {
   stockInStats: { totalIn: number; totalOut: number };
   departments: Department[];
   activities: Activity[];
-  technicians: Technician[];
   settings: Settings;
   mobileNavOpen: boolean;
   movements: never[];
@@ -177,7 +172,6 @@ const emptyState = (user: User | null): AppState => ({
   stockInStats: { totalIn: 0, totalOut: 0 },
   departments: [],
   activities: [],
-  technicians: [],
   settings: defaultSettings,
   mobileNavOpen: false,
   movements: [],
@@ -238,9 +232,6 @@ interface AppContextValue {
   addDepartment: (d: Department) => void;
   updateDepartment: (d: Department) => void;
   deleteDepartment: (id: string) => void;
-  addTechnician: (t: Omit<Technician, "id">) => void;
-  updateTechnician: (t: Technician) => void;
-  deleteTechnician: (id: string) => void;
   log: (
     action: string,
     module: string,
@@ -266,7 +257,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const loadAll = React.useCallback(async (t: string) => {
     const b = await apiFetch("/system/bootstrap", {}, t);
     return {
-      technicians: b.technicians,
       departments: buildDepartments(b.departments),
       categories: b.categories,
       inventory: b.items,
@@ -812,68 +802,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [authCall, fail],
   );
 
-  const addTechnician = React.useCallback(
-    (t: Omit<Technician, "id">) => {
-      void (async () => {
-        try {
-          const created = await authCall("/technicians", {
-            method: "POST",
-            body: JSON.stringify({ ...t, id: uid("TECH") }),
-          });
-          setState((s) => ({
-            ...s,
-            technicians: [created as Technician, ...s.technicians],
-          }));
-          toast.success("Technician added successfully");
-        } catch (e) {
-          fail(e, "Could not add technician");
-        }
-      })();
-    },
-    [authCall, fail],
-  );
-
-  const updateTechnician = React.useCallback(
-    (t: Technician) => {
-      void (async () => {
-        try {
-          const updated = await authCall(`/technicians/${t.id}`, {
-            method: "PUT",
-            body: JSON.stringify(t),
-          });
-          setState((s) => ({
-            ...s,
-            technicians: s.technicians.map((x) =>
-              x.id === t.id ? (updated as Technician) : x,
-            ),
-          }));
-          toast.success("Technician updated successfully");
-        } catch (e) {
-          fail(e, "Could not update technician");
-        }
-      })();
-    },
-    [authCall, fail],
-  );
-
-  const deleteTechnician = React.useCallback(
-    (id: string) => {
-      void (async () => {
-        try {
-          await authCall(`/technicians/${id}`, { method: "DELETE" });
-          setState((s) => ({
-            ...s,
-            technicians: s.technicians.filter((t) => t.id !== id),
-          }));
-          toast.success("Technician deleted");
-        } catch (e) {
-          fail(e, "Could not delete technician");
-        }
-      })();
-    },
-    [authCall, fail],
-  );
-
   const value: AppContextValue = React.useMemo(
     () => ({
       state,
@@ -906,9 +834,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addDepartment,
       updateDepartment,
       deleteDepartment,
-      addTechnician,
-      updateTechnician,
-      deleteTechnician,
       log,
     }),
     [
@@ -942,9 +867,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addDepartment,
       updateDepartment,
       deleteDepartment,
-      addTechnician,
-      updateTechnician,
-      deleteTechnician,
       log,
     ],
   );

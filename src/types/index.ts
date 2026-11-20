@@ -206,21 +206,3 @@ export type PageSection =
   | "System"
   | "Activity Log"
   | "Settings"
-  | "Technicians";
-
-export interface Technician {
-  id: string;
-  name: string;
-  email: string;
-  /** Login password (demo plain-text). Defaults to TECHNICIAN_DEMO_PASSWORD. */
-  password?: string;
-  employeeId: string;
-  specialization: string;
-  availability: "Available" | "Busy" | "Offline";
-  status: "Active" | "Inactive";
-  activeTickets: number;
-  resolvedTickets: number;
-  phone?: string;
-  lastActive?: string;
-  color?: string;
-}

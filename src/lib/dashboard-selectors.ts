@@ -1,11 +1,11 @@
-import type { Asset, Technician } from "@/types";
+import type { Asset } from "@/types";
 
 type Priority = "low" | "medium" | "high" | "critical";
 
 /**
  * Shared frontend selectors used by the dashboard so every displayed metric
- * is derived from the same underlying mock data as the Tickets / Technicians /
- * Inventory pages. Do not hardcode values in dashboard components.
+ * is derived from the same underlying mock data as the Tickets / Inventory
+ * pages. Do not hardcode values in dashboard components.
  */
 
 export const ACTIVE_TICKET_STATUSES: any[] = ["open", "in-progress", "partially-resolved"];
@@ -60,32 +60,6 @@ export function getTicketsByCategory(tickets: any[], department: string | "all" 
   const map = new Map<string, number>();
   for (const t of scoped) map.set(t.category, (map.get(t.category) ?? 0) + 1);
   return [...map.entries()].sort((a, b) => b[1] - a[1]);
-}
-
-/**
- * Active-ticket count per technician, calculated from actual ticket
- * assignments (ticket.technicianId → technician.id) rather than a stored
- * counter, so it always stays synchronized with the Tickets page.
- */
-export function getTechnicianWorkload(tickets: any[]): Map<string, number> {
-  const workload = new Map<string, number>();
-  for (const t of tickets) {
-    if (!t.technicianId || !ACTIVE_TICKET_STATUSES.includes(t.status)) continue;
-    workload.set(t.technicianId, (workload.get(t.technicianId) ?? 0) + 1);
-  }
-  return workload;
-}
-
-export function getTotalTechnicians(technicians: Technician[]) {
-  return technicians.length;
-}
-
-export function getAvailableTechnicians(technicians: Technician[]) {
-  return technicians.filter((t) => t.availability === "Available" && t.status === "Active").length;
-}
-
-export function getBusyTechnicians(technicians: Technician[]) {
-  return technicians.filter((t) => t.availability === "Busy").length;
 }
 
 export function getTotalAssets(assets: Asset[]) {
