@@ -2,12 +2,6 @@ export type Role = "super-admin" | "admin" | "user" | "department-manager" | "de
 
 export type StockStatus = "in-stock" | "low-stock" | "out-of-stock" | "overstock";
 
-export type TransferStatus = "pending" | "approved" | "in-transit" | "completed" | "rejected";
-
-export type RequestStatus = "pending" | "approved" | "rejected" | "partially-fulfilled" | "completed";
-
-export type RequestPriority = "low" | "medium" | "high" | "critical";
-
 export type POStatus = "draft" | "pending-approval" | "approved" | "ordered" | "partially-received" | "received" | "cancelled";
 
 export type AssetStatus = "available" | "assigned" | "under-repair" | "damaged" | "lost" | "retired";
@@ -84,20 +78,6 @@ export interface StockTransaction {
   note?: string;
 }
 
-export interface RequestRecord {
-  id: string;
-  requestedBy: string;
-  department: string;
-  subDepartment?: string;
-  itemId: string;
-  itemName: string;
-  quantity: number;
-  priority: RequestPriority;
-  date: string;
-  status: RequestStatus;
-  reason?: string;
-}
-
 export interface PurchaseOrderItem {
   name: string;
   qty: number;
@@ -114,21 +94,6 @@ export interface PurchaseOrder {
   orderDate: string;
   expectedDelivery: string;
   status: POStatus;
-}
-
-export interface Supplier {
-  id: string;
-  name: string;
-  contactPerson: string;
-  email: string;
-  phone: string;
-  address: string;
-  categories: string[];
-  itemsSupplied: number;
-  purchaseOrders: number;
-  totalSpend: number;
-  status: "active" | "inactive";
-  rating: number;
 }
 
 export interface Asset {
@@ -184,22 +149,6 @@ export interface Location {
   parent?: string;
 }
 
-export interface Transfer {
-  id: string;
-  transferNo: string;
-  fromDepartment: string;
-  toDepartment: string;
-  itemId: string;
-  itemName: string;
-  quantity: number;
-  reason: string;
-  requestedBy: string;
-  date: string;
-  status: TransferStatus;
-  approvedBy?: string;
-  approvalDate?: string;
-}
-
 export interface StockInRecord {
   id: number | string;
   workOrderId: string;
@@ -229,15 +178,6 @@ export interface Activity {
   date: string;
 }
 
-export interface NotificationItem {
-  id: string;
-  title: string;
-  description: string;
-  date: string;
-  read: boolean;
-  type: "info" | "success" | "warning" | "danger";
-}
-
 export interface DemoAccount {
   email: string;
   password: string;
@@ -251,13 +191,10 @@ export type PageSection =
   | "Inventory"
   | "Stock In"
   | "Stock Out"
-  | "Transfers"
   | "Adjustments"
   | "Operations"
-  | "Requests"
   | "Tickets"
   | "Purchase Orders"
-  | "Suppliers"
   | "Assets"
   | "Categories"
   | "Locations"

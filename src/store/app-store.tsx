@@ -7,13 +7,9 @@ import type {
   Category,
   Department,
   InventoryItem,
-  NotificationItem,
-  RequestRecord,
   Role,
   StockInRecord,
   StockTransaction,
-  Supplier,
-  Transfer,
   User,
   Technician,
 } from "@/types";
@@ -57,14 +53,9 @@ export type Permission =
   | "inventory.manage"
   | "stock-in.create"
   | "stock-out.create"
-  | "requests.create"
-  | "requests.approve"
-  | "transfers.create"
-  | "transfers.approve"
   | "po.create"
   | "po.manage"
   | "tickets.manage"
-  | "suppliers.manage"
   | "assets.manage"
   | "categories.manage"
   | "locations.manage"
@@ -80,14 +71,9 @@ const rolePermissions: Record<Role, Permission[]> = {
     "inventory.manage",
     "stock-in.create",
     "stock-out.create",
-    "requests.create",
-    "requests.approve",
-    "transfers.create",
-    "transfers.approve",
     "po.create",
     "po.manage",
     "tickets.manage",
-    "suppliers.manage",
     "assets.manage",
     "categories.manage",
     "locations.manage",
@@ -102,14 +88,9 @@ const rolePermissions: Record<Role, Permission[]> = {
     "inventory.manage",
     "stock-in.create",
     "stock-out.create",
-    "requests.create",
-    "requests.approve",
-    "transfers.create",
-    "transfers.approve",
     "po.create",
     "po.manage",
     "tickets.manage",
-    "suppliers.manage",
     "assets.manage",
     "categories.manage",
     "locations.manage",
@@ -123,16 +104,12 @@ const rolePermissions: Record<Role, Permission[]> = {
     "inventory.manage",
     "stock-in.create",
     "stock-out.create",
-    "requests.create",
-    "transfers.create",
     "reports.view",
   ],
   "department-manager": [
     "inventory.manage",
     "stock-in.create",
     "stock-out.create",
-    "requests.create",
-    "transfers.create",
     "reports.view",
     "tickets.manage",
   ],
@@ -140,8 +117,6 @@ const rolePermissions: Record<Role, Permission[]> = {
     "inventory.manage",
     "stock-in.create",
     "stock-out.create",
-    "requests.create",
-    "transfers.create",
     "reports.view",
   ],
   viewer: ["reports.view"],
@@ -155,9 +130,6 @@ export interface Settings {
   defaultReorderLevel: number;
   lowStockThreshold: number;
   notifyLowStock: boolean;
-  notifyRequests: boolean;
-  notifyTransfers: boolean;
-  notifyPOs: boolean;
   theme: "light" | "dark" | "system";
   sidebarCollapsed: boolean;
   showNotifications: boolean;
@@ -168,17 +140,13 @@ interface AppState {
   department: string;
   inventory: InventoryItem[];
   transactions: StockTransaction[];
-  requests: RequestRecord[];
-  suppliers: Supplier[];
   categories: Category[];
-  transfers: Transfer[];
   stockIn: StockInRecord[];
   stockInRecords: StockInRecord[];
   stockInHistory: StockInRecord[];
   stockInStats: { totalIn: number; totalOut: number };
   departments: Department[];
   activities: Activity[];
-  notifications: NotificationItem[];
   technicians: Technician[];
   settings: Settings;
   mobileNavOpen: boolean;
@@ -192,9 +160,6 @@ const defaultSettings: Settings = {
   defaultReorderLevel: 10,
   lowStockThreshold: 10,
   notifyLowStock: true,
-  notifyRequests: true,
-  notifyTransfers: true,
-  notifyPOs: true,
   theme: "light",
   sidebarCollapsed: false,
   showNotifications: true,
@@ -205,17 +170,13 @@ const emptyState = (user: User | null): AppState => ({
   department: "all",
   inventory: [],
   transactions: [],
-  requests: [],
-  suppliers: [],
   categories: [],
-  transfers: [],
   stockIn: [],
   stockInRecords: [],
   stockInHistory: [],
   stockInStats: { totalIn: 0, totalOut: 0 },
   departments: [],
   activities: [],
-  notifications: [],
   technicians: [],
   settings: defaultSettings,
   mobileNavOpen: false,
@@ -271,14 +232,6 @@ interface AppContextValue {
     category?: string;
   }) => Promise<void>;
   fetchStockInHistory: (itemId: string) => Promise<void>;
-  addTransfer: (
-    t: Omit<Transfer, "id" | "transferNo" | "status" | "requestedBy" | "date">,
-  ) => void;
-  updateTransfer: (id: string, status: Transfer["status"]) => void;
-  addRequest: (
-    r: Omit<RequestRecord, "id" | "status" | "requestedBy" | "date">,
-  ) => void;
-  updateRequest: (id: string, status: RequestRecord["status"]) => void;
   addCategory: (c: Category) => void;
   updateCategory: (c: Category) => void;
   deleteCategory: (id: string) => void;
@@ -294,7 +247,6 @@ interface AppContextValue {
     item: string,
     department?: string,
   ) => void;
-  markNotificationsRead: () => void;
 }
 
 const AppContext = React.createContext<AppContextValue | null>(null);
@@ -317,14 +269,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       technicians: b.technicians,
       departments: buildDepartments(b.departments),
       categories: b.categories,
-      suppliers: b.suppliers,
       inventory: b.items,
       stockIn: b.stockIn,
       transactions: b.transactions,
-      transfers: b.transfers,
-      requests: b.requests,
       activities: b.activities,
-      notifications: b.notifications,
     };
   }, []);
 
@@ -745,120 +693,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [authCall, fail],
   );
 
-  const addTransfer = React.useCallback(
-    (
-      t: Omit<
-        Transfer,
-        "id" | "transferNo" | "status" | "requestedBy" | "date"
-      >,
-    ) => {
-      void (async () => {
-        try {
-          const created = await authCall("/system/transfers", {
-            method: "POST",
-            body: JSON.stringify({
-              ...t,
-              id: uid("TRF"),
-              transferNo: uid("TRF-2026"),
-              status: "pending",
-              requestedBy: state.user?.name ?? "Admin",
-              date: new Date().toISOString(),
-            }),
-          });
-          setState((s) => ({
-            ...s,
-            transfers: [created as Transfer, ...s.transfers],
-          }));
-          toast.success("Transfer created successfully");
-        } catch (e) {
-          fail(e, "Could not create transfer");
-        }
-      })();
-    },
-    [authCall, fail, state.user],
-  );
-
-  const updateTransfer = React.useCallback(
-    (id: string, status: Transfer["status"]) => {
-      void (async () => {
-        try {
-          await authCall(`/system/transfers/${id}`, {
-            method: "PUT",
-            body: JSON.stringify({
-              status,
-              approvedBy:
-                status === "pending" || status === "rejected"
-                  ? undefined
-                  : (state.user?.name ?? "Admin"),
-            }),
-          });
-          setState((s) => ({
-            ...s,
-            transfers: s.transfers.map((x) =>
-              x.id === id
-                ? { ...x, status, approvedBy: state.user?.name ?? x.approvedBy }
-                : x,
-            ),
-          }));
-          toast.success(`Transfer ${status.replace("-", " ")}`);
-        } catch (e) {
-          fail(e, "Could not update transfer");
-        }
-      })();
-    },
-    [authCall, fail, state.user],
-  );
-
-  const addRequest = React.useCallback(
-    (r: Omit<RequestRecord, "id" | "status" | "requestedBy" | "date">) => {
-      void (async () => {
-        try {
-          const created = await authCall("/system/requests", {
-            method: "POST",
-            body: JSON.stringify({
-              ...r,
-              id: uid("REQ-2026"),
-              status: "pending",
-              requestedBy: state.user?.name ?? "Admin",
-              date: new Date().toISOString(),
-            }),
-          });
-          setState((s) => ({
-            ...s,
-            requests: [created as RequestRecord, ...s.requests],
-          }));
-          toast.success("Request submitted successfully");
-        } catch (e) {
-          fail(e, "Could not submit request");
-        }
-      })();
-    },
-    [authCall, fail, state.user],
-  );
-
-  const updateRequest = React.useCallback(
-    (id: string, status: RequestRecord["status"]) => {
-      void (async () => {
-        try {
-          await authCall(`/system/requests/${id}`, {
-            method: "PUT",
-            body: JSON.stringify({ status }),
-          });
-          setState((s) => ({
-            ...s,
-            requests: s.requests.map((r) =>
-              r.id === id ? { ...r, status } : r,
-            ),
-          }));
-          toast.success(`Request ${status}`);
-        } catch (e) {
-          fail(e, "Could not update request");
-        }
-      })();
-    },
-    [authCall, fail],
-  );
-
   const addCategory = React.useCallback(
     (c: Category) => {
       void (async () => {
@@ -1040,16 +874,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [authCall, fail],
   );
 
-  const markNotificationsRead = React.useCallback(() => {
-    setState((s) => ({
-      ...s,
-      notifications: s.notifications.map((n) => ({ ...n, read: true })),
-    }));
-    void authCall("/system/notifications/read", { method: "PUT" }).catch(
-      () => undefined,
-    );
-  }, [authCall]);
-
   const value: AppContextValue = React.useMemo(
     () => ({
       state,
@@ -1076,10 +900,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       fetchStockIn,
       fetchStockInStats,
       fetchStockInHistory,
-      addTransfer,
-      updateTransfer,
-      addRequest,
-      updateRequest,
       addCategory,
       updateCategory,
       deleteCategory,
@@ -1090,7 +910,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       updateTechnician,
       deleteTechnician,
       log,
-      markNotificationsRead,
     }),
     [
       state,
@@ -1117,10 +936,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       fetchStockIn,
       fetchStockInStats,
       fetchStockInHistory,
-      addTransfer,
-      updateTransfer,
-      addRequest,
-      updateRequest,
       addCategory,
       updateCategory,
       deleteCategory,
@@ -1131,7 +946,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       updateTechnician,
       deleteTechnician,
       log,
-      markNotificationsRead,
     ],
   );
 

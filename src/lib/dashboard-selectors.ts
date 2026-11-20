@@ -1,5 +1,6 @@
 import type { Asset, Technician } from "@/types";
-import type { RequestPriority } from "@/types";
+
+type Priority = "low" | "medium" | "high" | "critical";
 
 /**
  * Shared frontend selectors used by the dashboard so every displayed metric
@@ -44,7 +45,7 @@ export function getClosedTickets(tickets: any[], department: string | "all" = "a
   return getTicketsByStatus(tickets, department).closed;
 }
 
-export function getTicketsByPriority(tickets: any[], department: string | "all" = "all"): Record<RequestPriority, number> {
+export function getTicketsByPriority(tickets: any[], department: string | "all" = "all"): Record<Priority, number> {
   const scoped = tickets.filter((t) => inDepartment(t, department));
   return {
     low: scoped.filter((t) => t.priority === "low").length,
