@@ -6,21 +6,13 @@ import {
   ArrowUpRight,
   Boxes,
   CalendarDays,
-  CheckCircle2,
-  CircleDot,
   ClipboardList,
   Package,
-  Timer,
-  TrendingUp,
-  TrendingDown,
   Users as UsersIcon,
   Building2,
   BarChart3,
   Activity as ActivityIcon,
   AlertCircle,
-  PieChart,
-  LineChart,
-  TrendingUp as TrendingUpIcon,
 } from "lucide-react";
 import { useApp } from "@/store/app-store";
 import { StatCard } from "@/components/ui/StatCard";
@@ -34,7 +26,6 @@ import {
   CategoryDistributionChart,
   StockTrendChart,
   TopItemsChart,
-  LowStockAlertChart,
   MonthlyComparisonChart,
 } from "@/components/dashboard/charts";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -42,37 +33,11 @@ import { useFakeLoading } from "@/hooks/use-fake-loading";
 import { formatNumber, timeAgo, cn } from "@/lib/utils";
 import {
   getStatusColors,
-  getCategoryColor,
   getIconBgClass,
   getCardGradient,
   CHART_PALETTE,
   getPageGradient,
 } from "@/lib/theme";
-import { workloadLevel, type WorkloadLevelKey } from "@/lib/workload";
-
-const priorityClass: Record<string, string> = {
-  low: "bg-muted text-muted-foreground",
-  medium: "bg-primary/10 text-primary",
-  high: "bg-warning/15 text-warning",
-  critical: "bg-danger/10 text-danger",
-};
-
-const workloadBarColor: Record<WorkloadLevelKey, string> = {
-  low: "#10b981",
-  medium: "#f59e0b",
-  high: "#ef4444",
-  critical: "#b91c1c",
-};
-
-interface ActivityItem {
-  id: string;
-  user: string;
-  action: string;
-  module: string;
-  item: string;
-  department: string;
-  date: string;
-}
 
 function Greeting() {
   const { user, activeDepartment, role, state } = useApp();
@@ -105,17 +70,14 @@ export default function DashboardPage() {
   const { departmentItems, allItems, activeDepartment, visibleDepartments, state, role, setDepartment } = useApp();
   const loading = useFakeLoading();
   const [range, setRange] = React.useState<"7 days" | "30 days" | "3 months" | "1 year">("30 days");
-  const isDeptUser = role === "user" || role === "department-manager" || role === "department-user";
 
   const items = activeDepartment === "all" ? allItems : departmentItems;
 
   const stats = React.useMemo(() => {
     const totalItems = items.length;
     const totalStock = items.reduce((s, i) => s + i.quantity, 0);
-    const lowStock = items.filter((i) => i.quantity > 0 && i.quantity <= 10).length;
-    const outOfStock = items.filter((i) => i.quantity <= 0).length;
     const pendingRequests = state.requests.filter((r) => r.status === "pending" && (activeDepartment === "all" || r.department === activeDepartment)).length;
-    return { totalItems, totalStock, lowStock, outOfStock, pendingRequests };
+    return { totalItems, totalStock, pendingRequests };
   }, [items, state.requests, activeDepartment]);
 
   const deptChart = React.useMemo(() => {
@@ -127,7 +89,7 @@ export default function DashboardPage() {
     return depts.map((d, idx) => ({
       name: d.name,
       value: allItems.filter((i) => i.department === d.name).reduce((s, i) => s + i.quantity, 0),
-      color: CHART_PALETTE[idx],
+      color: d.color || CHART_PALETTE[idx % CHART_PALETTE.length],
     }));
   }, [activeDepartment, allItems, stats.totalStock, state.departments]);
 
@@ -182,10 +144,10 @@ export default function DashboardPage() {
         </div>
 
         {/* Primary Stats Row */}
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
-          <StatCard icon={Boxes} label="Range Of Devices" value={formatNumber(stats.totalItems)} change={4.2} trend="up" loading={loading} iconClass="bg-primary/20 text-primary" />
-          <StatCard icon={Package} label="Depth of Devices(Total Quantity of All Devices)" value={formatNumber(stats.totalStock)} change={2.8} trend="up" loading={loading} iconClass="bg-sky-500/20 text-sky-500" />
-          <StatCard icon={ClipboardList} label="Pending Requests" value={formatNumber(stats.pendingRequests)} change={-12.5} trend="down" loading={loading} iconClass="bg-violet-500/20 text-violet-500" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <StatCard icon={Boxes} label="Range Of Devices" value={formatNumber(stats.totalItems)} loading={loading} iconClass="bg-primary/20 text-primary" />
+          <StatCard icon={Package} label="Depth of Devices(Total Quantity of All Devices)" value={formatNumber(stats.totalStock)} loading={loading} iconClass="bg-sky-500/20 text-sky-500" />
+          <StatCard icon={ClipboardList} label="Pending Requests" value={formatNumber(stats.pendingRequests)} loading={loading} iconClass="bg-violet-500/20 text-violet-500" />
         </div>
 
         {/* Secondary Quick Stats */}
@@ -287,24 +249,14 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-2">
-          <Card className="relative overflow-hidden" style={{ background: "linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(245,158,11,0.05) 100%)" }}>
-            <CardHeader>
-              <CardTitle className="text-base">Low Stock Alert</CardTitle>
-              <p className="text-muted-foreground text-xs">Items by stock status</p>
-            </CardHeader>
-            <CardContent>
-              {loading ? <Skeleton className="h-[200px] w-full" /> : <LowStockAlertChart />}
-            </CardContent>
-          </Card>
-
+        <div className="grid gap-6">
           <Card className="relative overflow-hidden" style={{ background: "linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(249,115,22,0.05) 100%)" }}>
             <CardHeader>
               <CardTitle className="text-base">Monthly Comparison</CardTitle>
               <p className="text-muted-foreground text-xs">Monthly stock in vs out</p>
             </CardHeader>
             <CardContent>
-              {loading ? <Skeleton className="h-[240px] w-full" /> : <MonthlyComparisonChart />}
+              {loading ? <Skeleton className="h-[260px] w-full" /> : <MonthlyComparisonChart />}
             </CardContent>
           </Card>
         </div>

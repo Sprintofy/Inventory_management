@@ -74,6 +74,7 @@ export interface StockTransaction {
   reference: string;
   itemId: string;
   itemName: string;
+  category?: string;
   quantity: number;
   department: string;
   toDepartment?: string;
