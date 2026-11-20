@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
-import { FileDown, FileUp, Plus, Filter, X, AlertTriangle, PackageX, BarChart3, Package, TrendingUp } from "lucide-react";
+import { FileDown, FileUp, Plus, Filter, X, BarChart3, Package, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -115,28 +115,6 @@ export default function InventoryPage() {
               <div>
                 <p className="text-xs text-muted-foreground font-medium">Depth of Devices(Total Quantity of All Devices)</p>
                 <p className="text-2xl font-bold tabular-nums text-foreground">{filtered.reduce((s, i) => s + i.quantity, 0).toLocaleString()}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="relative overflow-hidden transition-all hover:shadow-xl hover:-translate-y-0.5" style={{ background: "linear-gradient(135deg, rgba(245,158,11,0.15) 0%, rgba(249,115,22,0.1) 100%)" }}>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="flex items-center justify-center rounded-xl size-11 bg-amber-500/20 text-amber-500">
-                <AlertTriangle className="size-5" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground font-medium">Low Stock (1-10)</p>
-                <p className="text-2xl font-bold tabular-nums text-foreground">{filtered.filter(i => i.quantity > 0 && i.quantity <= 10).length}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="relative overflow-hidden transition-all hover:shadow-xl hover:-translate-y-0.5" style={{ background: "linear-gradient(135deg, rgba(244,63,94,0.15) 0%, rgba(139,92,246,0.1) 100%)" }}>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="flex items-center justify-center rounded-xl size-11 bg-rose-500/20 text-rose-500">
-                <PackageX className="size-5" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground font-medium">Out of Stock</p>
-                <p className="text-2xl font-bold tabular-nums text-foreground">{filtered.filter(i => i.quantity <= 0).length}</p>
               </div>
             </CardContent>
           </Card>
