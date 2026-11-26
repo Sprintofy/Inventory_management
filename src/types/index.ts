@@ -1,16 +1,50 @@
-export type Role = "super-admin" | "admin" | "user" | "department-manager" | "department-user" | "viewer" | "technician";
+export type Role =
+  | "super-admin"
+  | "admin"
+  | "user"
+  | "department-manager"
+  | "department-user"
+  | "viewer"
+  | "technician";
 
-export type StockStatus = "in-stock" | "low-stock" | "out-of-stock" | "overstock";
+export type StockStatus =
+  | "in-stock"
+  | "low-stock"
+  | "out-of-stock"
+  | "overstock";
 
-export type POStatus = "draft" | "pending-approval" | "approved" | "ordered" | "partially-received" | "received" | "cancelled";
+export type POStatus =
+  | "draft"
+  | "pending-approval"
+  | "approved"
+  | "ordered"
+  | "partially-received"
+  | "received"
+  | "cancelled";
 
-export type AssetStatus = "available" | "assigned" | "under-repair" | "damaged" | "lost" | "retired";
+export type AssetStatus =
+  | "available"
+  | "assigned"
+  | "under-repair"
+  | "damaged"
+  | "lost"
+  | "retired";
 
 export type AssetCondition = "new" | "good" | "fair" | "poor";
 
-export type TransactionType = "stock-in" | "stock-out" | "transfer" | "adjustment";
+export type TransactionType =
+  | "stock-in"
+  | "stock-out"
+  | "transfer"
+  | "adjustment";
 
-export type TicketStatus = "open" | "in-progress" | "partially-resolved" | "resolved" | "closed" | "work-completed";
+export type TicketStatus =
+  | "open"
+  | "in-progress"
+  | "partially-resolved"
+  | "resolved"
+  | "closed"
+  | "work-completed";
 
 export type IssueStatus = "open" | "in-progress" | "resolved" | "closed";
 
@@ -42,7 +76,7 @@ export interface InventoryItem {
   lastUpdated: string;
   createdAt: string;
   department: string;
-  cpuType?: "CAN" | "NCAN" | "SA";
+  cpuType?: "CAN" | "NKN" | "SA";
 }
 
 export interface User {
@@ -205,4 +239,4 @@ export type PageSection =
   | "Reports"
   | "System"
   | "Activity Log"
-  | "Settings"
+  | "Settings";

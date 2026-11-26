@@ -25,7 +25,10 @@ import { uid } from "@/lib/utils";
 import { exportInventoryTemplate } from "@/lib/excel";
 import type { InventoryItem } from "@/types";
 
-type ParsedItem = Omit<InventoryItem, "id" | "status" | "lastUpdated" | "createdAt">;
+type ParsedItem = Omit<
+  InventoryItem,
+  "id" | "status" | "lastUpdated" | "createdAt"
+>;
 
 interface ParsedRow {
   row: number;
@@ -174,7 +177,9 @@ export function InventoryImportDialog({
           errors.push(`Reg No. "${sku}" already exists in inventory`);
         }
 
-        const rawType = String(get("type") ?? "").trim().toUpperCase();
+        const rawType = String(get("type") ?? "")
+          .trim()
+          .toUpperCase();
         if (rawType && rawType !== "W" && rawType !== "C" && rawType !== "NC") {
           errors.push("Type must be W, C or NC");
         }
@@ -202,7 +207,7 @@ export function InventoryImportDialog({
               String(get("dateOfVintage") ?? "").trim() || undefined,
             cpuType: (String(get("cpuType") ?? "").trim() || undefined) as
               | "CAN"
-              | "NCAN"
+              | "NKN"
               | "SA"
               | undefined,
             sku,

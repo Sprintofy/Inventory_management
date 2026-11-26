@@ -52,7 +52,7 @@ const formSchema = z.object({
   quantity: z.coerce.number().min(0, "Quantity cannot be negative"),
   status: z.enum(["active", "inactive"]),
   department: z.string().min(1, "Department is required"),
-  cpuType: z.enum(["CAN", "NCAN", "SA"]).optional(),
+  cpuType: z.enum(["CAN", "NKN", "SA"]).optional(),
 });
 
 type FormValues = z.output<typeof formSchema>;
